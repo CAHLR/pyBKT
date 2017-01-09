@@ -6,7 +6,7 @@
 //  Copyright © 2016 Cristian Garay. All rights reserved.
 //
 
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
 
 #include <iostream>
 #include <stdint.h>

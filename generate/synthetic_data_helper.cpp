@@ -6,7 +6,7 @@
 //  Copyright © 2016 Cristian Garay. All rights reserved.
 //
 
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
 
 #include <iostream>
 #include <stdint.h>
@@ -97,8 +97,13 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     
 }
 
+/*int init_numpy(){
+	import_array();
+}*/
+
 BOOST_PYTHON_MODULE(synthetic_data_helper){
     import_array();
+    //init_numpy();
     numeric::array::set_module_and_type("numpy", "ndarray");
     
     def("create_synthetic_data", create_synthetic_data);
