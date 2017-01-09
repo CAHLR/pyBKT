@@ -4,7 +4,7 @@ LIB = -L$(PYLIBPATH) $(shell python-config --libs) -L/usr/local/Cellar/boost-pyt
 OPTS = $(shell python-config --include) -O2 -I/usr/local/include -I/usr/local/Cellar/boost/1.60.0_1/include -I/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include -I/usr/local/Cellar/gcc49/4.9.3/lib/gcc/4.9/gcc/x86_64-apple-darwin15.6.0/4.9.3/include
 
 default: generate/synthetic_data_helper.so fit/E_step.so
-	@python2 generate/synthetic_data.py
+	@python2 test/hand_specified_model3.py
 
 generate/synthetic_data_helper.so: generate/synthetic_data_helper.o
 	$(CC) $(LIB) -Wl,-rpath,$(PYLIBPATH) -shared $< -o $@

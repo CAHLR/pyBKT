@@ -1,5 +1,5 @@
 import numpy as np
-import synthetic_data_helper
+from generate import synthetic_data_helper
 
 #TODO: check that parameters are not null, have data, match sizes, etc.
 def synthetic_data(model, lengths, resources = None):
