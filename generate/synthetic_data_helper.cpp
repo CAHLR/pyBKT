@@ -31,6 +31,9 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     
     numeric::array learns = extract<numeric::array>(model["learns"]);
     int num_resources = len(learns); //he got it from max between colums and rows of this array.
+
+    numeric::array forgets = extract<numeric::array>(model["forgets"]);
+    numeric::array guesses = extract<numeric::array>(model["guesses"]);
     
     numeric::array slips = extract<numeric::array>(model["slips"]);
     int num_subparts = len(slips); //he got it from max between colums and rows of this array.
@@ -38,9 +41,6 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     Vector2d initial_distn;
     double prior = extract<double>(model["prior"]);
     initial_distn << 1-prior, prior;
-    
-    numeric::array forgets = extract<numeric::array>(model["forgets"]);
-    numeric::array guesses = extract<numeric::array>(model["guesses"]);
     
     MatrixXd As(2, 2*num_resources);
     for (int n=0; n<num_resources; n++) {
@@ -71,9 +71,33 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
         
         Vector2d nextstate_distr = initial_distn;
         for (int t=0; t<T; t++) {
-            all_stateseqs[sequence_start + t] = nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX);
+            //why is this not working??
+            //all_stateseqs[sequence_start + t] = (nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX)) ? 1:0;
+            if(nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX)){
+                all_stateseqs[sequence_start + t] = 1;
+            }
+            else{
+                all_stateseqs[sequence_start + t] = 0;
+            }
+            //cout << "all_stateseqs[sequence_start + t]: " << all_stateseqs[sequence_start + t] << endl;
             for (int n=0; n<num_subparts; n++) {
-                all_data[num_subparts][n+num_subparts*t] = (all_stateseqs[sequence_start + t] ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < ((double) rand()) / ((double) RAND_MAX);
+                //why is this not working??
+                //all_data[num_subparts][n+num_subparts*t] = (all_stateseqs[sequence_start + t] ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < ((double) rand()) / ((double) RAND_MAX);
+                double temp_comp = (all_stateseqs[sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]));
+                //cout << "temp_comp: " << temp_comp << endl;
+                //cout << "extract<double>(slips[n]): " << extract<double>(slips[n]) << endl;
+                //cout << "1-extract<double>(guesses[n]): " << 1-extract<double>(guesses[n]) << endl;
+                //cout << "((double) rand()) / ((double) RAND_MAX): " << ((double) rand()) / ((double) RAND_MAX) << endl;
+                //cout << "temp_comp < (((double) rand()) / ((double) RAND_MAX)): " << (temp_comp < (((double) rand()) / ((double) RAND_MAX))) << endl;
+                if(temp_comp < (((double) rand()) / ((double) RAND_MAX))){
+                    all_data[n][sequence_start+t] = 1;
+                    //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
+                }
+                else{
+                    all_data[n][sequence_start+t] = 0;
+                    //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
+                }
+                //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
             }
             
             nextstate_distr = As.col(2*(extract<int>(resources[sequence_start + t])-1)+all_stateseqs[sequence_start + t]); //TODO: extract int is right??
