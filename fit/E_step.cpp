@@ -118,7 +118,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     double prior = extract<double>(model["prior"]);
 
     bool normalizeLengths = false;
-    //TODO: now i should be looking for optional params ???.
+    //then the original code goes to find the optional parameters.
 
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
@@ -211,7 +211,8 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             int32_t T = (int32_t) extract<double>(lengths[sequence_index]);
 
             //TODO: substract 1 because in matlab indexing starts at 1??? also for sequence_start?
-            numeric::array data = extract<numeric::array>(alldata[num_subparts-1]);
+            //this will not work for num_subparts > 1??
+            //numeric::array data = extract<numeric::array>(alldata[num_subparts-1]);
 
             //already extracted resources, so I'm not doing it again...
 
@@ -222,8 +223,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             likelihoods.setOnes();
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
-                     if (extract<int8_t>(data[sequence_start+n+num_subparts*t]) != 0) { //TODO: maybe cast doubles to int8_t.
-                         likelihoods.col(t) *= Bn.col(2*n + (extract<int8_t>(data[sequence_start+n+num_subparts*t]) == 2));
+                    numeric::array data = extract<numeric::array>(alldata[n]);
+                     if (extract<int8_t>(data[sequence_start+t]) != 0) { //TODO: maybe cast doubles to int8_t.
+                         likelihoods.col(t) *= Bn.col(2*n + (extract<int8_t>(data[sequence_start+t]) == 2));
                      }
                  }
              }
@@ -260,8 +262,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
             gamma.col(T-1) = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
-                if (extract<int8_t>(data[sequence_start+n+num_subparts*(T-1)]) != 0) {
-                    emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+n+num_subparts*(T-1)]) == 2)) += gamma.col(T-1);
+                numeric::array data = extract<numeric::array>(alldata[n]);
+                if (extract<int8_t>(data[sequence_start+(T-1)]) != 0) {
+                    emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+(T-1)]) == 2)) += gamma.col(T-1);
                 }
             }
 
@@ -278,8 +281,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
                 gamma.col(t) = pair.colwise().sum().transpose();
                 // NOTE: we have to touch the data again here
                 for (int n=0; n<num_subparts; n++) {
-                    if (extract<int8_t>(data[sequence_start+n+num_subparts*t]) != 0) {
-                        emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+n+num_subparts*t]) == 2)) += gamma.col(t);
+                    numeric::array data = extract<numeric::array>(alldata[n]);
+                    if (extract<int8_t>(data[sequence_start+t]) != 0) {
+                        emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+t]) == 2)) += gamma.col(t);
                     }
                 }
             }

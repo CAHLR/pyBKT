@@ -15,7 +15,12 @@ def synthetic_data(model, lengths, resources = None):
     starts = np.cumsum(lengths)
     starts = np.array([starts[i] - lengths[i] + 1 for i in range(len(starts))])
 
+    #print(model)
+    #print(starts)
+    #print(lengths)
+    #print(resources)
     syn_data = synthetic_data_helper.create_synthetic_data(model, starts, lengths, resources)
+    #print(syn_data["data"][0])
     syn_data["data"] = syn_data["data"] + 1
 
     syn_data["data"][:, resources != 1] = 0 #no data emitted unless resource == 1

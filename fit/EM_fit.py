@@ -1,7 +1,7 @@
 import numpy as np
 from util import check_data
-import E_step
-import M_step
+from fit import E_step
+from fit import M_step
 
 def EM_fit(model, data, tol = None, maxiter = None):
     if tol is None: tol = 1e-3
