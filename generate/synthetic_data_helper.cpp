@@ -27,16 +27,14 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
     
-    //TODO: is learns always an array? originally it was a horizontal array, im treating it as vertical.
-    
     numeric::array learns = extract<numeric::array>(model["learns"]);
-    int num_resources = len(learns); //he got it from max between colums and rows of this array.
+    int num_resources = len(learns);
 
     numeric::array forgets = extract<numeric::array>(model["forgets"]);
     numeric::array guesses = extract<numeric::array>(model["guesses"]);
     
     numeric::array slips = extract<numeric::array>(model["slips"]);
-    int num_subparts = len(slips); //he got it from max between colums and rows of this array.
+    int num_subparts = len(slips);
     
     Vector2d initial_distn;
     double prior = extract<double>(model["prior"]);
@@ -50,68 +48,45 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
         As.col(2*n+1) << forget, 1-forget;
     }
     
-    int num_sequences = len(starts); //he got it from max between colums and rows of this array.
+    int num_sequences = len(starts);
     
     int bigT = 0;
     for (int k=0; k<num_sequences; k++) {
-        bigT += (int) extract<double>(lengths[k]); //maybe this should come as int?
+        bigT += (int) extract<double>(lengths[k]); //extract this as int??
     }
     
     //// outputs
-    int8_t all_stateseqs[bigT]; //used to be 1xbigT
-    int8_t all_data[num_subparts][bigT];
+    int all_stateseqs[1][bigT]; //used to be int8_t
+    int all_data[num_subparts][bigT]; //used to be int8_t
     all_data[0][0] = 0;
     dict result;
     
     /* COMPUTATION */
     
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
-        int32_t sequence_start = (int32_t) extract<double>(starts[sequence_index]) - 1; // use to have -1 because Matlab indexing starts at 1.
+        int32_t sequence_start = (int32_t) extract<double>(starts[sequence_index]) - 1; //should i extract these as ints?
         int32_t T = (int32_t) extract<double>(lengths[sequence_index]);
         
         Vector2d nextstate_distr = initial_distn;
+
         for (int t=0; t<T; t++) {
-            //why is this not working??
-            //all_stateseqs[sequence_start + t] = (nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX)) ? 1:0;
-            if(nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX)){
-                all_stateseqs[sequence_start + t] = 1;
-            }
-            else{
-                all_stateseqs[sequence_start + t] = 0;
-            }
-            //cout << "all_stateseqs[sequence_start + t]: " << all_stateseqs[sequence_start + t] << endl;
+            all_stateseqs[0][sequence_start + t] = nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX); //always all_stateseqs[0]?
             for (int n=0; n<num_subparts; n++) {
-                //why is this not working??
-                //all_data[num_subparts][n+num_subparts*t] = (all_stateseqs[sequence_start + t] ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < ((double) rand()) / ((double) RAND_MAX);
-                double temp_comp = (all_stateseqs[sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]));
-                //cout << "temp_comp: " << temp_comp << endl;
-                //cout << "extract<double>(slips[n]): " << extract<double>(slips[n]) << endl;
-                //cout << "1-extract<double>(guesses[n]): " << 1-extract<double>(guesses[n]) << endl;
-                //cout << "((double) rand()) / ((double) RAND_MAX): " << ((double) rand()) / ((double) RAND_MAX) << endl;
-                //cout << "temp_comp < (((double) rand()) / ((double) RAND_MAX)): " << (temp_comp < (((double) rand()) / ((double) RAND_MAX))) << endl;
-                if(temp_comp < (((double) rand()) / ((double) RAND_MAX))){
-                    all_data[n][sequence_start+t] = 1;
-                    //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
-                }
-                else{
-                    all_data[n][sequence_start+t] = 0;
-                    //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
-                }
-                //cout << "all_data[n][sequence_start+t]: " << all_data[n][sequence_start+t] << endl;
+                all_data[n][sequence_start+t] = ((all_stateseqs[0][sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < (((double) rand()) / ((double) RAND_MAX));
             }
             
-            nextstate_distr = As.col(2*(extract<int>(resources[sequence_start + t])-1)+all_stateseqs[sequence_start + t]); //TODO: extract int is right??
+            nextstate_distr = As.col(2*(extract<int>(resources[sequence_start + t])-1)+all_stateseqs[0][sequence_start + t]); //extract int is right??
         }
     }
     
     //wrapping results in numpy objects.
-    npy_intp all_stateseqs_dims[1] = {bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_stateseqs_pyObj = PyArray_SimpleNewFromData(1, all_stateseqs_dims, NPY_INT8, all_stateseqs);
+    npy_intp all_stateseqs_dims[2] = {1, bigT}; //just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_stateseqs_pyObj = PyArray_SimpleNewFromData(2, all_stateseqs_dims, NPY_INT, all_stateseqs); //this should be NPY_INT8.
     boost::python::handle<> all_stateseqs_handle( all_stateseqs_pyObj );
     boost::python::numeric::array all_stateseqs_handle_arr( all_stateseqs_handle );
     
-    npy_intp all_data_dims[2] = {num_subparts, bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_data_pyObj = PyArray_SimpleNewFromData(2, all_data_dims, NPY_INT8, all_data);
+    npy_intp all_data_dims[2] = {num_subparts, bigT}; //just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_data_pyObj = PyArray_SimpleNewFromData(2, all_data_dims, NPY_INT, all_data); //this should be NPY_INT8.
     boost::python::handle<> all_data_handle( all_data_pyObj );
     boost::python::numeric::array all_data_arr( all_data_handle );
     

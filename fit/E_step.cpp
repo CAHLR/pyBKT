@@ -92,9 +92,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
-    
+
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-    
+
     numeric::array alldata = extract<numeric::array>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
@@ -102,18 +102,19 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     numeric::array allresources = extract<numeric::array>(data["resources"]);
 
     numeric::array starts = extract<numeric::array>(data["starts"]);
-    int num_sequences = len(starts); //use to be the max between rows and cols of starts.
+
+    int num_sequences = len(starts);
 
     numeric::array lengths = extract<numeric::array>(data["lengths"]);
 
     numeric::array learns = extract<numeric::array>(model["learns"]);
-    int num_resources = len(learns); //use to be the max between rows and cols of learns.
+    int num_resources = len(learns);
 
     numeric::array forgets = extract<numeric::array>(model["forgets"]);
 
-    numeric::array guess = extract<numeric::array>(model["guesses"]);
+    numeric::array guesses = extract<numeric::array>(model["guesses"]);
 
-    numeric::array slip = extract<numeric::array>(model["slips"]);
+    numeric::array slips = extract<numeric::array>(model["slips"]);
 
     double prior = extract<double>(model["prior"]);
 
@@ -125,14 +126,18 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
     MatrixXd As(2,2*num_resources);
     for (int n=0; n<num_resources; n++) {
-        As.col(2*n) << 1-extract<double>(learns[n]), extract<double>(learns[n]);
-        As.col(2*n+1) << extract<double>(forgets[n]), 1-extract<double>(forgets[n]);
+        double learn = extract<double>(learns[n]);
+        double forget = extract<double>(forgets[n]);
+        As.col(2*n) << 1-learn, learn;
+        As.col(2*n+1) << forget, 1-forget;
     }
 
     Array2Xd Bn(2,2*num_subparts);
     for (int n=0; n<num_subparts; n++) {
-        Bn.col(2*n) << 1-extract<double>(guess[n]), extract<double>(slip[n]); // incorrect
-        Bn.col(2*n+1) << extract<double>(guess[n]), 1-extract<double>(slip[n]); // correct
+        double guess = extract<double>(guesses[n]);
+        double slip = extract<double>(slips[n]);
+        Bn.col(2*n) << 1-guess, slip; // incorrect
+        Bn.col(2*n+1) << guess, 1-slip; // correct
     }
 
     //// outputs
@@ -146,24 +151,44 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     Map<Array2d,Aligned> all_initial_softcounts(init_softcounts);
     all_initial_softcounts.setZero();*/
     //TODO: I replaced the pointers to the arguments for new Eigen arrays.
-    ArrayXXd all_trans_softcounts(2,2*num_resources);
-    all_trans_softcounts.setZero();
+    /*ArrayXXd all_trans_softcounts(2,2*num_resources);
+    all_trans_softcounts.setZero(); //why is he setting all these to zero???
     Array2Xd all_emission_softcounts(2,2*num_subparts);
     all_emission_softcounts.setZero();
-    Array2d all_initial_softcounts(0, 0);
-    //all_initial_softcounts.setZero();
+    Array2d all_initial_softcounts(2, 1); //should i use these dimensions? the same as the original vector??
+    all_initial_softcounts.setZero();*/
+    //cout << "all_trans_softcounts" << all_trans_softcounts << endl;
+    //cout << "all_emission_softcounts" << all_emission_softcounts << endl;
+    //cout << "all_initial_softcounts" << all_initial_softcounts << endl;
+    double r_trans_softcounts[2*2*num_resources];
+    double r_emission_softcounts[2*2*num_subparts];
+    double r_init_softcounts[2*1];
+    Map<ArrayXXd,Aligned> all_trans_softcounts(r_trans_softcounts,2,2*num_resources);
+    all_trans_softcounts.setZero();
+    Map<Array2Xd,Aligned> all_emission_softcounts(r_emission_softcounts,2,2*num_subparts);
+    all_emission_softcounts.setZero();
+    Map<Array2d,Aligned> all_initial_softcounts(r_init_softcounts);
+    all_initial_softcounts.setZero();
 
     //TODO: FIX THIS!!! I'll replace all these weird arrays for zeroes ones.
-    Array2Xd likelihoods_out(2,bigT);
-    likelihoods_out.setZero();
-    Array2Xd gamma_out(2,bigT);
-    gamma_out.setZero();
-    Array2Xd alpha_out(2,bigT);
-    alpha_out.setZero();
+    //Array2Xd likelihoods_out(2,bigT);
+    //likelihoods_out.setZero();
+    //Array2Xd gamma_out(2,bigT);
+    //gamma_out.setZero();
+    //Array2Xd alpha_out(2,bigT);
+    //alpha_out.setZero();
+    Map<Array2Xd,Aligned> likelihoods_out(NULL,2,bigT);
+    Map<Array2Xd,Aligned> gamma_out(NULL,2,bigT);
+    Map<Array2Xd,Aligned> alpha_out(NULL,2,bigT);
     double s_total_loglike = 0;
     double *total_loglike = &s_total_loglike;
+    //cout << "likelihoods_out" << likelihoods_out << endl;
+    //cout << "gamma_out" << gamma_out << endl;
+    //cout << "alpha_out" << alpha_out << endl;
+    //cout << "s_total_loglike " << s_total_loglike << endl;
+    //cout << "total_loglike " << total_loglike << endl;
 
-    //TODO: FIX THIS!!!
+    //TODO: FIX THIS!!! why is he doing this??
     /* switch (num_outputs)
     {
         case 4:
@@ -179,6 +204,14 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             plhs[0] = mxCreateDoubleScalar(0.);
             total_loglike = mxGetPr(plhs[0]);
     }*/
+    double r_likelihoods_out[2*bigT];
+    double r_gamma_out[2*bigT];
+    double r_alpha_out[2*bigT];
+
+    new (&likelihoods_out) Map<Array2Xd,Aligned>(r_likelihoods_out,2,bigT);
+    new (&gamma_out) Map<Array2Xd,Aligned>(r_gamma_out,2,bigT);
+    new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
+
 
     /* COMPUTATION */
     Eigen::initParallel();
@@ -188,33 +221,28 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     {
         double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
         double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
-        Map<ArrayXXd,Aligned> trans_softcounts(s_trans_softcounts,2,2*num_resources);
-        Map<ArrayXXd,Aligned> emission_softcounts(s_emission_softcounts,2,2*num_subparts);
-        Array2d init_softcounts;
+        Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
+        Map<ArrayXXd,Aligned> emission_softcounts_temp(s_emission_softcounts,2,2*num_subparts);
+        Array2d init_softcounts_temp;
         double loglike;
 
-        trans_softcounts.setZero();
-        emission_softcounts.setZero();
-        init_softcounts.setZero();
+        trans_softcounts_temp.setZero();
+        emission_softcounts_temp.setZero();
+        init_softcounts_temp.setZero();
         loglike = 0;
         int num_threads = omp_get_num_threads();
         int blocklen = 1 + ((num_sequences - 1) / num_threads);
         int sequence_idx_start = blocklen * omp_get_thread_num();
         int sequence_idx_end = min(sequence_idx_start+blocklen,num_sequences);
         //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
+        //cout << "start: " << sequence_idx_start << " end: " << sequence_idx_end << endl;
 
         for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
             // NOTE: -1 because Matlab indexing starts at 1
-            int32_t sequence_start = (int32_t) extract<double>(starts[sequence_index]) - 1;
+            int32_t sequence_start = extract<int32_t>(starts[sequence_index]) - 1;
 
-            int32_t T = (int32_t) extract<double>(lengths[sequence_index]);
-
-            //TODO: substract 1 because in matlab indexing starts at 1??? also for sequence_start?
-            //this will not work for num_subparts > 1??
-            //numeric::array data = extract<numeric::array>(alldata[num_subparts-1]);
-
-            //already extracted resources, so I'm not doing it again...
+            int32_t T = extract<int32_t>(lengths[sequence_index]);
 
             //// likelihoods
             double s_likelihoods[2*T];
@@ -223,9 +251,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             likelihoods.setOnes();
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
-                    numeric::array data = extract<numeric::array>(alldata[n]);
-                     if (extract<int8_t>(data[sequence_start+t]) != 0) { //TODO: maybe cast doubles to int8_t.
-                         likelihoods.col(t) *= Bn.col(2*n + (extract<int8_t>(data[sequence_start+t]) == 2));
+                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                     if (data_temp != 0) {
+                         likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
                      }
                  }
              }
@@ -237,23 +265,31 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             Map<MatrixXd,Aligned> alpha(s_alpha,2,T);
             alpha.col(0) = initial_distn * likelihoods.col(0);
             norm = alpha.col(0).sum();
+            //cout << "norm: " << norm << endl;
             alpha.col(0) /= norm;
             contribution = log(norm);
+            //cout << "contribution " << contribution << endl;
             if(normalizeLengths) {
                 contribution = contribution / T;
             }
             loglike += contribution;
+            //cout << "loglike2 " << loglike << endl;
 
             for (int t=0; t<T-1; t++) {
-                alpha.col(t+1) = (As.block(0,2*(extract<double>(allresources[sequence_start+t])-1),2,2) * alpha.col(t)).array()
+                int16_t resources_temp = extract<int16_t>(allresources[sequence_start+t]);
+                alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
                     * likelihoods.col(t+1);
+                //cout << "likelihoods.col(t+1) " << likelihoods.col(t+1) << endl;
                 norm = alpha.col(t+1).sum();
+                //cout << "norm: " << norm << endl;
                 alpha.col(t+1) /= norm;
                 contribution = log(norm);
+                //cout << "contribution: " << contribution << endl;
                 if(normalizeLengths) {
                     contribution = contribution / T;
                 }
                 loglike += contribution;
+                //cout << "loglike " << loglike << endl;
             }
 
             //// backward messages and statistic counting
@@ -262,32 +298,33 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
             gamma.col(T-1) = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
-                numeric::array data = extract<numeric::array>(alldata[n]);
-                if (extract<int8_t>(data[sequence_start+(T-1)]) != 0) {
-                    emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+(T-1)]) == 2)) += gamma.col(T-1);
+                int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+(T-1)]);
+                if (data_temp != 0) {
+                    emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(T-1);
                 }
             }
 
             for (int t=T-2; t>=0; t--) {
 
-                Matrix2d A = As.block(0,2*(extract<double>(allresources[sequence_start+t])-1),2,2);
+				int16_t resources_temp = extract<int16_t>(allresources[sequence_start+t]);
+                Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
                 Array22d pair = A.array();
                 pair.rowwise() *= alpha.col(t).transpose().array();
                 pair.colwise() *= gamma.col(t+1);
                 pair.colwise() /= (A*alpha.col(t)).array();
                 pair = (pair != pair).select(0.,pair); // NOTE: replace NaNs
-                trans_softcounts.block(0,2*(extract<double>(allresources[sequence_start+t])-1),2,2) += pair;
+                trans_softcounts_temp.block(0,2*(resources_temp-1),2,2) += pair;
 
                 gamma.col(t) = pair.colwise().sum().transpose();
                 // NOTE: we have to touch the data again here
                 for (int n=0; n<num_subparts; n++) {
-                    numeric::array data = extract<numeric::array>(alldata[n]);
-                    if (extract<int8_t>(data[sequence_start+t]) != 0) {
-                        emission_softcounts.col(2*n + (extract<int8_t>(data[sequence_start+t]) == 2)) += gamma.col(t);
+                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                    if (data_temp != 0) {
+                        emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(t);
                     }
                 }
             }
-            init_softcounts += gamma.col(0);
+            init_softcounts_temp += gamma.col(0);
 
             //TODO: FIX THIS!!!
             /* switch (nlhs)
@@ -306,30 +343,33 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
         #pragma omp critical
         {
-            all_trans_softcounts += trans_softcounts;
-            all_emission_softcounts += emission_softcounts;
-            all_initial_softcounts += init_softcounts;
+            all_trans_softcounts += trans_softcounts_temp;
+            all_emission_softcounts += emission_softcounts_temp;
+            all_initial_softcounts += init_softcounts_temp;
+            //cout << "loglike " << loglike << endl;
             *total_loglike += loglike;
         }
     }
 
     dict result;
-    result["total_loglike"] = total_loglike;
+    result["total_loglike"] = *total_loglike;
 
-    npy_intp all_trans_softcounts_dims[2] = {2,2*num_resources}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_trans_softcounts_pyObj = PyArray_New(&PyArray_Type, 1, all_trans_softcounts_dims, NPY_DOUBLE, NULL, &all_trans_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
+    //cout << "r_trans_softcounts " << r_trans_softcounts << endl;
+
+    npy_intp all_trans_softcounts_dims[3] = {2,2,num_resources}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_trans_softcounts_pyObj = PyArray_New(&PyArray_Type, 3, all_trans_softcounts_dims, NPY_DOUBLE, NULL, &r_trans_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_trans_softcounts_handle( all_trans_softcounts_pyObj );
     boost::python::numeric::array all_trans_softcounts_arr( all_trans_softcounts_handle );
     result["all_trans_softcounts"] = all_trans_softcounts_arr;
 
-    npy_intp all_emission_softcounts_dims[2] = {2,2*num_subparts}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_emission_softcounts_pyObj = PyArray_New(&PyArray_Type, 1, all_emission_softcounts_dims, NPY_DOUBLE, NULL, &all_emission_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
+    npy_intp all_emission_softcounts_dims[3] = {2,2,num_subparts}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_emission_softcounts_pyObj = PyArray_New(&PyArray_Type, 3, all_emission_softcounts_dims, NPY_DOUBLE, NULL, &r_emission_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_emission_softcounts_handle( all_emission_softcounts_pyObj );
     boost::python::numeric::array all_emission_softcounts_arr( all_emission_softcounts_handle );
     result["all_emission_softcounts"] = all_emission_softcounts_arr;
 
-    npy_intp all_initial_softcounts_dims[2] = {2}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_initial_softcounts_pyObj = PyArray_New(&PyArray_Type, 1, all_initial_softcounts_dims, NPY_DOUBLE, NULL, &all_initial_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
+    npy_intp all_initial_softcounts_dims[2] = {2,1}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_initial_softcounts_pyObj = PyArray_New(&PyArray_Type, 2, all_initial_softcounts_dims, NPY_DOUBLE, NULL, &r_init_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_initial_softcounts_handle( all_initial_softcounts_pyObj );
     boost::python::numeric::array all_initial_softcounts_arr( all_initial_softcounts_handle );
     result["all_initial_softcounts"] = all_initial_softcounts_arr;
@@ -342,7 +382,9 @@ BOOST_PYTHON_MODULE(E_step){
     numeric::array::set_module_and_type("numpy", "ndarray");
     to_python_converter<double, double_to_python_float>();
     enable_numpy_scalar_converter<boost::int8_t, NPY_INT8>();
-    
+    enable_numpy_scalar_converter<boost::int16_t, NPY_INT16>();
+    enable_numpy_scalar_converter<boost::int32_t, NPY_INT32>();
+
     def("run", run);
-    
+
 }

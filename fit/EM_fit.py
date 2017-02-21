@@ -4,6 +4,7 @@ from fit import E_step
 from fit import M_step
 
 def EM_fit(model, data, tol = None, maxiter = None):
+
     if tol is None: tol = 1e-3
     if maxiter is None: maxiter = 100
 
@@ -17,20 +18,21 @@ def EM_fit(model, data, tol = None, maxiter = None):
     init_softcounts = np.zeros((2, 1))
     log_likelihoods = np.zeros((maxiter, 1))
 
-    # print(data)
-    # print(model)
-    # print(trans_softcounts)
-    # print(emission_softcounts)
-    # print(init_softcounts)
-    # result = E_step.run(data, model, trans_softcounts, emission_softcounts, init_softcounts, 1)
+    result = {}
+    result['all_trans_softcounts'] = trans_softcounts
+    result['all_emission_softcounts'] = emission_softcounts
+    result['all_initial_softcounts'] = init_softcounts
 
     for i in range(maxiter):
-        result = E_step.run(data, model, trans_softcounts, emission_softcounts, init_softcounts, 1)
-        log_likelihoods[i] = result['total_loglike']
+        result = E_step.run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
+        for j in range(num_resources):
+            result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
 
-        if(i > 1 and abs(log_likelihoods[i] - log_likelihoods[i-1]) < tol):
+        log_likelihoods[i][0] = result['total_loglike']
+
+        if(i > 1 and abs(log_likelihoods[i][0] - log_likelihoods[i-1][0]) < tol):
             break
 
-        model = M_step.run(model, trans_softcounts, emission_softcounts, init_softcounts)
+        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'])
 
-    return(model, log_likelihoods[1:i])
+    return(model, log_likelihoods[:i+1])
