@@ -1,22 +1,74 @@
-CC = g++-4.9
-PYLIBPATH = $(shell python-config --exec-prefix)/lib
-LIB = -L$(PYLIBPATH) $(shell python-config --libs) -L/usr/local/Cellar/boost-python/1.60.0/lib -lboost_python -fopenmp
-OPTS = $(shell python-config --include) -O2 -I/usr/local/include -I/usr/local/Cellar/boost/1.60.0_1/include -I/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include -I/usr/local/Cellar/gcc49/4.9.3/lib/gcc/4.9/gcc/x86_64-apple-darwin15.6.0/4.9.3/include
+#for python3
+
+#c++ compiler
+CXX = g++-4.9
+
+#-------------------
+
+PYTHON_INCLUDE_PATH = $(shell python3-config --include)
+
+O2_LIB = -O2
+
+#where eigen was installed.
+EIGEN_INCLUDE_PATH = -I/usr/local/include
+
+#boost-python include path.
+#need to get this more programmaticaly.
+BOOST_PYTHON_INCLUDE_PATH = -I/usr/local/Cellar/boost/1.63.0/include
+
+#numpy include path
+#this should change for anaconda?
+#need to get this more programmaticaly.
+#NUMPY_INCLUDE_PATH = -I/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include
+#NUMPY_INCLUDE_PATH = -I/Users/cgaray/anaconda/lib/python3.5/site-packages/numpy/core/include/
+NUMPY_INCLUDE_PATH = -I/Users/cgaray/anaconda/pkgs/numpy-1.11.1-py35_0/lib/python3.5/site-packages/numpy/core/include/
+
+#omp include path (?)
+OMP_INCLUDE_PATH = -I/usr/local/Cellar/gcc49/4.9.3/lib/gcc/4.9/gcc/x86_64-apple-darwin15.6.0/4.9.3/include
+
+ALL_OPTS = $(PYTHON_INCLUDE_PATH) $(O2_LIB) $(EIGEN_INCLUDE_PATH) \
+$(BOOST_PYTHON_INCLUDE_PATH) $(NUMPY_INCLUDE_PATH) $(OMP_INCLUDE_PATH)
+
+#-------------------
+
+#change python-config for python3-config on python3 (works with Anaconda).
+#or complete the paths and libraries manually.
+
+#where the dylib files are located.
+PYTHON_LIB_PATH = $(shell python3-config --exec-prefix)/lib
+
+#basic python libs
+PYTHON_LIBS = $(shell python3-config --libs)
+
+#boost-python lib path.
+#need to get this more programmaticaly.
+BOOST_PYTHON_LIB_PATH = -L/usr/local/Cellar/boost-python/1.63.0/lib
+
+#boost-python libs
+BOOST_PYTHON_LIBS = -lboost_python
+
+#openmp libs
+OPENMP_LIBS = -fopenmp
+
+ALL_LIBS = -L$(PYTHON_LIB_PATH) $(PYTHON_LIBS) $(BOOST_PYTHON_LIB_PATH) \
+$(BOOST_PYTHON_LIBS) $(OPENMP_LIBS)
+
+#-------------------
 
 default: generate/synthetic_data_helper.so fit/E_step.so
-	@python2 test/hand_specified_model3.py
+	@python test/hand_specified_model3.py
 
 generate/synthetic_data_helper.so: generate/synthetic_data_helper.o
-	$(CC) $(LIB) -Wl,-rpath,$(PYLIBPATH) -shared $< -o $@
+	$(CXX) $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared $< -o $@
 
 generate/synthetic_data_helper.o: generate/synthetic_data_helper.cpp Makefile
-	$(CC) $(OPTS) -c $< -o $@
+	$(CXX) $(ALL_OPTS) -c $< -o $@
 
 fit/E_step.so: fit/E_step.o
-	$(CC) $(LIB) -Wl,-rpath,$(PYLIBPATH) -shared $< -o $@
+	$(CXX) $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared $< -o $@
 
 fit/E_step.o: fit/E_step.cpp Makefile
-	$(CC) $(OPTS) -c $< -o $@
+	$(CXX) $(ALL_OPTS) -c $< -o $@
 
 clean:
 	rm -rf generate/*.so generate/*.o fit/*.so fit/*.o
