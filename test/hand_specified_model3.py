@@ -1,6 +1,6 @@
 import numpy as np
-from generate import synthetic_data
-from fit import EM_fit
+from pyBKT.generate import synthetic_data
+from pyBKT.fit import EM_fit
 from copy import deepcopy
 
 #parameters

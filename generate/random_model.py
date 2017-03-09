@@ -1,5 +1,5 @@
 import numpy as np
-from util import dirrnd
+from pyBKT.util import dirrnd
 
 def random_model(num_resources=None, num_subparts=None, trans_prior=None, given_notknow_prior=None, given_know_prior=None, pi_0_prior=None):
 

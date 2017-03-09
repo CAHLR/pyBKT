@@ -23,19 +23,29 @@ using namespace Eigen;
 using namespace std;
 using namespace boost::python;
 
+#if PY_VERSION_HEX >= 0x03000000
+void *
+#else
+void
+#endif
+init_numpy(){
+    //Py_Initialize;
+    import_array();
+}
+
 //original comment:
 //"TODO if we aren't outputting gamma, don't need to write it to memory (just
 //need t and t+1), so we can save the stack array for each HMM at the cost of
 //a branch"
 
-struct double_to_python_float
+/*struct double_to_python_float
 {
     static PyObject* convert(double const& d)
       {
         return boost::python::incref(
           boost::python::object(d).ptr());
       }
-};
+};*/
 
 //numpy scalar converters.
 template <typename T, NPY_TYPES NumPyScalarType>
@@ -45,7 +55,8 @@ struct enable_numpy_scalar_converter
   {
     // Required NumPy call in order to use the NumPy C API within another
     // extension module.
-    import_array();
+    // import_array();
+    init_numpy();
 
     boost::python::converter::registry::push_back(
       &convertible,
@@ -240,9 +251,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
         for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
             // NOTE: -1 because Matlab indexing starts at 1
-            int32_t sequence_start = extract<int32_t>(starts[sequence_index]) - 1;
+            int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
 
-            int32_t T = extract<int32_t>(lengths[sequence_index]);
+            int64_t T = extract<int64_t>(lengths[sequence_index]);
 
             //// likelihoods
             double s_likelihoods[2*T];
@@ -276,7 +287,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             //cout << "loglike2 " << loglike << endl;
 
             for (int t=0; t<T-1; t++) {
-                int16_t resources_temp = extract<int16_t>(allresources[sequence_start+t]);
+                int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
                 alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
                     * likelihoods.col(t+1);
                 //cout << "likelihoods.col(t+1) " << likelihoods.col(t+1) << endl;
@@ -306,7 +317,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
             for (int t=T-2; t>=0; t--) {
 
-				int16_t resources_temp = extract<int16_t>(allresources[sequence_start+t]);
+				int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
                 Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
                 Array22d pair = A.array();
                 pair.rowwise() *= alpha.col(t).transpose().array();
@@ -377,13 +388,16 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     return(result);
 }
 
+
 BOOST_PYTHON_MODULE(E_step){
-    import_array();
+    //import_array();
+    init_numpy();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    to_python_converter<double, double_to_python_float>();
+    //to_python_converter<double, double_to_python_float>();
     enable_numpy_scalar_converter<boost::int8_t, NPY_INT8>();
     enable_numpy_scalar_converter<boost::int16_t, NPY_INT16>();
     enable_numpy_scalar_converter<boost::int32_t, NPY_INT32>();
+    enable_numpy_scalar_converter<boost::int64_t, NPY_INT64>();
 
     def("run", run);
 

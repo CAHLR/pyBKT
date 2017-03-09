@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <stdint.h>
+#include <alloca.h>
 #include <Eigen/Core>
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
@@ -20,6 +21,75 @@
 using namespace Eigen;
 using namespace std;
 using namespace boost::python;
+
+#if PY_VERSION_HEX >= 0x03000000
+void *
+#else
+void
+#endif
+init_numpy(){
+    //Py_Initialize;
+    import_array();
+}
+
+struct double_to_python_float
+{
+    static PyObject* convert(double const& d)
+      {
+        return boost::python::incref(
+          boost::python::object(d).ptr());
+      }
+};
+
+//numpy scalar converters.
+template <typename T, NPY_TYPES NumPyScalarType>
+struct enable_numpy_scalar_converter
+{
+  enable_numpy_scalar_converter()
+  {
+    // Required NumPy call in order to use the NumPy C API within another
+    // extension module.
+    // import_array();
+    init_numpy();
+
+    boost::python::converter::registry::push_back(
+      &convertible,
+      &construct,
+      boost::python::type_id<T>());
+  }
+
+  static void* convertible(PyObject* object)
+  {
+    // The object is convertible if all of the following are true:
+    // - is a valid object.
+    // - is a numpy array scalar.
+    // - its descriptor type matches the type for this converter.
+    return (
+      object &&                                                    // Valid
+      PyArray_CheckScalar(object) &&                               // Scalar
+      PyArray_DescrFromScalar(object)->type_num == NumPyScalarType // Match
+    )
+      ? object // The Python object can be converted.
+      : NULL;
+  }
+
+  static void construct(
+    PyObject* object,
+    boost::python::converter::rvalue_from_python_stage1_data* data)
+  {
+    // Obtain a handle to the memory block that the converter has allocated
+    // for the C++ type.
+    namespace python = boost::python;
+    typedef python::converter::rvalue_from_python_storage<T> storage_type;
+    void* storage = reinterpret_cast<storage_type*>(data)->storage.bytes;
+
+    // Extract the array scalar type directly into the storage.
+    PyArray_ScalarAsCtype(object, storage);
+
+    // Set convertible to indicate success.
+    data->convertible = storage;
+  }
+};
 
 dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& lengths, numeric::array& resources){
     //TODO: check if parameters are null.
@@ -50,9 +120,9 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     
     int num_sequences = len(starts);
     
-    int bigT = 0;
+    int64_t bigT = 0;
     for (int k=0; k<num_sequences; k++) {
-        bigT += (int) extract<double>(lengths[k]); //extract this as int??
+        bigT += extract<int64_t>(lengths[k]); //extract this as int??
     }
     
     //// outputs
@@ -64,8 +134,8 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     /* COMPUTATION */
     
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
-        int32_t sequence_start = (int32_t) extract<double>(starts[sequence_index]) - 1; //should i extract these as ints?
-        int32_t T = (int32_t) extract<double>(lengths[sequence_index]);
+        int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1; //should i extract these as ints?
+        int64_t T = extract<int64_t>(lengths[sequence_index]);
         
         Vector2d nextstate_distr = initial_distn;
 
@@ -75,7 +145,7 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
                 all_data[n][sequence_start+t] = ((all_stateseqs[0][sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < (((double) rand()) / ((double) RAND_MAX));
             }
             
-            nextstate_distr = As.col(2*(extract<int>(resources[sequence_start + t])-1)+all_stateseqs[0][sequence_start + t]); //extract int is right??
+            nextstate_distr = As.col(2*(extract<int64_t>(resources[sequence_start + t])-1)+all_stateseqs[0][sequence_start + t]); //extract int is right??
         }
     }
     
@@ -96,14 +166,19 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     
 }
 
-/*int init_numpy(){
-	import_array();
-}*/
-
 BOOST_PYTHON_MODULE(synthetic_data_helper){
-    import_array();
-    //init_numpy();
+    //import_array();
+    init_numpy();
+    /*if(PyArray_API == NULL)
+	{
+	    import_array();
+	}*/
     numeric::array::set_module_and_type("numpy", "ndarray");
+    to_python_converter<double, double_to_python_float>();
+    enable_numpy_scalar_converter<boost::int8_t, NPY_INT8>();
+    enable_numpy_scalar_converter<boost::int16_t, NPY_INT16>();
+    enable_numpy_scalar_converter<boost::int32_t, NPY_INT32>();
+    enable_numpy_scalar_converter<boost::int64_t, NPY_INT64>();
     
     def("create_synthetic_data", create_synthetic_data);
     

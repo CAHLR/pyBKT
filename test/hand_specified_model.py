@@ -1,9 +1,9 @@
 import numpy as np
-from generate import synthetic_data
-from generate import random_model
-from fit import EM_fit
+from pyBKT.generate import synthetic_data
+from pyBKT.generate import random_model
+from pyBKT.fit import EM_fit
 from copy import deepcopy
-from util import print_dot
+from pyBKT.util import print_dot
 
 #parameters
 num_subparts = 4

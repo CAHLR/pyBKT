@@ -1,7 +1,7 @@
 import numpy as np
-from util import check_data
-from fit import E_step
-from fit import M_step
+from pyBKT.util import check_data
+from pyBKT.fit import E_step
+from pyBKT.fit import M_step
 
 def EM_fit(model, data, tol = None, maxiter = None):
 
