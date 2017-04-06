@@ -17,12 +17,15 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts):
     model['learns'] = model['As'][:, 1, 0]
     model['forgets'] = model['As'][:, 0, 1]
 
-    model['emissions'] = emission_softcounts / np.sum(emission_softcounts, axis=0)
+    temp = np.sum(emission_softcounts, axis=2)
+
+    #model['emissions'] = emission_softcounts / np.sum(emission_softcounts, axis=1)
+    model['emissions'] = emission_softcounts / temp[:, :, None]
     #the expand dims is very weird.
     #model['guesses'] = np.expand_dims(model['emissions'][:, 0, 1].squeeze(), axis=0)
     #model['slips'] = np.expand_dims(model['emissions'][:, 1, 0].squeeze(), axis=0)
-    model['guesses'] = model['emissions'][1, 0, :]
-    model['slips'] = model['emissions'][0, 1, :]
+    model['guesses'] = model['emissions'][:, 0, 1]
+    model['slips'] = model['emissions'][:, 1, 0]
 
     temp = np.sum(init_softcounts[:])
     model['pi_0'] = init_softcounts[:] / np.sum(init_softcounts[:])

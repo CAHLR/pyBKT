@@ -367,13 +367,13 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
     //cout << "r_trans_softcounts " << r_trans_softcounts << endl;
 
-    npy_intp all_trans_softcounts_dims[3] = {2,2,num_resources}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    npy_intp all_trans_softcounts_dims[3] = {num_resources,2,2}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
     PyObject * all_trans_softcounts_pyObj = PyArray_New(&PyArray_Type, 3, all_trans_softcounts_dims, NPY_DOUBLE, NULL, &r_trans_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_trans_softcounts_handle( all_trans_softcounts_pyObj );
     boost::python::numeric::array all_trans_softcounts_arr( all_trans_softcounts_handle );
     result["all_trans_softcounts"] = all_trans_softcounts_arr;
 
-    npy_intp all_emission_softcounts_dims[3] = {2,2,num_subparts}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    npy_intp all_emission_softcounts_dims[3] = {num_subparts,2,2}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
     PyObject * all_emission_softcounts_pyObj = PyArray_New(&PyArray_Type, 3, all_emission_softcounts_dims, NPY_DOUBLE, NULL, &r_emission_softcounts, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_emission_softcounts_handle( all_emission_softcounts_pyObj );
     boost::python::numeric::array all_emission_softcounts_arr( all_emission_softcounts_handle );

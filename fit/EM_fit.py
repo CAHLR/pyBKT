@@ -13,8 +13,8 @@ def EM_fit(model, data, tol = None, maxiter = None):
     num_subparts = data["data"].shape[0] #mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
 
-    trans_softcounts = np.zeros((2, 2, num_resources))
-    emission_softcounts = np.zeros((2, 2, num_subparts))
+    trans_softcounts = np.zeros((num_resources, 2, 2))
+    emission_softcounts = np.zeros((num_subparts, 2, 2))
     init_softcounts = np.zeros((2, 1))
     log_likelihoods = np.zeros((maxiter, 1))
 
@@ -27,6 +27,8 @@ def EM_fit(model, data, tol = None, maxiter = None):
         result = E_step.run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
+        for j in range(num_subparts):
+            result['all_emission_softcounts'][j] = result['all_emission_softcounts'][j].transpose()
 
         log_likelihoods[i][0] = result['total_loglike']
 
