@@ -4,7 +4,7 @@ Python implementation of the Bayesian Knowledge Tracing algorithm to model learn
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) Computational Approaches to Human Learning Research (CAHL) Lab @ UC Berkeley https://github.com/CAHLR/xBKT
 
-This is intended as a quick overview of steps to install and setup and to run xBKT locally.
+This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
 
 # Instalation and setup
 
@@ -17,9 +17,7 @@ git clone https://github.com/cagaray/pyBKT.git
 ## Installing Eigen ##
 
 Get Eigen from http://eigen.tuxfamily.org/index.php?title=Main_Page and unzip
-it somewhere (anywhere will work, but it affects the mex command below). On a
-\*nix machine, these commands should put Eigen in /usr/local/include:
-
+it somewhere. On a \*nix machine, these commands should put Eigen in `/usr/local/include`:
 
     cd /usr/local/include
     wget --no-check-certificate http://bitbucket.org/eigen/eigen/get/3.1.3.tar.gz
@@ -28,10 +26,9 @@ it somewhere (anywhere will work, but it affects the mex command below). On a
     rm 3.1.3.tar.gz
 
 Similarly, if working in OS X, you can download the latest stable version of Eigen 
-from the site above. This program has run successfully with `Eigen 3.2.5`.
-First move the file to /usr/local/include, then unzip and create simplified link to Eigen. 
+from the site above. This program has run successfully with _Eigen 3.2.5_.
+First move the file to `/usr/local/include`, then unzip and create simplified link to Eigen. 
 These commands can be used below:
-
 
     mv <path to file>/3.1.3.tar.gz /usr/local/include/3.1.3.tar.gz
     tar -xvf 3.1.3.tar.gz
@@ -43,11 +40,11 @@ These commands can be used below:
 The easiest way to install Boost-Python is through Homebrew:
 
 ```
-For Python 3
+For Python 3 (when is not the default Python version in the machine)
 - brew uninstall boost-python (if already installed)
 - brew install boost-python --with-python3 --without-python
 
-For Python 2
+For Python 2 or when Python 3 is the default Python version.
 - brew install boost-python
 ```
 
@@ -57,7 +54,7 @@ Run `make` in the root directory of the pyBKT project folder. If this step runs 
 
 ## Potential Errors When Running Makefile on OS X ##
 
-Before running `make`, check `Makefile` in pyBKT. Be sure that the paths for all the libraaries are correct (Boos-Python, Eigen, Numpy, OMP).
+Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP).
 
 You may see the following error while running `make`
 ```
@@ -80,7 +77,7 @@ The Makefile uses the python-config tool, if need to install it run: `sudo apt i
 
 # Preparing Data and Running Model #
 ## Input and Output Data ##
-`pyBKT` models student mastery of a skills as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable has two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
+_pyBKT_ models student mastery of a skills as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable has two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
 
 To run the pyBKT model, define the following variables:
 * `num_subparts`: The number of unique questions used to check understanding. Each subpart has a unique set of emission probabilities.
@@ -126,7 +123,7 @@ The `fitmodel` also includes the following emission probabilities:
 
 
 ## Running pyBKT ##
-You can add the folder path to the PYTHONPATH env variable in order to run the model from anywhere in your system. In Unix-based systems edit you _.bash_profile_ file and add:
+You can add the folder path to the PYTHONPATH env variable in order to run the model from anywhere in your system. In Unix-based systems edit your _.bash_rc_ or _.bash_profile_ file and add:
 
 ```
 export PYTHONPATH="${PYTHONPATH}:/path_to_folder_containing_pyBKT_folder"
@@ -155,21 +152,60 @@ which you can run with `python test/hand_specified_model.py`.
 Here's a simplified version:
 
 ```python
-num_subparts = 4
-truemodel = generate.random_model(num_subparts);
+import numpy as np
+from pyBKT.generate import synthetic_data
+from pyBKT.fit import EM_fit
+from copy import deepcopy
 
-data = generate.synthetic_data(truemodel,[200,150,500]);
+#parameters
+num_subparts = 1
+num_resources = 2
+num_fit_initializations = 10
+observation_sequence_lengths = np.full(500, 100, dtype=np.int)
 
-best_likelihood = -inf;
-for i=1:25
-    [fitmodel, log_likelihoods] = fit.EM_fit(generate.random_model(num_subparts),data);
-    if (log_likelihoods(end) > best_likelihood)
-        best_likelihood = log_likelihoods(end);
-        best_model = fitmodel;
-    end
-end
+#generate synthetic model and data.
+#model is really easy.
+truemodel = {}
 
-disp('these two should look similar');
-truemodel.A
-best_model.A
+truemodel["As"] =  np.zeros((2, 2, num_resources), dtype=np.float_)
+for i in range(num_resources):
+    truemodel["As"][i, :, :] = np.transpose([[0.7, 0.3], [0.01, 0.99]])
+truemodel["learns"] = truemodel["As"][:, 1, 0]
+truemodel["forgets"] = truemodel["As"][:, 0, 1]
+
+truemodel["pi_0"] = np.array([[0.9], [0.1]])
+truemodel["prior"] = truemodel["pi_0"][1][0]
+
+truemodel["guesses"] = np.full(num_subparts, 0.1, dtype=np.float_)
+truemodel["slips"] = np.full(num_subparts, 0.03, dtype=np.float_)
+
+#data!
+print("generating data...")
+data = synthetic_data.synthetic_data(truemodel, observation_sequence_lengths)
+
+#fit models, starting with random initializations
+print('fitting! each dot is a new EM initialization')
+
+best_likelihood = float("-inf")
+
+fitmodel = deepcopy(truemodel) # NOTE: include this line to initialize at the truth
+(fitmodel, log_likelihoods) = EM_fit.EM_fit(fitmodel, data)
+if(log_likelihoods[-1] > best_likelihood):
+    best_likelihood = log_likelihoods[-1]
+    best_model = fitmodel
+
+# compare the fit model to the true model
+
+print('')
+print('\ttruth\tlearned')
+for r in range(num_resources):
+    print('learn%d\t%.4f\t%.4f' % (r+1, truemodel['As'][r, 1, 0].squeeze(), best_model['As'][r, 1, 0].squeeze()))
+for r in range(num_resources):
+    print('forget%d\t%.4f\t%.4f' % (r+1, truemodel['As'][r, 0, 1].squeeze(), best_model['As'][r, 0, 1].squeeze()))
+
+for s in range(num_subparts):
+    print('guess%d\t%.4f\t%.4f' % (s+1, truemodel['guesses'][s], best_model['guesses'][s]))
+for s in range(num_subparts):
+    print('slip%d\t%.4f\t%.4f' % (s+1, truemodel['slips'][s], best_model['slips'][s]))
+
 ```
