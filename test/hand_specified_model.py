@@ -1,6 +1,6 @@
 import numpy as np
 from pyBKT.generate import synthetic_data
-from pyBKT.generate import random_model
+from pyBKT.generate import random_model, random_model_uni
 from pyBKT.fit import EM_fit
 from copy import deepcopy
 from pyBKT.util import print_dot
@@ -21,7 +21,7 @@ truemodel["As"][1, :, :] = np.transpose([[0.9, 0.1], [0.1, 0.9]])
 truemodel["learns"] = truemodel["As"][:, 1, 0]
 truemodel["forgets"] = truemodel["As"][:, 0, 1]
 
-truemodel["pi_0"] = np.array([[0.9], [0.1]])
+truemodel["pi_0"] = np.array([[0.9], [0.1]]) #TODO: one prior per resource? does this array needs to be col?
 truemodel["prior"] = 0.1
 
 truemodel["guesses"] = np.full(num_subparts, 0.05, dtype=np.float_)
