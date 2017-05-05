@@ -37,7 +37,7 @@ These commands can be used below:
 
 ## Installing Boost-Python ##
 
-The easiest way to install Boost-Python is through Homebrew:
+On OS X, the easiest way to install Boost-Python is through Homebrew:
 
 ```
 For Python 3 (when is not the default Python version in the machine)
@@ -48,13 +48,15 @@ For Python 2 or when Python 3 is the default Python version.
 - brew install boost-python
 ```
 
+On Unix machines, install all the Boost Libraries using `sudo apt-get install libboost-all-dev`.
+
 ## Compiling ##
+
+Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP).
 
 Run `make` in the root directory of the pyBKT project folder. If this step runs successfully, you should see one _.o_ and one _.so_ file generated for each of the _.cpp_ files.
 
 ## Potential Errors When Running Makefile on OS X ##
-
-Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP).
 
 You may see the following error while running `make`
 ```
