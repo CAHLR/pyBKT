@@ -45,7 +45,7 @@ PYTHON_LIBS = $(shell python3-config --libs)
 BOOST_PYTHON_LIB_PATH = -L/usr/local/Cellar/boost-python/1.63.0/lib
 
 #boost-python libs
-BOOST_PYTHON_LIBS = -lboost_python
+BOOST_PYTHON_LIBS = -lboost_python3
 
 #openmp libs
 OPENMP_LIBS = -fopenmp
@@ -56,7 +56,7 @@ $(BOOST_PYTHON_LIBS) $(OPENMP_LIBS)
 #-------------------
 
 default: generate/synthetic_data_helper.so fit/E_step.so
-	@python test/hand_specified_model3.py
+	@python3 test/hand_specified_model3.py
 
 generate/synthetic_data_helper.so: generate/synthetic_data_helper.o
 	$(CXX) $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared $< -o $@
