@@ -42,7 +42,7 @@ PYTHON_LIBS = $(shell python3-config --libs)
 
 #boost-python lib path.
 #need to get this more programmaticaly.
-BOOST_PYTHON_LIB_PATH = -L/usr/local/lib
+BOOST_PYTHON_LIB_PATH = -L/usr/lib/x86_64-linux-gnu/
 
 #boost-python libs
 BOOST_PYTHON_LIBS = -lboost_python-py34
