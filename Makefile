@@ -24,7 +24,7 @@ BOOST_PYTHON_INCLUDE_PATH = -I/usr/include
 NUMPY_INCLUDE_PATH = -I/usr/local/lib/python3.4/dist-packages/numpy/core/include/
 
 #omp include path (?)
-OMP_INCLUDE_PATH = -I/usr/lib/gcc/x86_64-linux-gnu/4.6/include/
+OMP_INCLUDE_PATH = -I/usr/lib/gcc/x86_64-linux-gnu/4.9/include/
 
 ALL_OPTS = $(PYTHON_INCLUDE_PATH) $(O2_LIB) $(EIGEN_INCLUDE_PATH) \
 $(BOOST_PYTHON_INCLUDE_PATH) $(NUMPY_INCLUDE_PATH) $(OMP_INCLUDE_PATH)
