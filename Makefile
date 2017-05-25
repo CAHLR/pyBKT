@@ -45,7 +45,7 @@ PYTHON_LIBS = $(shell python3-config --libs)
 BOOST_PYTHON_LIB_PATH = -L/usr/local/lib
 
 #boost-python libs
-BOOST_PYTHON_LIBS = -lboost_python
+BOOST_PYTHON_LIBS = -lboost_python-py34
 
 #openmp libs
 OPENMP_LIBS = -fopenmp
