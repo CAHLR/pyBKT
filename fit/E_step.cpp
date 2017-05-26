@@ -385,6 +385,12 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     boost::python::numeric::array all_initial_softcounts_arr( all_initial_softcounts_handle );
     result["all_initial_softcounts"] = all_initial_softcounts_arr;
 
+    npy_intp alpha_out_dims[2] = {2,bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * alpha_out_pyObj = PyArray_New(&PyArray_Type, 2, alpha_out_dims, NPY_DOUBLE, NULL, &r_alpha_out, 0, NPY_ARRAY_CARRAY, NULL);
+    boost::python::handle<> alpha_out_handle( alpha_out_pyObj );
+    boost::python::numeric::array alpha_out_arr( alpha_out_handle );
+    result["alpha"] = alpha_out_arr;
+
     return(result);
 }
 

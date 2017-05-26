@@ -55,7 +55,7 @@ $(BOOST_PYTHON_LIBS) $(OPENMP_LIBS)
 
 #-------------------
 
-default: generate/synthetic_data_helper.so fit/E_step.so
+default: generate/synthetic_data_helper.so fit/E_step.so fit/predict_onestep_states.so
 	@python test/hand_specified_model3.py
 
 generate/synthetic_data_helper.so: generate/synthetic_data_helper.o
@@ -69,6 +69,12 @@ fit/E_step.so: fit/E_step.o
 
 fit/E_step.o: fit/E_step.cpp Makefile
 	$(CXX) $< $(ALL_OPTS) -c -fPIC -o $@
+
+fit/predict_onestep_states.so: fit/predict_onestep_states.o
+	$(CXX) $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared $< -o $@
+
+fit/predict_onestep_states.o: fit/predict_onestep_states.cpp Makefile
+	$(CXX) $(ALL_OPTS) -c $< -o $@
 
 clean:
 	rm -rf generate/*.so generate/*.o fit/*.so fit/*.o

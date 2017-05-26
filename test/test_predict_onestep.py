@@ -1,5 +1,6 @@
 import numpy as np
 from pyBKT.generate import synthetic_data
+from pyBKT.fit import predict_onestep
 
 #parameters
 num_subparts = 1
@@ -26,5 +27,7 @@ truemodel["slips"] = np.full(num_subparts, 0.03, dtype=np.float_)
 #data!
 print("generating data...")
 data = synthetic_data.synthetic_data(truemodel, observation_sequence_lengths)
+
+(correct_predictions, state_predictions) = predict_onestep.run(truemodel, data)
 
 print("finishing...")

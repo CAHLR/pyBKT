@@ -9,6 +9,7 @@
 #include <boost/python/ptr.hpp>
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
+//#include <numpy/arrayobject.h>
 
 using namespace Eigen;
 using namespace std;
@@ -90,7 +91,7 @@ struct enable_numpy_scalar_converter
 
 // TODO openmp version
 
-dict run(dict& data, dict& model, numeric::array& forward_messages){
+numeric::array run(dict& data, dict& model, numeric::array& forward_messages){
     //TODO: check if parameters are null.
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
@@ -130,35 +131,45 @@ dict run(dict& data, dict& model, numeric::array& forward_messages){
     }
 
     // forward messages
-    double *all_forward_messages = mxGetPr(prhs[2]);
+    //numeric::array all_forward_messages = extract<numeric::array>(forward_messages);
+    double forward_messages_temp [2*bigT];
+    for (int i=0; i<2; i++) {
+        for (int j=0; j<bigT; j++){
+            forward_messages_temp[i+j] = extract<double>(forward_messages[i][j]);
+        }
+    }
 
     //// outputs
 
-    // lhs outputs
-    if (nlhs != 1) { mexErrMsgTxt("must have one output\n"); }
-    plhs[0] = mxCreateDoubleMatrix(2,bigT,mxREAL);
-    double *all_predictions = mxGetPr(plhs[0]);
-    Map<Array2Xd,Aligned> predictions(mxGetPr(plhs[0]),2,bigT);
+    double all_predictions[2*bigT];
+    Map<Array2Xd,Aligned> predictions(all_predictions,2,bigT);
 
     /* COMPUTATION */
 
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
         // NOTE: -1 because Matlab indexing starts at 1
-        int sequence_start = ((int) starts[sequence_index]) - 1;
-        int T = (int) lengths[sequence_index];
+        int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
+        int64_t T = extract<int64_t>(lengths[sequence_index]);
 
-        int16_t *resources = allresources + sequence_start;
-        Map<MatrixXd> forward_messages(all_forward_messages + 2*sequence_start,2,T);
+        //int16_t *resources = allresources + sequence_start;
+        Map<MatrixXd> forward_messages(forward_messages_temp + 2*sequence_start,2,T);
         Map<MatrixXd> predictions(all_predictions + 2*sequence_start,2,T);
 
         predictions.col(0) = initial_distn;
         for (int t=0; t<T-1; t++) {
-            predictions.col(t+1) = As.block(0,2*(resources[t]-1),2,2) * forward_messages.col(t);
+            int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
+            predictions.col(t+1) = As.block(0,2*(resources_temp-1),2,2) * forward_messages.col(t);
         }
     }
+
+    npy_intp all_predictions_dims[2] = {2,bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * all_predictions_pyObj = PyArray_New(&PyArray_Type, 2, all_predictions_dims, NPY_DOUBLE, NULL, &all_predictions, 0, NPY_ARRAY_CARRAY, NULL);
+    boost::python::handle<> all_predictions_handle( all_predictions_pyObj );
+    boost::python::numeric::array all_predictions_arr( all_predictions_handle );
+    return(all_predictions_arr);
 }
 
-BOOST_PYTHON_MODULE(E_step){
+BOOST_PYTHON_MODULE(predict_onestep_states){
     //import_array();
     init_numpy();
     numeric::array::set_module_and_type("numpy", "ndarray");
