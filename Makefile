@@ -71,10 +71,10 @@ fit/E_step.o: fit/E_step.cpp Makefile
 	$(CXX) $< $(ALL_OPTS) -c -fPIC -o $@
 
 fit/predict_onestep_states.so: fit/predict_onestep_states.o
-	$(CXX) $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared $< -o $@
+	$(CXX) $< $(ALL_LIBS) -Wl,-rpath,$(PYTHON_LIB_PATH) -shared -o $@
 
 fit/predict_onestep_states.o: fit/predict_onestep_states.cpp Makefile
-	$(CXX) $(ALL_OPTS) -c $< -o $@
+	$(CXX) $< $(ALL_OPTS) -c -fPIC -o $@
 
 clean:
 	rm -rf generate/*.so generate/*.o fit/*.so fit/*.o
