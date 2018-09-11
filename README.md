@@ -28,7 +28,7 @@ This is intended as a quick overview of steps to install and setup and to run py
 ## Cloning the repository ##
 
 ```
-git clone https://github.com/cagaray/pyBKT.git
+git clone https://github.com/CAHLR/pyBKT.git
 ```
 
 ## Installing Eigen ##
