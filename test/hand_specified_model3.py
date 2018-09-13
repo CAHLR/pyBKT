@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 import numpy as np
 from pyBKT.generate import synthetic_data
 from pyBKT.fit import EM_fit
@@ -5,7 +7,7 @@ from copy import deepcopy
 
 #parameters
 num_subparts = 1
-num_resources = 2
+num_resources = 1
 num_fit_initializations = 10
 observation_sequence_lengths = np.full(500, 100, dtype=np.int)
 
@@ -15,7 +17,7 @@ truemodel = {}
 
 truemodel["As"] =  np.zeros((2, 2, num_resources), dtype=np.float_)
 for i in range(num_resources):
-    truemodel["As"][i, :, :] = np.transpose([[0.7, 0.3], [0.01, 0.99]])
+    truemodel["As"][i, :, :] = np.transpose([[0.7, 0.3], [0, 1]])
 truemodel["learns"] = truemodel["As"][:, 1, 0]
 truemodel["forgets"] = truemodel["As"][:, 0, 1]
 
