@@ -1,7 +1,7 @@
 #for python3
 
 #c++ compiler
-CXX = g++-4.9
+CXX = g++
 
 #-------------------
 
@@ -10,7 +10,7 @@ PYTHON_INCLUDE_PATH = $(shell python3-config --includes)
 O2_LIB = -O2
 
 #where eigen was installed.
-EIGEN_INCLUDE_PATH = -I/home/cgaray
+EIGEN_INCLUDE_PATH = -I./Eigen
 
 #boost-python include path.
 #need to get this more programmaticaly.
@@ -21,7 +21,7 @@ BOOST_PYTHON_INCLUDE_PATH = -I/usr/include
 #need to get this more programmaticaly.
 #NUMPY_INCLUDE_PATH = -I/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/numpy/core/include
 #NUMPY_INCLUDE_PATH = -I/Users/cgaray/anaconda/lib/python3.5/site-packages/numpy/core/include/
-NUMPY_INCLUDE_PATH = -I/usr/local/lib/python3.4/dist-packages/numpy/core/include/
+NUMPY_INCLUDE_PATH = -I/usr/local/lib/python3.6/dist-packages/numpy/core/include/
 
 #omp include path (?)
 OMP_INCLUDE_PATH = -I/usr/lib/gcc/x86_64-linux-gnu/4.9/include/
@@ -45,7 +45,7 @@ PYTHON_LIBS = $(shell python3-config --libs)
 BOOST_PYTHON_LIB_PATH = -L/usr/lib/x86_64-linux-gnu/
 
 #boost-python libs
-BOOST_PYTHON_LIBS = -lboost_python-py34
+BOOST_PYTHON_LIBS = -lboost_python-py36
 
 #openmp libs
 OPENMP_LIBS = -fopenmp
