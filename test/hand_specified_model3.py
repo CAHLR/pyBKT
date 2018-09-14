@@ -7,7 +7,7 @@ from copy import deepcopy
 
 #parameters
 num_subparts = 1
-num_resources = 1
+num_resources = 2
 num_fit_initializations = 10
 observation_sequence_lengths = np.full(500, 100, dtype=np.int)
 
