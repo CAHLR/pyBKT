@@ -3,17 +3,18 @@ import numpy as np
 def run(model, trans_softcounts, emission_softcounts, init_softcounts):
 
     #is this right??
-    trans_softcounts[:, np.sum(trans_softcounts, axis=1) == 0] = 1
-    emission_softcounts[:, np.sum(emission_softcounts, axis=0) == 0] = 1
-    assert (trans_softcounts.shape[0] == 2)
+    trans_softcounts[np.sum(trans_softcounts, axis=1) == 0,:] = 1
+    emission_softcounts[np.sum(emission_softcounts, axis=2) == 0,:] = 1
     assert (trans_softcounts.shape[1] == 2)
+    assert (trans_softcounts.shape[2] == 2)
 
     temp = np.sum(trans_softcounts, axis=1)
 
     #model['As'] = trans_softcounts / np.sum(trans_softcounts, axis=1)
     #model['As'] = np.divide(trans_softcounts, np.sum(trans_softcounts, axis=1))
-    model['As'][0] = trans_softcounts[0] / np.sum(trans_softcounts, axis=1)[0]
-    model['As'][1] = trans_softcounts[1] / np.sum(trans_softcounts, axis=1)[1]
+    for i in range(model['As'].shape[0]):
+    	model['As'][i] = trans_softcounts[i] / np.sum(trans_softcounts, axis=1)[i]
+
     model['learns'] = model['As'][:, 1, 0]
     model['forgets'] = model['As'][:, 0, 1]
 

@@ -7,25 +7,27 @@ from copy import deepcopy
 
 #parameters
 num_subparts = 1
-num_resources = 2
-num_fit_initializations = 10
+num_resources = 1
+num_fit_initializations = 20
 observation_sequence_lengths = np.full(500, 100, dtype=np.int)
 
 #generate synthetic model and data.
 #model is really easy.
 truemodel = {}
 
-truemodel["As"] =  np.zeros((2, 2, num_resources), dtype=np.float_)
+truemodel["As"] =  np.zeros((num_resources,2,2), dtype=np.float_)
 for i in range(num_resources):
-    truemodel["As"][i, :, :] = np.transpose([[0.7, 0.3], [0, 1]])
-truemodel["learns"] = truemodel["As"][:, 1, 0]
-truemodel["forgets"] = truemodel["As"][:, 0, 1]
+    truemodel["As"][i] = np.transpose([[0.7, 0.3], [0, 1]])
+
+truemodel["learns"] = truemodel["As"][:,1, 0,]
+truemodel["forgets"] = truemodel["As"][:,0, 1]
 
 truemodel["pi_0"] = np.array([[0.9], [0.1]])
 truemodel["prior"] = truemodel["pi_0"][1][0]
 
 truemodel["guesses"] = np.full(num_subparts, 0.1, dtype=np.float_)
 truemodel["slips"] = np.full(num_subparts, 0.03, dtype=np.float_)
+#truemodel["resources"] = np.random.randint(1, high = num_resources, size = sum(observation_sequence_lengths))
 
 #data!
 print("generating data...")
