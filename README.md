@@ -4,6 +4,9 @@ Python implementation of the Bayesian Knowledge Tracing algorithm, modeling stud
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). 
 
+Python notebook quick start example:
+https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s
+
 This implimentation can be used to define many BKT variants, including these from the literature: 
 
 Pardos, Z.A., Heffernan, N.T. (2012) Tutor Modeling vs. Student Modeling. In Proceedings
@@ -34,25 +37,17 @@ git clone https://github.com/CAHLR/pyBKT.git
 ## Installing Eigen ##
 
 Get Eigen from http://eigen.tuxfamily.org/index.php?title=Main_Page and unzip
-it somewhere. On a \*nix machine, these commands should put Eigen in `/usr/local/include`:
+it into the pyBKT directory:
 
-    cd /usr/local/include
+    cd pyBKT
     wget --no-check-certificate http://bitbucket.org/eigen/eigen/get/3.1.3.tar.gz
     tar -xzvf 3.1.3.tar.gz
-    ln -s eigen-eigen-2249f9c22fe8/Eigen ./Eigen
-    rm 3.1.3.tar.gz
-
-Similarly, if working in OS X, you can download the latest stable version of Eigen 
-from the site above. This program has run successfully with _Eigen 3.2.5_.
-First move the file to `/usr/local/include`, then unzip and create simplified link to Eigen. 
-These commands can be used below:
-
-    mv <path to file>/3.1.3.tar.gz /usr/local/include/3.1.3.tar.gz
-    tar -xvf 3.1.3.tar.gz
-    ln -s <name of unzipped file>/Eigen ./Eigen
+    mv ./eigen-eigen-2249f9c22fe8 ./Eigen
     rm 3.1.3.tar.gz
 
 ## Installing Boost-Python ##
+
+On Unix machines, install all the Boost Libraries using `sudo apt install libboost-all-dev`
 
 On OS X, the easiest way to install Boost-Python is through Homebrew:
 
@@ -65,13 +60,11 @@ For Python 2 or when Python 3 is the default Python version.
 - brew install boost-python
 ```
 
-On Unix machines, install all the Boost Libraries using `sudo apt-get install libboost-all-dev`.
-
 ## Compiling ##
 
-Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP).
+Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP). The default python version in the Makefile is 3.6. If you have a different version, you will need to change NUMPY_INCLUDE_PATH  and BOOST_PYTHON_LIBS, accordingly. 
 
-Run `make` in the root directory of the pyBKT project folder. If this step runs successfully, you should see one _.o_ and one _.so_ file generated for each of the _.cpp_ files.
+Run `make` in the root directory of the pyBKT project folder. If this step runs successfully, you should see one _.o_ and one _.so_ file generated for each of the _.cpp_ files and the simulated data generation and training example should complete successfully, printing ground truth and learned BKT parameter values.
 
 ## Potential Errors When Running Makefile on OS X ##
 
