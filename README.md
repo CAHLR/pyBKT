@@ -50,6 +50,8 @@ For Python 2 or when Python 3 is the default Python version.
 - brew install boost-python
 ```
 
+NOTE: pyBKT is currently not compatible with libboost version >= 1.65.
+
 ## Compiling ##
 
 Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP). The default python version in the Makefile is 3.6. If you have a different version, you will need to change NUMPY_INCLUDE_PATH  and BOOST_PYTHON_LIBS, accordingly. 
