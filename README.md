@@ -9,20 +9,19 @@ https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s
 
 This implimentation can be used to define many BKT variants, including these from the literature: 
 
-Pardos, Z.A., Heffernan, N.T. (2012) Tutor Modeling vs. Student Modeling. In Proceedings
-of the 25th annual Florida Artificial Intelligence Research Society Conference. Marco
-Island, FL. AAAI. Pages 420-425.
+⋅⋅⋅Pardos, Z. A., Heffernan, N. T. (2010) Modeling Individualization in a Bayesian Networks
+⋅⋅⋅Implementation of Knowledge Tracing. In P. De Bra, A. Kobsa, D. Chin (eds.)
+⋅⋅⋅Proceedings of the 18th International Conference on User Modeling, Adaptation and
+⋅⋅⋅Personalization (UMAP). Big Island of Hawaii. Pages. Springer. Pages 255-266.
 
-Pardos, Z. & Heffernan, N. (2011) KT-IDEM: Introducing Item Difficulty to the Knowledge
-Tracing Model. In Konstant et al. (eds.) Proceedings of the 20th International
-Conference on User Modeling, Adaptation and Personalization (UMAP). Girona,
-Spain. Springer. Pages 243-254.
+⋅⋅⋅Pardos, Z. & Heffernan, N. (2011) KT-IDEM: Introducing Item Difficulty to the Knowledge
+⋅⋅⋅Tracing Model. In Konstant et al. (eds.) Proceedings of the 20th International
+⋅⋅⋅Conference on User Modeling, Adaptation and Personalization (UMAP). Girona,
+⋅⋅⋅Spain. Springer. Pages 243-254.
 
-Pardos, Z. A., Heffernan, N. T. (2010) Modeling Individualization in a Bayesian Networks
-Implementation of Knowledge Tracing. In P. De Bra, A. Kobsa, D. Chin (eds.)
-Proceedings of the 18th International Conference on User Modeling, Adaptation and
-Personalization (UMAP). Big Island of Hawaii. Pages. Springer. Pages 255-266.
-
+⋅⋅⋅Pardos, Z.A., Heffernan, N.T. (2012) Tutor Modeling vs. Student Modeling. In Proceedings
+⋅⋅⋅of the 25th annual Florida Artificial Intelligence Research Society Conference. Marco
+⋅⋅⋅Island, FL. AAAI. Pages 420-425.
 
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
 
