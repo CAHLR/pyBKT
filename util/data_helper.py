@@ -9,8 +9,10 @@ def assistments_data(skill_name):
   s = requests.get(url).content
   df = pd.read_csv(io.StringIO(s.decode('ISO-8859-1')))
   
-  # filter by the skill yo uwant
-  skill = df[df['skill_name']==skill_name]
+  # filter by the skill you want, make sure the question is an 'original'
+  skill = df[(df['skill_name']==skill_name) & (df['original'] == 1)]
+  # sort by the order in which the problems were answered
+  df.sort_values('order_id', inplace=True)
 
   # example of how to get the unique users
   # uilist=skill['user_id'].unique()
