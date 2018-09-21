@@ -27,17 +27,19 @@ def assistments_data(skill_name):
   # find out how many problems per user, form the start/length arrays
   steps=df3.groupby('user_id')['problem_id'].count().values
   lengths=np.copy(steps)
-  lengths=np.resize(lengths,lengths.size-1)
+  
   steps[0]=0
   steps[1]=1
-  for i in range(1,steps.size):
-    steps[i]=steps[i-1]+lengths[i-1]
+  for i in range(2,steps.size):
+    steps[i]=steps[i-1]+lengths[i-2]
+  
   starts=np.delete(steps,0)
 
   resources=[1]*data.size
   resource=np.asarray(resources)
   
   stateseqs=np.copy(resource)
+  lengths=np.resize(lengths,lengths.size-1)
   Data={}
   Data["stateseqs"]=np.asarray([stateseqs],dtype='int32')
   Data["data"]=np.asarray([data],dtype='int32')
@@ -46,5 +48,3 @@ def assistments_data(skill_name):
   Data["resources"]=resource
   
   return (Data)
-
-#assistments_data('Pythagorean Theorem')
