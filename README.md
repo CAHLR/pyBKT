@@ -4,7 +4,7 @@ Python implementation of the Bayesian Knowledge Tracing algorithm, modeling stud
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). 
 
-Python notebook quick start example: [Google Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab")
+Python notebook quick start example: [Google Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab") ** A new version of a library (libboost) broke dependencies, we are working on a fix
 
 This implimentation can be used to define many BKT variants, including these from the literature: 
 
