@@ -4,8 +4,9 @@ Python implementation of the Bayesian Knowledge Tracing algorithm, modeling stud
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). 
 
-Python notebook quick start example: [Google Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab") ** A new version of a library (libboost) broke dependencies, we are working on a fix
+[!Quick-start example with a Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab") 
 
+## Supported model variants
 This implimentation can be used to define many BKT variants, including these from the literature: 
 
 Pardos, Z. A., Heffernan, N. T. (2010) Modeling Individualization in a Bayesian Networks Implementation of Knowledge Tracing. In P. De Bra, A. Kobsa, D. Chin (eds.) Proceedings of the 18th International Conference on User Modeling, Adaptation and Personalization (UMAP). Big Island of Hawaii. Pages. Springer. Pages 255-266.
@@ -14,10 +15,8 @@ Pardos, Z. & Heffernan, N. (2011) KT-IDEM: Introducing Item Difficulty to the Kn
 
 Pardos, Z.A., Heffernan, N.T. (2012) Tutor Modeling vs. Student Modeling. In Proceedings of the 25th annual Florida Artificial Intelligence Research Society Conference. Marco Island, FL. AAAI. Pages 420-425.
 
-This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
-
 # Instalation and setup
-
+This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
 ## Cloning the repository ##
 
 ```
@@ -50,7 +49,10 @@ For Python 2 or when Python 3 is the default Python version.
 - brew install boost-python
 ```
 
-NOTE: pyBKT is currently not compatible with libboost version >= 1.65.
+NOTE: pyBKT is currently not compatible with libboost version >= 1.65 due to a switch to numpy from numeric for array representation. The following older compatible versions are recommended for Ubuntu installations:
+14.04: apt install libboost1.55-all-dev
+16.04: apt install libboost1.58-all-dev
+18.04: apt install  libboost1.62-all-dev
 
 ## Compiling ##
 
