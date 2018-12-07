@@ -50,8 +50,11 @@ For Python 2 or when Python 3 is the default Python version.
 ```
 
 NOTE: pyBKT is currently not compatible with libboost version >= 1.65 due to a switch to numpy from numeric for array representation. The following older compatible versions are recommended for Ubuntu installations:
+
 14.04: apt install libboost1.55-all-dev
+
 16.04: apt install libboost1.58-all-dev
+
 18.04: apt install  libboost1.62-all-dev
 
 ## Compiling ##
