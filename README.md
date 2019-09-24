@@ -2,18 +2,31 @@
 
 Python implementation of the Bayesian Knowledge Tracing algorithm, modeling student cognitive mastery from problem solving sequences.
 
-Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). 
-
 [Quick-start compile/train example in Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab") 
 
+Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
+
 ## Supported model variants
-This implimentation can be used to define many BKT variants, including these from the literature: 
+pyBKT can be used to define and fit many BKT variants, including these from the literature: 
 
-Pardos, Z. A., Heffernan, N. T. (2010) Modeling Individualization in a Bayesian Networks Implementation of Knowledge Tracing. In P. De Bra, A. Kobsa, D. Chin (eds.) Proceedings of the 18th International Conference on User Modeling, Adaptation and Personalization (UMAP). Big Island of Hawaii. Pages. Springer. Pages 255-266.
+* Individual student priors, learn rate, guess, and slip [1,2]
+* Individual item guess and slip [3,4,5]
+* Individual item or resource learn rate [4,5]
 
-Pardos, Z. & Heffernan, N. (2011) KT-IDEM: Introducing Item Difficulty to the Knowledge Tracing Model. In Konstant et al. (eds.) Proceedings of the 20th International Conference on User Modeling, Adaptation and Personalization (UMAP). Girona, Spain. Springer. Pages 243-254.
+1. Pardos, Z. A., Heffernan, N. T. (2010) Modeling Individualization in a Bayesian Networks Implementation of Knowledge Tracing. In P. De Bra, A. Kobsa, D. Chin (Eds.) *Proceedings of the 18th International Conference on User Modeling, Adaptation and Personalization* (UMAP). Big Island of Hawaii. Pages. Springer. Pages 255-266. [[doi]](https://doi.org/10.1007/978-3-642-13470-8_24
+)
 
-Pardos, Z.A., Heffernan, N.T. (2012) Tutor Modeling vs. Student Modeling. In Proceedings of the 25th annual Florida Artificial Intelligence Research Society Conference. Marco Island, FL. AAAI. Pages 420-425.
+1. Pardos, Z. A., Heffernan, N. T. (2010) Using HMMs and bagged decision trees to leverage rich features of user and skill from an intelligent tutoring system dataset. In J. Stamper & A. Niculescu-Mizil (Eds.) *Proceedings of the KDD Cup Workshop at the 16th ACM Conference on Knowledge Discovery and Data Mining* (SIGKDD). Washington, D.C. ACM. Pages 24-35. [[kdd cup]](https://pslcdatashop.web.cmu.edu/KDDCup/workshop/papers/pardos_heffernan_KDD_Cup_2010_article.pdf)
+
+1. Pardos, Z. & Heffernan, N. (2011) KT-IDEM: Introducing Item Difficulty to the Knowledge Tracing Model. In Konstant et al. (eds.) *Proceedings of the 20th International Conference on User Modeling, Adaptation and Personalization* (UMAP). Girona, Spain. Springer. Pages 243-254. [[doi]](https://doi.org/10.1007/978-3-642-22362-4_21)
+
+1. Pardos, Z. A., Bergner, Y., Seaton, D., Pritchard, D.E. (2013) Adapting Bayesian Knowledge Tracing to a Massive Open Online College Course in edX. In S.K. D’Mello, R.A. Calvo, & A. Olney (Eds.) *Proceedings of the 6th International Conference on Educational Data Mining* (EDM). Memphis, TN. Pages 137-144. [[edm]](http://educationaldatamining.org/EDM2013/proceedings/paper_20.pdf)
+
+1. Xu, Y., Johnson, M. J., Pardos, Z. A. (2015) Scaling cognitive modeling to massive open environments. In *Proceedings of the Workshop on Machine Learning for Education at the 32nd International Conference on Machine Learning* (ICML). Lille, France. [[icml ml4ed]](http://ml4ed.cc/attachments/XuY.pdf)
+
+
+
+
 
 # Instalation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
