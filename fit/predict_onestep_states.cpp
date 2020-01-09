@@ -135,7 +135,7 @@ numeric::array run(dict& data, dict& model, numeric::array& forward_messages){
     double forward_messages_temp [2*bigT];
     for (int i=0; i<2; i++) {
         for (int j=0; j<bigT; j++){
-            forward_messages_temp[i+j] = extract<double>(forward_messages[i][j]);
+            forward_messages_temp[i* bigT +j] = extract<double>(forward_messages[i][j]);
         }
     }
 
