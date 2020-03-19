@@ -50,27 +50,6 @@ Alternatively, if `pip` poses some problems, you can clone the repository as suc
     python3 setup.py install
 ```
 
-## Potential Errors When Running Makefile on OS X ##
-
-You may see the following error while running `make`
-```
-    make: g++-4.9: No such file or directory
-```
-
-Try `gcc --version` in your terminal. If a version exists, you already have gcc installed. This error may be due to an incorrect version of gcc being called. In order to change the gcc version in `Makefile`, update the `CXX` variable. For example, you may need to change `CXX=g++-4.9` to `CXX=g++-5`, depending on the version you set up. 
-
-If a version does not exist, you  may need to download gcc49. This can be downloaded with [brew](http://brew.sh/). 
-
-These steps would allow you to set up gcc49. Run the following commands
-```
-    brew install --enable-cxx gcc49
-    brew install mpfr
-    brew install gmp
-    brew install libmpc
-```
-
-The Makefile uses the python-config tool, if need to install it run: `sudo apt install python-dev`
-
 # Preparing Data and Running Model #
 ## Input and Output Data ##
 _pyBKT_ models student mastery of a skills as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable has two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
