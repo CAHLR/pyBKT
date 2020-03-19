@@ -2,10 +2,15 @@
 
 Python implementation of the Bayesian Knowledge Tracing algorithm, modeling student cognitive mastery from problem solving sequences.
 
-[Quick-start compile/train example in Colab notebook](https://colab.research.google.com/drive/13iqM8mtYwtOKw3Ja4RS51ZTa4NnEQ26s "pyBKT quick start in Colab") 
+[Quick-start compile/train example in Colab notebook](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") 
 
-Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
+Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python adaptation by Cristian Garay (c.garay@berkeley.edu). Contributions by Anirudhan Badrinath (abadrinath@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
 
+# Requirements
+Python >= 3.5 (Ubuntu >= 16.04)
+Libboost >= 1.58
+
+Supported OS: Linux only. Pure Python port in-development for OSX, Windows, and all other platforms. 
 ## Supported model variants
 pyBKT can be used to define and fit many BKT variants, including these from the literature: 
 
