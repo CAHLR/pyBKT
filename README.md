@@ -28,7 +28,7 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 
 
 
-# Instalation and setup
+# Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
 
 ## Installing Boost-Python ##
