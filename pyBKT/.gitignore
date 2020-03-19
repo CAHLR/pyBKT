@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.o
+*.so
+fit/E_step.cpp
+fit/predict_onestep_states.cpp
+generate/synthetic_data_helper.cpp
