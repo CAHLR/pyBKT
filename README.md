@@ -30,51 +30,25 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 
 # Instalation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
-## Cloning the repository ##
-
-```
-git clone https://github.com/CAHLR/pyBKT.git
-```
-
-## Installing Eigen ##
-
-Get Eigen from http://eigen.tuxfamily.org/index.php?title=Main_Page and unzip
-it into the pyBKT directory:
-
-    cd pyBKT
-    wget --no-check-certificate http://bitbucket.org/eigen/eigen/get/3.1.3.tar.gz
-    tar -xzvf 3.1.3.tar.gz
-    mv ./eigen-eigen-2249f9c22fe8 ./Eigen
-    rm 3.1.3.tar.gz
 
 ## Installing Boost-Python ##
 
-On Unix machines, install all the Boost Libraries using `sudo apt install libboost-all-dev`
+On Ubuntu machines, install all the Boost Libraries using `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to the Linux distribution to install `libboost`.
 
-On OS X, the easiest way to install Boost-Python is through Homebrew:
+## Installing ##
+
+Once `libboost` is installed (check by doing a quick `ldconfig -p | grep libboost_python`, which should yield an output), you can simply run:
 
 ```
-For Python 3 (when is not the default Python version in the machine)
-- brew uninstall boost-python (if already installed)
-- brew install boost-python --with-python3 --without-python
+    pip install git+https://github.com/CAHLR/pyBKT.git
+``` 
+Alternatively, if `pip` poses some problems, you can clone the repository as such and then run the `setup.py` script manually.
 
-For Python 2 or when Python 3 is the default Python version.
-- brew install boost-python
 ```
-
-NOTE: pyBKT is currently not compatible with libboost version >= 1.65 due to a switch to numpy from numeric for array representation. The following older compatible versions are recommended for Ubuntu installations:
-
-14.04: apt install libboost1.55-all-dev
-
-16.04: apt install libboost1.58-all-dev
-
-18.04: apt install  libboost1.62-all-dev
-
-## Compiling ##
-
-Before running `make`, check `Makefile` in the pyBKT folder. Be sure that the paths for all the libraries are correct (Boos-Python, Eigen, Numpy, OMP). The default python version in the Makefile is 3.6. If you have a different version, you will need to change NUMPY_INCLUDE_PATH  and BOOST_PYTHON_LIBS, accordingly. 
-
-Run `make` in the root directory of the pyBKT project folder. If this step runs successfully, you should see one _.o_ and one _.so_ file generated for each of the _.cpp_ files and the simulated data generation and training example should complete successfully, printing ground truth and learned BKT parameter values.
+    git clone https://github.com/CAHLR/pyBKT.git
+    cd pyBKT
+    python3 setup.py install
+```
 
 ## Potential Errors When Running Makefile on OS X ##
 
