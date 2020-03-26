@@ -103,6 +103,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
+
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
     numeric::array alldata = extract<numeric::array>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
@@ -212,140 +213,149 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             plhs[0] = mxCreateDoubleScalar(0.);
             total_loglike = mxGetPr(plhs[0]);
     }*/
-    double * r_alpha_out = new double[2 * bigT];
+    double * r_alpha_out = new double[2*bigT];
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
 
     /* COMPUTATION */
+    Eigen::initParallel();
     /* omp_set_dynamic(0); */
     /* omp_set_num_threads(6); */
-    //#pragma omp parallel
-    //{
-    double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
-    double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
+    #pragma omp parallel
+    {
+        double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
+        double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
+        Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
+        Map<ArrayXXd,Aligned> emission_softcounts_temp(s_emission_softcounts,2,2*num_subparts);
+        Array2d init_softcounts_temp;
+        double loglike;
 
-    Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
-    Map<ArrayXXd,Aligned> emission_softcounts_temp(s_emission_softcounts,2,2*num_subparts);
-    Array2d init_softcounts_temp;
-    double loglike;
+        trans_softcounts_temp.setZero();
+        emission_softcounts_temp.setZero();
+        init_softcounts_temp.setZero();
+        loglike = 0;
+        int num_threads = omp_get_num_threads();
+        int blocklen = 1 + ((num_sequences - 1) / num_threads);
+        int sequence_idx_start = blocklen * omp_get_thread_num();
+        int sequence_idx_end = min(sequence_idx_start+blocklen,num_sequences);
+        //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
+        //cout << "start: " << sequence_idx_start << " end: " << sequence_idx_end << endl;
 
-    trans_softcounts_temp.setZero();
-    emission_softcounts_temp.setZero();
-    init_softcounts_temp.setZero();
-    loglike = 0;
-    //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
-    //cout << "start: " << sequence_idx_start << " end: " << sequence_idx_end << endl;
+        for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
-    for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
-        // NOTE: -1 because Matlab indexing starts at 1
-        int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
+            // NOTE: -1 because Matlab indexing starts at 1
+            int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
 
-        int64_t T = extract<int64_t>(lengths[sequence_index]);
+            int64_t T = extract<int64_t>(lengths[sequence_index]);
 
-        //// likelihoods
-        double * s_likelihoods = new double[2*T];
-        Map<Array2Xd,Aligned> likelihoods(s_likelihoods,2,T);
+            //// likelihoods
+            double s_likelihoods[2*T];
+            Map<Array2Xd,Aligned> likelihoods(s_likelihoods,2,T);
 
-        likelihoods.setOnes();
-         for (int t=0; t<T; t++) {
-             for (int n=0; n<num_subparts; n++) {
-                int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
-                 if (data_temp != 0) {
-                     likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
+            likelihoods.setOnes();
+             for (int t=0; t<T; t++) {
+                 for (int n=0; n<num_subparts; n++) {
+                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                     if (data_temp != 0) {
+                         likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
+                     }
                  }
              }
-         }
 
-        //// forward messages
-        double norm;
-        double * s_alpha = new double[2*T];// __attribute__((aligned(16)));
-        double contribution;
-        Map<MatrixXd,Aligned> alpha(s_alpha,2,T);
-        alpha.col(0) = initial_distn * likelihoods.col(0);
-        norm = alpha.col(0).sum();
-        //cout << "norm: " << norm << endl;
-        alpha.col(0) /= norm;
-        contribution = log(norm);
-        //cout << "contribution " << contribution << endl;
-        if(normalizeLengths) {
-            contribution = contribution / T;
-        }
-        loglike += contribution;
-        //cout << "loglike2 " << loglike << endl;
-
-        for (int t=0; t<T-1; t++) {
-            int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
-            alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
-                * likelihoods.col(t+1);
-            //cout << "likelihoods.col(t+1) " << likelihoods.col(t+1) << endl;
-            norm = alpha.col(t+1).sum();
+            //// forward messages
+            double norm;
+            double s_alpha[2*T] __attribute__((aligned(16)));
+            double contribution;
+            Map<MatrixXd,Aligned> alpha(s_alpha,2,T);
+            alpha.col(0) = initial_distn * likelihoods.col(0);
+            norm = alpha.col(0).sum();
             //cout << "norm: " << norm << endl;
-            alpha.col(t+1) /= norm;
+            alpha.col(0) /= norm;
             contribution = log(norm);
-            //cout << "contribution: " << contribution << endl;
+            //cout << "contribution " << contribution << endl;
             if(normalizeLengths) {
                 contribution = contribution / T;
             }
             loglike += contribution;
-            //cout << "loglike " << loglike << endl;
-        }
+            //cout << "loglike2 " << loglike << endl;
 
-        //// backward messages and statistic counting
-
-        double*  s_gamma = new double[2*T];// __attribute__((aligned(16)));
-        Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
-        gamma.col(T-1) = alpha.col(T-1);
-        for (int n=0; n<num_subparts; n++) {
-            int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+(T-1)]);
-            if (data_temp != 0) {
-                emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(T-1);
+            for (int t=0; t<T-1; t++) {
+                int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
+                alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
+                    * likelihoods.col(t+1);
+                //cout << "likelihoods.col(t+1) " << likelihoods.col(t+1) << endl;
+                norm = alpha.col(t+1).sum();
+                //cout << "norm: " << norm << endl;
+                alpha.col(t+1) /= norm;
+                contribution = log(norm);
+                //cout << "contribution: " << contribution << endl;
+                if(normalizeLengths) {
+                    contribution = contribution / T;
+                }
+                loglike += contribution;
+                //cout << "loglike " << loglike << endl;
             }
-        }
 
-        for (int t=T-2; t>=0; t--) {
+            //// backward messages and statistic counting
 
-            int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
-            Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
-            Array22d pair = A.array();
-            pair.rowwise() *= alpha.col(t).transpose().array();
-            pair.colwise() *= gamma.col(t+1);
-            pair.colwise() /= (A*alpha.col(t)).array();
-            pair = (pair != pair).select(0.,pair); // NOTE: replace NaNs
-            trans_softcounts_temp.block(0,2*(resources_temp-1),2,2) += pair;
-
-            gamma.col(t) = pair.colwise().sum().transpose();
-            // NOTE: we have to touch the data again here
+            double s_gamma[2*T] __attribute__((aligned(16)));
+            Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
+            gamma.col(T-1) = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
-                int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+(T-1)]);
                 if (data_temp != 0) {
-                    emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(t);
+                    emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(T-1);
                 }
             }
+
+            for (int t=T-2; t>=0; t--) {
+
+				int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
+                Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
+                Array22d pair = A.array();
+                pair.rowwise() *= alpha.col(t).transpose().array();
+                pair.colwise() *= gamma.col(t+1);
+                pair.colwise() /= (A*alpha.col(t)).array();
+                pair = (pair != pair).select(0.,pair); // NOTE: replace NaNs
+                trans_softcounts_temp.block(0,2*(resources_temp-1),2,2) += pair;
+
+                gamma.col(t) = pair.colwise().sum().transpose();
+                // NOTE: we have to touch the data again here
+                for (int n=0; n<num_subparts; n++) {
+                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                    if (data_temp != 0) {
+                        emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(t);
+                    }
+                }
+            }
+            init_softcounts_temp += gamma.col(0);
+
+            //TODO: FIX THIS!!!
+            /* switch (nlhs)
+            {
+                case 4:
+                    likelihoods_out.block(0,sequence_start,2,T) = likelihoods;
+                case 3:
+                    gamma_out.block(0,sequence_start,2,T) = gamma;
+                case 2:
+                    alpha_out.block(0,sequence_start,2,T) = alpha;
+            } */
+            alpha_out.block(0,sequence_start,2,T) = alpha;
         }
-        init_softcounts_temp += gamma.col(0);
 
-        //TODO: FIX THIS!!!
-        /* switch (nlhs)
+        #pragma omp critical
         {
-            case 4:
-                likelihoods_out.block(0,sequence_start,2,T) = likelihoods;
-            case 3:
-                gamma_out.block(0,sequence_start,2,T) = gamma;
-            case 2:
-                alpha_out.block(0,sequence_start,2,T) = alpha;
-        } */
-        alpha_out.block(0,sequence_start,2,T) = alpha;
-    //    delete s_gamma; delete s_alpha; delete s_likelihoods;
+            all_trans_softcounts += trans_softcounts_temp;
+            all_emission_softcounts += emission_softcounts_temp;
+            all_initial_softcounts += init_softcounts_temp;
+            //cout << "loglike " << loglike << endl;
+            *total_loglike += loglike;
+        }
     }
-
-        all_trans_softcounts += trans_softcounts_temp;
-        all_emission_softcounts += emission_softcounts_temp;
-        all_initial_softcounts += init_softcounts_temp;
-        //cout << "loglike " << loglike << endl;
-        *total_loglike += loglike;
 
     dict result;
     result["total_loglike"] = *total_loglike;
+
     //cout << "r_trans_softcounts " << r_trans_softcounts << endl;
 
     npy_intp all_trans_softcounts_dims[3] = {num_resources,2,2}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
@@ -366,10 +376,12 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     boost::python::numeric::array all_initial_softcounts_arr( all_initial_softcounts_handle );
     result["all_initial_softcounts"] = all_initial_softcounts_arr;
 
-    npy_intp alpha_out_dims[2] = {2, bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * alpha_out_pyObj = PyArray_New(&PyArray_Type, 2, alpha_out_dims, NPY_DOUBLE, NULL, &r_alpha_out, 0, NPY_ARRAY_CARRAY, NULL);
-    boost::python::handle<> alpha_out_handle ( alpha_out_pyObj );
-    result["alpha"] = alpha_out_handle;
+    npy_intp alpha_out_dims[2] = {2,bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
+    PyObject * alpha_out_pyObj = PyArray_New(&PyArray_Type, 2, alpha_out_dims, NPY_DOUBLE, NULL, r_alpha_out, 0, NPY_ARRAY_CARRAY, NULL);
+    boost::python::handle<> alpha_out_handle( alpha_out_pyObj );
+    boost::python::numeric::array alpha_out_arr (alpha_out_handle);
+    result["alpha"] = alpha_out_arr;
+
     return(result);
 }
 
