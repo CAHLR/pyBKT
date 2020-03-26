@@ -118,8 +118,6 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     //gamma_out.setZero();
     //Array2Xd alpha_out(2,bigT);
     //alpha_out.setZero();
-    Map<Array2Xd,Aligned> likelihoods_out(NULL,2,bigT);
-    Map<Array2Xd,Aligned> gamma_out(NULL,2,bigT);
     Map<Array2Xd,Aligned> alpha_out(NULL,2,bigT);
     double s_total_loglike = 0;
     double *total_loglike = &s_total_loglike;
@@ -140,12 +138,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
             plhs[0] = mxCreateDoubleScalar(0.);
             total_loglike = mxGetPr(plhs[0]);
     }*/
-    double r_likelihoods_out[2*bigT];
-    double r_gamma_out[2*bigT];
     double* r_alpha_out = (double*) malloc(2 * bigT * sizeof(double));
-
-    new (&likelihoods_out) Map<Array2Xd,Aligned>(r_likelihoods_out,2,bigT);
-    new (&gamma_out) Map<Array2Xd,Aligned>(r_gamma_out,2,bigT);
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
 
@@ -202,11 +195,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
             alpha.col(0) = initial_distn * likelihoods.col(0);
             norm = alpha.col(0).sum();
             alpha.col(0) /= norm;
-            contribution = log(norm);
-            if(normalizeLengths) {
-                contribution = contribution / T;
-            }
-            loglike += contribution;
+            loglike += log(norm) / (normalizeLengths? T : 1);
 
             for (int t=0; t<T-1; t++) {
                 int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
@@ -214,11 +203,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
                     * likelihoods.col(t+1);
                 norm = alpha.col(t+1).sum();
                 alpha.col(t+1) /= norm;
-                contribution = log(norm);
-                if(normalizeLengths) {
-                    contribution = contribution / T;
-                }
-                loglike += contribution;
+                loglike += log(norm) / (normalizeLengths? T : 1);
             }
 
             //// backward messages and statistic counting
@@ -265,8 +250,6 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
                 case 2:
                     alpha_out.block(0,sequence_start,2,T) = alpha;
             } */
-            likelihoods_out.block(0,sequence_start,2,T) = likelihoods;
-            gamma_out.block(0,sequence_start,2,T) = gamma;
             alpha_out.block(0,sequence_start,2,T) = alpha;
         }
 
