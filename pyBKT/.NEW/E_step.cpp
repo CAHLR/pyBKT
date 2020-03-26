@@ -36,6 +36,8 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
+    Eigen::initParallel();
+    Eigen::setNbThreads(n);
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
     numpy::ndarray alldata = extract<numpy::ndarray>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
@@ -44,7 +46,6 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
     numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
 
-    cout << "ree";
     numpy::ndarray starts = extract<numpy::ndarray>(data["starts"]);
 
     int num_sequences = len(starts);
@@ -141,12 +142,10 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     double* r_alpha_out = (double*) malloc(2 * bigT * sizeof(double));
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
-             cout << "ree";
 
     /* COMPUTATION */
     #pragma omp parallel
     {
-             cout << "ree";
         double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
         double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
         Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
@@ -174,22 +173,17 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
             //// likelihoods
             double * s_likelihoods = new double[2*T];
-             cout << "ree";
             Map<Array2Xd,Aligned> likelihoods(s_likelihoods,2,T);
 
-             cout << "ree";
             likelihoods.setOnes();
-             cout << "ree";
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
                     int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
                      if (data_temp != 0) {
                         likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
                      }
-             cout << "ree";
                  }
              }
-             cout << "ree";
 
             //// forward messages
             double norm;
