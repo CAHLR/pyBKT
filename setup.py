@@ -19,7 +19,7 @@ sys.tracebacklimit = 0
 FILES = {'synthetic_data_helper.cpp': './generate/',
          'predict_onestep_states.cpp': './fit/', 'E_step.cpp': './fit/'}
 
-ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w']
+ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp']
 ALL_LINK_ARGS = ['-fopenmp']
 ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + [np.get_include(), 'pyBKT/Eigen/', get_paths()['include']]

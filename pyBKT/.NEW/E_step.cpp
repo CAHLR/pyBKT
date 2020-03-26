@@ -36,7 +36,6 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
-
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
     numpy::ndarray alldata = extract<numpy::ndarray>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
@@ -45,6 +44,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
     numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
 
+    cout << "ree";
     numpy::ndarray starts = extract<numpy::ndarray>(data["starts"]);
 
     int num_sequences = len(starts);
@@ -141,13 +141,12 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     double* r_alpha_out = (double*) malloc(2 * bigT * sizeof(double));
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
+             cout << "ree";
 
     /* COMPUTATION */
-    Eigen::initParallel();
-    /* omp_set_dynamic(0); */
-    /* omp_set_num_threads(6); */
     #pragma omp parallel
     {
+             cout << "ree";
         double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
         double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
         Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
@@ -164,28 +163,33 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
         int sequence_idx_start = blocklen * omp_get_thread_num();
         int sequence_idx_end = min(sequence_idx_start+blocklen,num_sequences);
         //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
-        //cout << "start: " << sequence_idx_start << " end: " << sequence_idx_end << endl;
 
         for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
+             cout << "ree";
             // NOTE: -1 because Matlab indexing starts at 1
             int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
 
             int64_t T = extract<int64_t>(lengths[sequence_index]);
 
             //// likelihoods
-            double s_likelihoods[2*T];
+            double * s_likelihoods = new double[2*T];
+             cout << "ree";
             Map<Array2Xd,Aligned> likelihoods(s_likelihoods,2,T);
 
+             cout << "ree";
             likelihoods.setOnes();
+             cout << "ree";
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
                     int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
                      if (data_temp != 0) {
-                         likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
+                        likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
                      }
+             cout << "ree";
                  }
              }
+             cout << "ree";
 
             //// forward messages
             double norm;
@@ -250,9 +254,8 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
                 case 2:
                     alpha_out.block(0,sequence_start,2,T) = alpha;
             } */
-            alpha_out.block(0,sequence_start,2,T) = alpha;
+            //alpha_out.block(0,sequence_start,2,T) = alpha;
         }
-
         #pragma omp critical
         {
             all_trans_softcounts += trans_softcounts_temp;

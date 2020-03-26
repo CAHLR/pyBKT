@@ -188,8 +188,6 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     //gamma_out.setZero();
     //Array2Xd alpha_out(2,bigT);
     //alpha_out.setZero();
-    Map<Array2Xd,Aligned> likelihoods_out(NULL,2,bigT);
-    Map<Array2Xd,Aligned> gamma_out(NULL,2,bigT);
     Map<Array2Xd,Aligned> alpha_out(NULL,2,bigT);
     double s_total_loglike = 0;
     double *total_loglike = &s_total_loglike;
@@ -215,12 +213,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             plhs[0] = mxCreateDoubleScalar(0.);
             total_loglike = mxGetPr(plhs[0]);
     }*/
-    double r_likelihoods_out[2*bigT];
-    double r_gamma_out[2*bigT];
-    double r_alpha_out[2*bigT];
-
-    new (&likelihoods_out) Map<Array2Xd,Aligned>(r_likelihoods_out,2,bigT);
-    new (&gamma_out) Map<Array2Xd,Aligned>(r_gamma_out,2,bigT);
+    double * r_alpha_out = new double[2*bigT];
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
 
@@ -347,8 +340,6 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
                 case 2:
                     alpha_out.block(0,sequence_start,2,T) = alpha;
             } */
-            likelihoods_out.block(0,sequence_start,2,T) = likelihoods;
-            gamma_out.block(0,sequence_start,2,T) = gamma;
             alpha_out.block(0,sequence_start,2,T) = alpha;
         }
 
