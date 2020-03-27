@@ -37,7 +37,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-    
+    Eigen::initParallel();    
 
     numpy::ndarray alldata = extract<numpy::ndarray>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.

@@ -106,6 +106,8 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
 
+    Eigen::initParallel();
+
     numeric::array alldata = extract<numeric::array>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
@@ -236,7 +238,6 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
 
     /* COMPUTATION */
-    Eigen::initParallel();
     /* omp_set_dynamic(0); */
     /* omp_set_num_threads(6); */
     #pragma omp parallel
