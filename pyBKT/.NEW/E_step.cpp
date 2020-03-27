@@ -46,7 +46,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     alldata_arr.resize(num_subparts, bigT);
     for (int i = 0; i < num_subparts; i++)
         for (int j = 0; j < bigT; j++)
-            alldata_arr(i, j) = extract<int32_t>(alldata[i][j]); //extract<int32_t>(alldata_arr[i][j]);
+            alldata_arr(i, j) = extract<int32_t>(alldata[i][j]);
 
     numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
     int len_allresources = len(allresources);

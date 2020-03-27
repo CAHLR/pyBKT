@@ -109,14 +109,32 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     numeric::array alldata = extract<numeric::array>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
+    Array<int32_t, Eigen::Dynamic, Eigen::Dynamic> alldata_arr;
+    alldata_arr.resize(num_subparts, bigT);
+    for (int i = 0; i < num_subparts; i++)
+        for (int j = 0; j < bigT; j++)
+            alldata_arr(i, j) = extract<int32_t>(alldata[i][j]);
 
     numeric::array allresources = extract<numeric::array>(data["resources"]);
+    int len_allresources = len(allresources);
+    Array<int64_t, Eigen::Dynamic, 1> allresources_arr;
+    allresources_arr.resize(len_allresources, 1);
+    for (int i = 0; i < len_allresources; i++)
+        allresources_arr.row(i) << extract<int64_t>(allresources[i]);
 
     numeric::array starts = extract<numeric::array>(data["starts"]);
-
     int num_sequences = len(starts);
+    Array<int64_t, Eigen::Dynamic, 1> starts_arr;
+    starts_arr.resize(num_sequences, 1);
+    for (int i = 0; i < num_sequences; i++)
+        starts_arr.row(i) << extract<int64_t>(starts[i]);
 
     numeric::array lengths = extract<numeric::array>(data["lengths"]);
+    int len_lengths = len(lengths);
+    Array<int64_t, Eigen::Dynamic, 1> lengths_arr;
+    lengths_arr.resize(len_lengths, 1);
+    for (int i = 0; i < len_lengths; i++)
+        lengths_arr.row(i) << extract<int64_t>(lengths[i]);
 
     numeric::array learns = extract<numeric::array>(model["learns"]);
     int num_resources = len(learns);
@@ -244,9 +262,9 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
         for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
             // NOTE: -1 because Matlab indexing starts at 1
-            int64_t sequence_start = extract<int64_t>(starts[sequence_index]) - 1;
+            int64_t sequence_start = starts_arr(sequence_index, 0) - 1;
 
-            int64_t T = extract<int64_t>(lengths[sequence_index]);
+            int64_t T = lengths_arr(sequence_index, 0);
 
             //// likelihoods
             double s_likelihoods[2*T];
@@ -255,7 +273,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             likelihoods.setOnes();
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
-                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                    int32_t data_temp = alldata_arr(n, sequence_start+t);
                      if (data_temp != 0) {
                          likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
                      }
@@ -280,7 +298,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             //cout << "loglike2 " << loglike << endl;
 
             for (int t=0; t<T-1; t++) {
-                int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
+                int64_t resources_temp = allresources_arr(sequence_start+t, 0);
                 alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
                     * likelihoods.col(t+1);
                 //cout << "likelihoods.col(t+1) " << likelihoods.col(t+1) << endl;
@@ -302,7 +320,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
             Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
             gamma.col(T-1) = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
-                int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+(T-1)]);
+                int32_t data_temp = alldata_arr(n, sequence_start+(T-1));
                 if (data_temp != 0) {
                     emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(T-1);
                 }
@@ -310,7 +328,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
 
             for (int t=T-2; t>=0; t--) {
 
-				int64_t resources_temp = extract<int64_t>(allresources[sequence_start+t]);
+				int64_t resources_temp = allresources_arr(sequence_start+t, 0);
                 Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
                 Array22d pair = A.array();
                 pair.rowwise() *= alpha.col(t).transpose().array();
@@ -322,7 +340,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
                 gamma.col(t) = pair.colwise().sum().transpose();
                 // NOTE: we have to touch the data again here
                 for (int n=0; n<num_subparts; n++) {
-                    int32_t data_temp = extract<int32_t>(alldata[n][sequence_start+t]);
+                    int32_t data_temp = alldata_arr(n, sequence_start+t);
                     if (data_temp != 0) {
                         emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(t);
                     }
