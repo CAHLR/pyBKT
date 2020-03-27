@@ -295,7 +295,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
     numpy::ndarray alpha_out_arr = numpy::from_data(r_alpha_out, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, bigT),
                                                                boost::python::make_tuple(bigT * 8, 8), boost::python::object());
-    result["alpha_out"] = alpha_out_arr;
+    result["alpha"] = alpha_out_arr;
 
     return(result);
 }

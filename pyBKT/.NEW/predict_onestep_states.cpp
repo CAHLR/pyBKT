@@ -15,7 +15,7 @@ using namespace Eigen;
 using namespace std;
 using namespace boost::python;
 
-namespace np = boost::python::numpy;
+namespace np = numpy;
 namespace p = boost::python;
 
 //original comment:
@@ -72,14 +72,16 @@ numpy::ndarray run(dict& data, dict& model, numpy::ndarray& forward_messages){
         As.col(2*n+1) << forget, 1-forget;
     }
 
+
     // forward messages
     //numpy::ndarray all_forward_messages = extract<numpy::ndarray>(forward_messages);
-    double forward_messages_temp [2*bigT];
+    double * forward_messages_temp = new double[2*bigT];
     for (int i=0; i<2; i++) {
         for (int j=0; j<bigT; j++){
             forward_messages_temp[i* bigT +j] = extract<double>(forward_messages[i][j]);
         }
     }
+
 
     //// outputs
 
@@ -94,8 +96,8 @@ numpy::ndarray run(dict& data, dict& model, numpy::ndarray& forward_messages){
         int64_t T = extract<int64_t>(lengths[sequence_index]);
 
         //int16_t *resources = allresources + sequence_start;
-        Map<MatrixXd> forward_messages(forward_messages_temp + 2*sequence_start,2,T);
-        Map<MatrixXd> predictions(all_predictions + 2*sequence_start,2,T);
+        Map<MatrixXd, Aligned> forward_messages(forward_messages_temp + 2*sequence_start,2,T);
+        Map<MatrixXd, Aligned> predictions(all_predictions + 2*sequence_start,2,T);
 
         predictions.col(0) = initial_distn;
         for (int t=0; t<T-1; t++) {
@@ -104,7 +106,8 @@ numpy::ndarray run(dict& data, dict& model, numpy::ndarray& forward_messages){
         }
     }
 
-    numpy::ndarray all_predictions_arr = np::from_data(all_predictions, np::dtype::get_builtin<double>(), p::make_tuple(2, bigT), p::make_tuple(8 * bigT, bigT), p::object());
+    numpy::ndarray all_predictions_arr = numpy::from_data(all_predictions, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, bigT),
+                                                                           boost::python::make_tuple(bigT * 8, 8), boost::python::object());;
     return(all_predictions_arr);
 }
 
