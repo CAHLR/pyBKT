@@ -126,8 +126,8 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     }
     
     //// outputs
-    int all_stateseqs[1][bigT]; //used to be int8_t
-    int all_data[num_subparts][bigT]; //used to be int8_t
+    int * all_stateseqs = new int[1][bigT]; //used to be int8_t
+    int * all_data = new int[num_subparts][bigT]; //used to be int8_t
     all_data[0][0] = 0;
     dict result;
     
