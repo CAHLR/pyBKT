@@ -129,8 +129,6 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     int * all_stateseqs = new int[bigT]; //used to be int8_t
     int * all_data = new int[num_subparts * bigT];
     all_data[0] = 0;
-
-    cout << "here1" << endl;
     dict result;
     
     /* COMPUTATION */
