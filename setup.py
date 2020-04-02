@@ -106,7 +106,7 @@ try:
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         description="PyBKT",
         url="https://github.com/CAHLR/pyBKT",
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util', 'pyBKT.source-py'],
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
