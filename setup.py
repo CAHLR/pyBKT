@@ -119,6 +119,7 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
+    print(os.listdir(), file = sys.stderr)
     move('pyBKT', 'unneeded')
     move('unneeded/source-py', 'pyBKT')
     setup(
