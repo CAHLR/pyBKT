@@ -117,6 +117,7 @@ try:
     )
 except:
     move('pyBKT', 'unneeded')
+    print(os.listdir(), os.listdir('unneeded'))
     move('unneeded/.source-py', 'pyBKT')
     setup(
         name="pyBKT",
