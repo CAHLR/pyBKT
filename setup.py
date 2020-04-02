@@ -8,7 +8,7 @@
 
 import numpy as np, os
 import sys
-from shutil import copyfile
+from shutil import copyfile, move
 import subprocess as s
 from sysconfig import get_paths
 from distutils.core import setup, Extension
@@ -62,26 +62,24 @@ def clean():
     LIBRARY_DIRS = [i for i in LIBRARY_DIRS if i != ""]
     ALL_LIBRARIES = [i for i in ALL_LIBRARIES if i != ""]
 
-if LIBRARY_DIRS:
-    ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
-
-if find_boost_version() < 165:
-    copy_files(FILES, '.DEPRECATED')
-    LIBRARY_DIRS += find_dep_lib_dirs()
-    ALL_LIBRARIES.append(find_dep_lib_name())
-else:
-    copy_files(FILES, '.NEW')
-    LIBRARY_DIRS += find_library_dirs()
-    ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
-
-if len(LIBRARY_DIRS) < 2:
-    raise ValueError('Unable to find Boost library location or linker flags. Specify them with LD_LIBRARY_PATH or with pip install --install-option="-lboostlibraryhere".')
-
-clean()
-
-os.chdir('..')
 
 try:
+    if LIBRARY_DIRS:
+        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+
+    if find_boost_version() < 165:
+        copy_files(FILES, '.DEPRECATED')
+        LIBRARY_DIRS += find_dep_lib_dirs()
+        ALL_LIBRARIES.append(find_dep_lib_name())
+    else:
+        copy_files(FILES, '.NEW')
+        LIBRARY_DIRS += find_library_dirs()
+        ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
+
+    clean()
+
+    os.chdir('..')
+
     module1 = Extension('pyBKT/generate/synthetic_data_helper', sources = ['pyBKT/generate/synthetic_data_helper.cpp'], include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
@@ -121,4 +119,20 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
-    raise ValueError('Unable to find Boost library location or linker flags. Specify them with LD_LIBRARY_PATH or with pip install --install-option="-lboostlibraryhere".')
+    move('pyBKT', 'unneeded')
+    move('unneeded/source-py', 'pyBKT')
+    setup(
+        name="pyBKT",
+        version="1.3",
+        author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
+        author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
+        description="PyBKT",
+        url="https://github.com/CAHLR/pyBKT",
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: MIT License",
+            "Operating System :: OS Independent",
+        ],
+        install_requires = ["numpy"],
+    )
