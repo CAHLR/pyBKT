@@ -13,11 +13,10 @@ import subprocess as s
 from sysconfig import get_paths
 from distutils.core import setup, Extension
 
-os.chdir('pyBKT')
 sys.tracebacklimit = 0
 
-FILES = {'synthetic_data_helper.cpp': './generate/',
-         'predict_onestep_states.cpp': './fit/', 'E_step.cpp': './fit/'}
+FILES = {'synthetic_data_helper.cpp': 'pyBKT/generate/',
+         'predict_onestep_states.cpp': 'pyBKT/fit/', 'E_step.cpp': 'pyBKT/fit/'}
 
 ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp']
 ALL_LINK_ARGS = ['-fopenmp']
@@ -68,17 +67,15 @@ try:
         ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
 
     if find_boost_version() < 165:
-        copy_files(FILES, '.DEPRECATED')
+        copy_files(FILES, 'pyBKT/.DEPRECATED')
         LIBRARY_DIRS += find_dep_lib_dirs()
         ALL_LIBRARIES.append(find_dep_lib_name())
     else:
-        copy_files(FILES, '.NEW')
+        copy_files(FILES, 'pyBKT/.NEW')
         LIBRARY_DIRS += find_library_dirs()
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
 
     clean()
-
-    os.chdir('..')
 
     module1 = Extension('pyBKT/generate/synthetic_data_helper', sources = ['pyBKT/generate/synthetic_data_helper.cpp'], include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
