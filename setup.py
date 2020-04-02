@@ -119,12 +119,9 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
-    if 'np-include.info' in os.listdir():
-        os.chdir('..')
-        os.system('mv pyBKT unneeded; mv unneeded/source-py pyBKT')
-    else:
-        move('pyBKT', 'unneeded')
-        move('unneeded/source-py', 'pyBKT')
+    os.chdir('..')
+    move('pyBKT', 'unneeded')
+    move('unneeded/source-py', 'pyBKT')
     setup(
         name="pyBKT",
         version="1.3",
