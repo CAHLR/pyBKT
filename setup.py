@@ -106,7 +106,7 @@ try:
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         description="PyBKT",
         url="https://github.com/CAHLR/pyBKT",
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util', 'pyBKT.source-py'],
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
@@ -117,8 +117,7 @@ try:
     )
 except:
     move('pyBKT', 'unneeded')
-    print(os.listdir('unneeded'))
-    move('unneeded/source-py', 'pyBKT')
+    move('unneeded/.source-py', 'pyBKT')
     setup(
         name="pyBKT",
         version="1.3",
