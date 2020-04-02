@@ -25,6 +25,8 @@ def run(model, data):
         result['all_emission_softcounts'][j] = result['all_emission_softcounts'][j].transpose()
 
     state_predictions = predict_onestep_states.run(data, model, result['alpha'])
+    p = state_predictions.shape
+    state_predictions = state_predictions.flatten(order = 'C').reshape(p, order = 'F')
 
     correct_emission_predictions = model["guesses"]*state_predictions[0,:] + (1-model["slips"])*state_predictions[1,:]
 
