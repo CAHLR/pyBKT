@@ -3,7 +3,7 @@
 # Setup for PyBKT                       #
 #                                       #
 # @author Anirudhan Badrinath           #
-# Last edited: 09 March 2020            #
+# Last edited: 01 April 2020            #
 #########################################
 
 import numpy as np, os
