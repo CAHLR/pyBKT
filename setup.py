@@ -121,7 +121,8 @@ try:
 except:
     if 'np-include.info' in os.listdir():
         os.chdir('..')
-        os.system('mv pyBKT unneeded; mv unneeded/source-py pyBKT')
+        os.system('ls -lrt')
+        os.system('cd ..;mv pyBKT unneeded; mv unneeded/source-py pyBKT')
     else:
         move('pyBKT', 'unneeded')
         move('unneeded/source-py', 'pyBKT')
