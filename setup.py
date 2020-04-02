@@ -120,11 +120,13 @@ try:
     )
 except:
     if 'np-include.info' in os.listdir():
+        move('source-py', '..')
         os.chdir('..')
-    print(os.listdir())
-    move('pyBKT', 'unneeded')
-    print(os.listdir())
-    move('unneeded/source-py', 'pyBKT')
+        move('pyBKT', 'unneeded')
+        move('source-py', 'pyBKT')
+    else:
+        move('pyBKT', 'unneeded')
+        move('unneeded/source-py', 'pyBKT')
     setup(
         name="pyBKT",
         version="1.3",
