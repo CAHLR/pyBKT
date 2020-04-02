@@ -126,9 +126,11 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     }
     
     //// outputs
-    int * all_stateseqs = new int[1][bigT]; //used to be int8_t
-    int * all_data = new int[num_subparts][bigT]; //used to be int8_t
-    all_data[0][0] = 0;
+    int * all_stateseqs = new int[bigT]; //used to be int8_t
+    int * all_data = new int[num_subparts * bigT];
+    all_data[0] = 0;
+
+    cout << "here1" << endl;
     dict result;
     
     /* COMPUTATION */
@@ -140,21 +142,23 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
         Vector2d nextstate_distr = initial_distn;
 
         for (int t=0; t<T; t++) {
-            all_stateseqs[0][sequence_start + t] = nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX); //always all_stateseqs[0]?
+            all_stateseqs[sequence_start + t] = nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX); //always all_stateseqs[0]?
             for (int n=0; n<num_subparts; n++) {
-                all_data[n][sequence_start+t] = ((all_stateseqs[0][sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < (((double) rand()) / ((double) RAND_MAX));
+                all_data[n * num_subparts + sequence_start+t] = ((all_stateseqs[sequence_start + t]) ? extract<double>(slips[n]) : (1-extract<double>(guesses[n]))) < (((double) rand()) / ((double) RAND_MAX));
             }
             
-            nextstate_distr = As.col(2*(extract<int64_t>(resources[sequence_start + t])-1)+all_stateseqs[0][sequence_start + t]); //extract int is right??
+            nextstate_distr = As.col(2*(extract<int64_t>(resources[sequence_start + t])-1)+all_stateseqs[sequence_start + t]); //extract int is right??
         }
     }
     
+
     //wrapping results in numpy objects.
     npy_intp all_stateseqs_dims[2] = {1, bigT}; //just put directly this array into the PyArray_SimpleNewFromData function?
     PyObject * all_stateseqs_pyObj = PyArray_SimpleNewFromData(2, all_stateseqs_dims, NPY_INT, all_stateseqs); //this should be NPY_INT8.
     boost::python::handle<> all_stateseqs_handle( all_stateseqs_pyObj );
     boost::python::numeric::array all_stateseqs_handle_arr( all_stateseqs_handle );
     
+
     npy_intp all_data_dims[2] = {num_subparts, bigT}; //just put directly this array into the PyArray_SimpleNewFromData function?
     PyObject * all_data_pyObj = PyArray_SimpleNewFromData(2, all_data_dims, NPY_INT, all_data); //this should be NPY_INT8.
     boost::python::handle<> all_data_handle( all_data_pyObj );
@@ -162,6 +166,7 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     
     result["stateseqs"] = all_stateseqs_handle_arr;
     result["data"] = all_data_arr;
+
     return(result);
     
 }
