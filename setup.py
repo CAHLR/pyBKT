@@ -116,9 +116,10 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
-    move('./pyBKT/source-py', './source-py')
-    move('./pyBKT', './unneeded')
-    move('./source-py', './pyBKT')
+    print(os.listdir())
+    move(os.path.join('pyBKT', 'source-py'), 'source-py')
+    move('pyBKT', 'unneeded')
+    move('source-py', 'pyBKT')
     setup(
         name="pyBKT",
         version="1.3",
