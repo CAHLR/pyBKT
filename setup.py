@@ -15,13 +15,14 @@ from distutils.core import setup, Extension
 
 sys.tracebacklimit = 0
 
-FILES = {'synthetic_data_helper.cpp': 'pyBKT/generate/',
-         'predict_onestep_states.cpp': 'pyBKT/fit/', 'E_step.cpp': 'pyBKT/fit/'}
+FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
+         'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
+         'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
 ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp']
 ALL_LINK_ARGS = ['-fopenmp']
 ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
-INCLUDE_DIRS = sys.path + [np.get_include(), 'pyBKT/Eigen/', get_paths()['include']]
+INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']]
 LIBRARY_DIRS = [os.environ['LD_LIBRARY_PATH']] if 'LD_LIBRARY_PATH' in os.environ \
                                                else []
 def find_library_dirs():
@@ -67,37 +68,38 @@ try:
         ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
 
     if find_boost_version() < 165:
-        copy_files(FILES, 'pyBKT/.DEPRECATED')
+        copy_files(FILES, 'source-cpp/.DEPRECATED')
         LIBRARY_DIRS += find_dep_lib_dirs()
         ALL_LIBRARIES.append(find_dep_lib_name())
     else:
-        copy_files(FILES, 'pyBKT/.NEW')
+        copy_files(FILES, 'source-cpp/.NEW')
         LIBRARY_DIRS += find_library_dirs()
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
 
     clean()
 
-    module1 = Extension('pyBKT/generate/synthetic_data_helper', sources = ['pyBKT/generate/synthetic_data_helper.cpp'], include_dirs = INCLUDE_DIRS,
+    module1 = Extension('pyBKT/generate/synthetic_data_helper',
+                        sources = ['source-cpp/pyBKT/generate/synthetic_data_helper.cpp'], 
+                        include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
                         libraries = ALL_LIBRARIES, 
                         extra_link_args = ALL_LINK_ARGS)
 
-    module2 = Extension('pyBKT/fit/E_step', sources = ['pyBKT/fit/E_step.cpp'], include_dirs = INCLUDE_DIRS,
+    module2 = Extension('pyBKT/fit/E_step', 
+                        sources = ['source-cpp/pyBKT/fit/E_step.cpp'],
+                        include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
                         libraries = ALL_LIBRARIES, 
                         extra_link_args = ALL_LINK_ARGS)
 
-    module3 = Extension('pyBKT/fit/predict_onestep_states', sources = ['pyBKT/fit/predict_onestep_states.cpp'], include_dirs = INCLUDE_DIRS,
+    module3 = Extension('pyBKT/fit/predict_onestep_states',
+                        sources = ['source-cpp/pyBKT/fit/predict_onestep_states.cpp'],                        include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
                         libraries = ALL_LIBRARIES, 
                         extra_link_args = ALL_LINK_ARGS)
-
-    with open("README.md", "r") as fh:
-        long_description = fh.read()
-
 
     setup(
         name="pyBKT",
@@ -107,6 +109,10 @@ try:
         description="PyBKT",
         url="https://github.com/CAHLR/pyBKT",
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        package_dir = { 'pyBKT': 'source-cpp/pyBKT',
+                        'pyBKT.generate': 'source-cpp/pyBKT/generate',
+                        'pyBKT.fit': 'source-cpp/pyBKT/fit',
+                        'pyBKT.util': 'source-cpp/pyBKT/util'},
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
@@ -116,9 +122,6 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
-    move('pyBKT', 'unneeded')
-    print(os.listdir(), os.listdir('unneeded'))
-    move('unneeded/.source-py', 'pyBKT')
     setup(
         name="pyBKT",
         version="1.3",
@@ -126,11 +129,15 @@ except:
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         description="PyBKT",
         url="https://github.com/CAHLR/pyBKT",
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
         ],
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        package_dir = { 'pyBKT': 'source-py/pyBKT',
+                        'pyBKT.generate': 'source-py/pyBKT/generate',
+                        'pyBKT.fit': 'source-py/pyBKT/fit',
+                        'pyBKT.util': 'source-py/pyBKT/util'},
         install_requires = ["numpy"],
     )
