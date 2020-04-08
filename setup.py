@@ -7,6 +7,7 @@
 #########################################
 
 import numpy as np, os
+from os.path import normpath as npath
 import sys
 from shutil import copyfile, move
 import subprocess as s
@@ -22,39 +23,53 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
 ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp']
 ALL_LINK_ARGS = ['-fopenmp']
 ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
-INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']]
+INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
+                ([os.environ['BOOST_INCLUDE']] if 'BOOST_INCLUDE' in os.environ \
+                                                 else [])
 LIBRARY_DIRS = [os.environ['LD_LIBRARY_PATH']] if 'LD_LIBRARY_PATH' in os.environ \
                                                else []
 def find_library_dirs():
     lst = []
-    os.system("whereis libboost_python | cut -d' ' -f 2 | sed 's/libboost.*//' > np-include.info")
-    lst.append(open("np-include.info", "r").read().strip())
+    try:
+        os.system("whereis libboost_python | cut -d' ' -f 2 | sed 's/libboost.*//' > np-include.info")
+        lst.append(open("np-include.info", "r").read().strip())
+    except:
+        pass
     os.system("python3-config --exec-prefix > np-include.info")
     lst.append(open("np-include.info", "r").read().strip() + "/lib")
     return lst
 
 def find_dep_lib_dirs():
     lst = []
-    os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d\">\" -f2 | xargs | sed 's/libboost.*//' > np-include.info")
-    lst.append(open("np-include.info", "r").read().strip())
+    try:
+        os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d\">\" -f2 | xargs | sed 's/libboost.*//' > np-include.info")
+        lst.append(open("np-include.info", "r").read().strip())
+    except:
+        pass
     os.system("python3-config --exec-prefix > np-include.info")
     lst.append(open("np-include.info", "r").read().strip() + "/lib")
     return lst
 
 def find_dep_lib_name(l = None):
-    if l is None:
-        os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
-    else:
-        os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
-    return open("np-include.info", "r").read().strip()
+    try:
+        if l is None:
+            os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
+        else:
+            os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
+        return open("np-include.info", "r").read().strip()
+    except:
+        return "boost_python"
 
 def find_boost_version():
-    os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
-    return int(open("np-include.info", "r").read().strip().replace('_', ''))
+    try:
+        os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
+        return int(open("np-include.info", "r").read().strip().replace('_', ''))
+    except:
+        return 165
 
 def copy_files(l, s):
     for i in l:
-        copyfile(os.path.normpath(s + "/" + i), os.path.normpath(l[i] + "/" + i))
+        copyfile(npath(s + "/" + i), npath(l[i] + "/" + i))
 
 def clean():
     global LIBRARY_DIRS, ALL_LIBRARIES
@@ -68,18 +83,18 @@ try:
         ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
 
     if find_boost_version() < 165:
-        copy_files(FILES, 'source-cpp/.DEPRECATED')
+        copy_files(FILES, npath('source-cpp/.DEPRECATED'))
         LIBRARY_DIRS += find_dep_lib_dirs()
         ALL_LIBRARIES.append(find_dep_lib_name())
     else:
-        copy_files(FILES, 'source-cpp/.NEW')
+        copy_files(FILES, npath('source-cpp/.NEW'))
         LIBRARY_DIRS += find_library_dirs()
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
 
     clean()
 
     module1 = Extension('pyBKT/generate/synthetic_data_helper',
-                        sources = ['source-cpp/pyBKT/generate/synthetic_data_helper.cpp'], 
+                        sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
                         include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
@@ -87,7 +102,7 @@ try:
                         extra_link_args = ALL_LINK_ARGS)
 
     module2 = Extension('pyBKT/fit/E_step', 
-                        sources = ['source-cpp/pyBKT/fit/E_step.cpp'],
+                        sources = [npath('source-cpp/pyBKT/fit/E_step.cpp')],
                         include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
@@ -95,7 +110,8 @@ try:
                         extra_link_args = ALL_LINK_ARGS)
 
     module3 = Extension('pyBKT/fit/predict_onestep_states',
-                        sources = ['source-cpp/pyBKT/fit/predict_onestep_states.cpp'],                        include_dirs = INCLUDE_DIRS,
+                        sources = [npath('source-cpp/pyBKT/fit/predict_onestep_states.cpp')],
+                        include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
                         library_dirs = LIBRARY_DIRS, 
                         libraries = ALL_LIBRARIES, 
@@ -109,10 +125,10 @@ try:
         description="PyBKT",
         url="https://github.com/CAHLR/pyBKT",
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
-        package_dir = { 'pyBKT': 'source-cpp/pyBKT',
-                        'pyBKT.generate': 'source-cpp/pyBKT/generate',
-                        'pyBKT.fit': 'source-cpp/pyBKT/fit',
-                        'pyBKT.util': 'source-cpp/pyBKT/util'},
+        package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
+                        'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
+                        'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
+                        'pyBKT.util': npath('source-cpp/pyBKT/util')},
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
