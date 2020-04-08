@@ -151,9 +151,9 @@ except:
             "Operating System :: OS Independent",
         ],
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
-        package_dir = { 'pyBKT': 'source-py/pyBKT',
-                        'pyBKT.generate': 'source-py/pyBKT/generate',
-                        'pyBKT.fit': 'source-py/pyBKT/fit',
-                        'pyBKT.util': 'source-py/pyBKT/util'},
+        package_dir = { 'pyBKT': npath('source-py/pyBKT'),
+                        'pyBKT.generate': npath('source-py/pyBKT/generate'),
+                        'pyBKT.fit': npath('source-py/pyBKT/fit'),
+                        'pyBKT.util': npath('source-py/pyBKT/util')},
         install_requires = ["numpy"],
     )
