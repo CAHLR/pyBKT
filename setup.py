@@ -77,7 +77,7 @@ def clean():
     LIBRARY_DIRS = [i for i in LIBRARY_DIRS if i != ""]
     ALL_LIBRARIES = [i for i in ALL_LIBRARIES if i != ""]
 
-with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 try:
