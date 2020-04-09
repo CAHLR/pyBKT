@@ -128,7 +128,6 @@ try:
         download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
         keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
         classifiers=[
-            'Development Status :: 5 - Stable',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
@@ -156,7 +155,6 @@ except:
         download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
         keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
         classifiers=[
-            'Development Status :: 5 - Stable',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
