@@ -6,14 +6,14 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 ```
 [Quick-start example in Colab notebook](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") 
 
-Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python boost adaptation by Cristian Garay (c.garay@berkeley.edu). All-platform python adaption and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
+Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python boost adaptation by Cristian Garay (c.garay@berkeley.edu). All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
 
 ## Requirements
-Python >= 3.5 (Ubuntu >= 16.04)
-
-Libboost >= 1.58
+Python >= 3.5
 
 Supported OS: All platforms! (Yes, Windows too)
+
+Libboost >= 1.58 (optional - will enable fast inference if installed)
 ## Supported model variants
 pyBKT can be used to define and fit many BKT variants, including these from the literature: 
 
@@ -39,7 +39,7 @@ This is intended as a quick overview of steps to install and setup and to run py
 
 ## Installing Boost-Python ##
 
-If you are using a Linux distribution with Lib Boost, pyBKT will install with fast c++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your Linux machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution.
+If you have Lib Boost already installed, pip will install pyBKT with fast c++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution. Without Boot, pip will install pyBKT without c++ speed optimizations.
 
 ## Installing ##
 
