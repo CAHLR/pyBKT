@@ -12,7 +12,7 @@ import sys
 from shutil import copyfile, move
 import subprocess as s
 from sysconfig import get_paths
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 
 sys.tracebacklimit = 0
 
