@@ -77,6 +77,8 @@ def clean():
     LIBRARY_DIRS = [i for i in LIBRARY_DIRS if i != ""]
     ALL_LIBRARIES = [i for i in ALL_LIBRARIES if i != ""]
 
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 try:
     if LIBRARY_DIRS:
@@ -135,6 +137,8 @@ try:
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
         ],
+        long_description = long_description,
+        long_description_content_type='text/markdown',
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
         package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
                         'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
@@ -162,6 +166,8 @@ except:
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
         ],
+        long_description = long_description,
+        long_description_content_type='text/markdown',
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
         package_dir = { 'pyBKT': npath('source-py/pyBKT'),
                         'pyBKT.generate': npath('source-py/pyBKT/generate'),
