@@ -119,34 +119,48 @@ try:
 
     setup(
         name="pyBKT",
-        version="1.3",
+        version="1.0",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
-        description="PyBKT",
+        license = 'MIT',
+        description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
         url="https://github.com/CAHLR/pyBKT",
+        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+        keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
+        classifiers=[
+            'Development Status :: 5 - Stable',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8'
+            "License :: OSI Approved :: MIT License",
+            "Operating System :: OS Independent",
+        ],
         packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
         package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
                         'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
                         'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
                         'pyBKT.util': npath('source-cpp/pyBKT/util')},
-        classifiers=[
-            "Programming Language :: Python :: 3",
-            "License :: OSI Approved :: MIT License",
-            "Operating System :: OS Independent",
-        ],
         install_requires = ["numpy"],
         ext_modules = [module1, module2, module3]
     )
 except:
     setup(
         name="pyBKT",
-        version="1.3",
+        version="1.0",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
-        description="PyBKT",
+        license = 'MIT',
+        description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
         url="https://github.com/CAHLR/pyBKT",
+        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+        keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
         classifiers=[
-            "Programming Language :: Python :: 3",
+            'Development Status :: 5 - Stable',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8'
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",
         ],
