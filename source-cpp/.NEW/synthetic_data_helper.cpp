@@ -60,8 +60,8 @@ dict create_synthetic_data(dict& model, numpy::ndarray& starts, numpy::ndarray& 
     }
     
     //// outputs
-    int* all_stateseqs = (int*) malloc(bigT * sizeof(int));
-    int* all_data = (int*) malloc(num_subparts * bigT * sizeof(int)); //used to be int8_t
+    int* all_stateseqs = new int[bigT];
+    int* all_data = new int[num_subparts * bigT]; //used to be int8_t
     *all_data = 0;
     dict result;
     
@@ -84,9 +84,9 @@ dict create_synthetic_data(dict& model, numpy::ndarray& starts, numpy::ndarray& 
     }
     
     //wrapping results in numpy objects.
-    np::ndarray all_stateseqs_arr = np::from_data(all_stateseqs, np::dtype::get_builtin<int>(), p::make_tuple(1, bigT), p::make_tuple(4 * bigT, 4), p::object());
+    np::ndarray all_stateseqs_arr = np::from_data(all_stateseqs, np::dtype::get_builtin<int>(), p::make_tuple(1, bigT), p::make_tuple(4 * bigT, 4), p::object()).copy();
     
-    np::ndarray all_data_arr = np::from_data(all_data, np::dtype::get_builtin<int>(), p::make_tuple(num_subparts, bigT), p::make_tuple(4 * bigT, 4), p::object());
+    np::ndarray all_data_arr = np::from_data(all_data, np::dtype::get_builtin<int>(), p::make_tuple(num_subparts, bigT), p::make_tuple(4 * bigT, 4), p::object()).copy();
     
     result["stateseqs"] = all_stateseqs_arr;
     result["data"] = all_data_arr;

@@ -121,9 +121,9 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     all_emission_softcounts.setZero();
     Array2d all_initial_softcounts(2, 1); //should i use these dimensions? the same as the original vector??
     all_initial_softcounts.setZero();*/
-    double* r_trans_softcounts = (double*) malloc(2*2*num_resources * sizeof(double));
-    double* r_emission_softcounts = (double*) malloc(2*2*num_subparts * sizeof(double));
-    double* r_init_softcounts = (double*) malloc(2*1 * sizeof(double));;
+    double* r_trans_softcounts = new double[2*2*num_resources];
+    double* r_emission_softcounts = new double[2*2*num_subparts];
+    double* r_init_softcounts = new double[2*1];
     Map<ArrayXXd,Aligned> all_trans_softcounts(r_trans_softcounts,2,2*num_resources);
     all_trans_softcounts.setZero();
     Map<Array2Xd,Aligned> all_emission_softcounts(r_emission_softcounts,2,2*num_subparts);
@@ -158,7 +158,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
             plhs[0] = mxCreateDoubleScalar(0.);
             total_loglike = mxGetPr(plhs[0]);
     }*/
-    double* r_alpha_out = (double*) malloc(2 * bigT * sizeof(double));
+    double* r_alpha_out = new double[2 * bigT];
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
     /* COMPUTATION */
@@ -281,21 +281,26 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
 
     numpy::ndarray all_trans_softcounts_arr = numpy::from_data(r_trans_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(num_resources, 2, 2),
-                                                               boost::python::make_tuple(32, 16, 8), boost::python::object());
+                                                               boost::python::make_tuple(32, 16, 8), boost::python::object()).copy();
     result["all_trans_softcounts"] = all_trans_softcounts_arr;
 
 
     numpy::ndarray all_emission_softcounts_arr = numpy::from_data(r_emission_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(num_subparts, 2, 2),
-                                                               boost::python::make_tuple(32, 16, 8), boost::python::object());
+                                                               boost::python::make_tuple(32, 16, 8), boost::python::object()).copy();
     result["all_emission_softcounts"] = all_emission_softcounts_arr;
 
     numpy::ndarray all_initial_softcounts_arr = numpy::from_data(r_init_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, 1),
-                                                               boost::python::make_tuple(8, 8), boost::python::object());
+                                                               boost::python::make_tuple(8, 8), boost::python::object()).copy();
     result["all_initial_softcounts"] = all_initial_softcounts_arr;
 
     numpy::ndarray alpha_out_arr = numpy::from_data(r_alpha_out, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, bigT),
-                                                               boost::python::make_tuple(bigT * 8, 8), boost::python::object());
+                                                               boost::python::make_tuple(bigT * 8, 8), boost::python::object()).copy();
     result["alpha"] = alpha_out_arr;
+
+    delete r_alpha_out;
+    delete r_trans_softcounts;
+    delete r_emission_softcounts;
+    delete r_init_softcounts;
 
     return(result);
 }

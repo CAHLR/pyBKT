@@ -85,7 +85,7 @@ numpy::ndarray run(dict& data, dict& model, numpy::ndarray& forward_messages){
 
     //// outputs
 
-    double* all_predictions = (double*) malloc(2 * bigT * sizeof(double));
+    double* all_predictions = new double[2 * bigT];
     Map<Array2Xd,Aligned> predictions(all_predictions,2,bigT);
 
     /* COMPUTATION */
@@ -107,7 +107,9 @@ numpy::ndarray run(dict& data, dict& model, numpy::ndarray& forward_messages){
     }
 
     numpy::ndarray all_predictions_arr = numpy::from_data(all_predictions, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, bigT),
-                                                                           boost::python::make_tuple(bigT * 8, 8), boost::python::object());;
+                                                                           boost::python::make_tuple(bigT * 8, 8), boost::python::object()).copy();
+    delete all_predictions;
+    delete forward_messages_temp;
     return(all_predictions_arr);
 }
 
