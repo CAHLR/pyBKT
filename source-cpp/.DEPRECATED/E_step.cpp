@@ -401,6 +401,8 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     boost::python::numeric::array alpha_out_arr (alpha_out_handle);
     result["alpha"] = alpha_out_arr;
 
+    delete r_alpha_out;
+
     return(result);
 }
 

@@ -165,6 +165,9 @@ dict create_synthetic_data(dict& model, numeric::array& starts, numeric::array& 
     result["stateseqs"] = all_stateseqs_handle_arr;
     result["data"] = all_data_arr;
 
+    delete all_stateseqs;
+    delete all_data;
+
     return(result);
     
 }

@@ -132,7 +132,7 @@ numeric::array run(dict& data, dict& model, numeric::array& forward_messages){
 
     // forward messages
     //numeric::array all_forward_messages = extract<numeric::array>(forward_messages);
-    double forward_messages_temp [2*bigT];
+    double * forward_messages_temp = new double[2*bigT];
     for (int i=0; i<2; i++) {
         for (int j=0; j<bigT; j++){
             forward_messages_temp[i* bigT +j] = extract<double>(forward_messages[i][j]);
@@ -141,7 +141,7 @@ numeric::array run(dict& data, dict& model, numeric::array& forward_messages){
 
     //// outputs
 
-    double all_predictions[2*bigT];
+    double * all_predictions = new double[2*bigT];
     Map<Array2Xd,Aligned> predictions(all_predictions,2,bigT);
 
     /* COMPUTATION */
@@ -163,9 +163,13 @@ numeric::array run(dict& data, dict& model, numeric::array& forward_messages){
     }
 
     npy_intp all_predictions_dims[2] = {2,bigT}; //TODO: just put directly this array into the PyArray_SimpleNewFromData function?
-    PyObject * all_predictions_pyObj = PyArray_New(&PyArray_Type, 2, all_predictions_dims, NPY_DOUBLE, NULL, &all_predictions, 0, NPY_ARRAY_CARRAY, NULL);
+    PyObject * all_predictions_pyObj = PyArray_New(&PyArray_Type, 2, all_predictions_dims, NPY_DOUBLE, NULL, all_predictions, 0, NPY_ARRAY_CARRAY, NULL);
     boost::python::handle<> all_predictions_handle( all_predictions_pyObj );
     boost::python::numeric::array all_predictions_arr( all_predictions_handle );
+
+    delete all_predictions;
+    delete forward_messages_temp;
+
     return(all_predictions_arr);
 }
 
