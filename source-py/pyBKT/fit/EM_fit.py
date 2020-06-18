@@ -143,7 +143,7 @@ def inner(x):
         # likelihood calculation
         likelihoods = np.ones((2, T))
         alpha = np.empty((2, T))
-        for t in range(2):
+        for t in range(min(2, T)):
             for n in range(num_subparts):
                 data_temp = alldata[n][sequence_start + t]
                 if data_temp:
@@ -158,13 +158,14 @@ def inner(x):
         resources_temp = allresources[sequence_start + 1]
 
         # combined with t = 2 for efficiency, otherwise we need another loop
-        k = 2 * (resources_temp - 1)
-        alpha[:, 1] = dot(As[0:2, k: k + 2], alpha[:, 0]) * \
-                  likelihoods[:, 1]
-        norm = sum(alpha[:, 1])
-        alpha[:, 1] /= norm
-        contribution = log(norm) / (T if normalizeLengths else 1)
-        loglike += contribution
+        if T >= 2:
+            k = 2 * (resources_temp - 1)
+            alpha[:, 1] = dot(As[0:2, k: k + 2], alpha[:, 0]) * \
+                      likelihoods[:, 1]
+            norm = sum(alpha[:, 1])
+            alpha[:, 1] /= norm
+            contribution = log(norm) / (T if normalizeLengths else 1)
+            loglike += contribution
 
         for t in range(2, T):
             for n in range(num_subparts):
