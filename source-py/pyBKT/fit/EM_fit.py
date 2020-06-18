@@ -158,7 +158,7 @@ def inner(x):
 
         # combined with t = 2 for efficiency, otherwise we need another loop
         if T >= 2:
-            resources_temp = allresources[sequence_start + 1]
+            resources_temp = allresources[sequence_start]
             k = 2 * (resources_temp - 1)
             alpha[:, 1] = dot(As[0:2, k: k + 2], alpha[:, 0]) * \
                       likelihoods[:, 1]
