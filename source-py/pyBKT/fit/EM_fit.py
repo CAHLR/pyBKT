@@ -146,8 +146,9 @@ def inner(x):
         for t in range(min(2, T)):
             for n in range(num_subparts):
                 data_temp = alldata[n][sequence_start + t]
-                if data_temp:
-                    likelihoods[:,t] *= Bn[:, 2 * n + int(data_temp == 2)]
+                if data_temp and not (Bn[:, 2 * n + int(data_temp == 2)] == 0).all():
+                    if not np.allclose(likelihoods[:,t] * Bn[:, 2 * n + int(data_temp == 2)], np.array([0, 0])):
+                        likelihoods[:,t] *= Bn[:, 2 * n + int(data_temp == 2)]
         
         # setup for alpha, included in loop for efficiency (to keep it as one loop)
         alpha[:,0] = initial_distn * likelihoods[:,0]
@@ -170,8 +171,9 @@ def inner(x):
         for t in range(2, T):
             for n in range(num_subparts):
                 data_temp = alldata[n][sequence_start + t]
-                if data_temp:
-                    likelihoods[:,t] *= Bn[:, 2 * n + int(data_temp == 2)]
+                if data_temp and not (Bn[:, 2 * n + int(data_temp == 2)] == 0).all():
+                    if not np.allclose(likelihoods[:,t] * Bn[:, 2 * n + int(data_temp == 2)], np.array([0, 0])):
+                        likelihoods[:,t] *= Bn[:, 2 * n + int(data_temp == 2)]
             # general loop for alpha calculations
             resources_temp = allresources[sequence_start + t - 1]
             k = 2 * (resources_temp - 1)
