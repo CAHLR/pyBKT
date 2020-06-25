@@ -27,11 +27,6 @@ def run(model, data):
     state_predictions = predict_onestep_states.run(data, model, result['alpha'])
     p = state_predictions.shape
     state_predictions = state_predictions.flatten(order = 'C').reshape(p, order = 'F')
-    # replace nans?
-    for i in range(len(state_predictions)):
-        for j in range(len(state_predictions[0]) - 1):
-            if np.isnan(state_predictions[i][j + 1]):
-                state_predictions[i][j + 1] = np.around(state_predictions[i][j], 8)
     # multiguess solution, should work
     correct_emission_predictions = np.expand_dims(model["guesses"], axis = 1) @ np.expand_dims(state_predictions[0,:], axis = 0) + np.expand_dims(1-model["slips"], axis = 1) @ np.expand_dims(state_predictions[1,:], axis = 0)
     #correct_emission_predictions = model['guesses'] * np.asarray([state_predictions[0,:]]).T + (1 - model['slips']) * np.asarray([state_predictions[1,:]]).T
