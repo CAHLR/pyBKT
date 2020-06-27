@@ -196,12 +196,11 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
              for (int t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
                     int32_t data_temp = alldata_arr(n, sequence_start+t);
-                    bool zeroed = Bn.col(2*n + (data_temp == 2)).isZero(0);
-                     if (data_temp != 0 && !zeroed) {
-                        if (!(likelihoods.col(t) * Bn.col(2*n + (data_temp == 2))).isZero(0)) {
-                            likelihoods.col(t) *= Bn.col(2*n + (data_temp == 2));
-                        }
-                     }
+                    if (data_temp != 0) {
+                        for (int i = 0; i < likelihoods.rows(); i++)
+                            if (Bn(i, 2*n + (data_temp == 2)) != 0)
+                                likelihoods(i, t) *= Bn(i, 2*n + (data_temp == 2));
+                    }
                  }
              }
 
