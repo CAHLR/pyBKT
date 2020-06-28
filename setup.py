@@ -20,7 +20,7 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
          'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
-ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp']
+ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O3']
 ALL_LINK_ARGS = ['-fopenmp']
 ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
