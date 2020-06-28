@@ -111,32 +111,23 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     numeric::array alldata = extract<numeric::array>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
-    Array<int32_t, Eigen::Dynamic, Eigen::Dynamic> alldata_arr;
-    alldata_arr.resize(num_subparts, bigT);
-    for (int i = 0; i < num_subparts; i++)
-        for (int j = 0; j < bigT; j++)
-            alldata_arr(i, j) = extract<int32_t>(alldata[i][j]);
 
-    numeric::array allresources = extract<numeric::array>(data["resources"]);
+	Map<ArrayXXi,Aligned> alldata_arr(reinterpret_cast<int*>(alldata.get_data()),num_subparts,bigT);
+    numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
+
     int len_allresources = len(allresources);
-    Array<int64_t, Eigen::Dynamic, 1> allresources_arr;
-    allresources_arr.resize(len_allresources, 1);
-    for (int i = 0; i < len_allresources; i++)
-        allresources_arr.row(i) << extract<int64_t>(allresources[i]);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(allresources.get_data()),len_allresources,1);
 
-    numeric::array starts = extract<numeric::array>(data["starts"]);
+    numpy::ndarray starts = extract<numpy::ndarray>(data["starts"]);
     int num_sequences = len(starts);
-    Array<int64_t, Eigen::Dynamic, 1> starts_arr;
-    starts_arr.resize(num_sequences, 1);
-    for (int i = 0; i < num_sequences; i++)
-        starts_arr.row(i) << extract<int64_t>(starts[i]);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(starts.get_data()),num_sequences,1);
 
-    numeric::array lengths = extract<numeric::array>(data["lengths"]);
+
+    numpy::ndarray lengths = extract<numpy::ndarray>(data["lengths"]);
     int len_lengths = len(lengths);
-    Array<int64_t, Eigen::Dynamic, 1> lengths_arr;
-    lengths_arr.resize(len_lengths, 1);
-    for (int i = 0; i < len_lengths; i++)
-        lengths_arr.row(i) << extract<int64_t>(lengths[i]);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(lengths.get_data()),len_lengths,1);
+
+
 
     numeric::array learns = extract<numeric::array>(model["learns"]);
     int num_resources = len(learns);
