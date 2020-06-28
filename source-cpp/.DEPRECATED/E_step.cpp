@@ -112,22 +112,21 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
 
-	Map<ArrayXXi,Aligned> alldata_arr(reinterpret_cast<int*>(alldata.get_data()),num_subparts,bigT);
-    numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
+    npy_intp ind[2]{0,0};
+	Map<ArrayXXi,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_GetPtr((PyArrayObject*)alldata.view().ptr(), ind)),num_subparts,bigT);
+    numeric::array allresources = extract<numeric::array>(data["resources"]);
 
     int len_allresources = len(allresources);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(allresources.get_data()),len_allresources,1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(PyArray_GetPtr((PyArrayObject*)allresources.view().ptr(), ind)),len_allresources,1);
 
-    numpy::ndarray starts = extract<numpy::ndarray>(data["starts"]);
+    numeric::array starts = extract<numeric::array>(data["starts"]);
     int num_sequences = len(starts);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(starts.get_data()),num_sequences,1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(PyArray_GetPtr((PyArrayObject*)starts.view().ptr(), ind)),num_sequences,1);
 
 
-    numpy::ndarray lengths = extract<numpy::ndarray>(data["lengths"]);
+    numeric::array lengths = extract<numeric::array>(data["lengths"]);
     int len_lengths = len(lengths);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(lengths.get_data()),len_lengths,1);
-
-
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(PyArray_GetPtr((PyArrayObject*)lengths.view().ptr(), ind)),len_lengths,1);
 
     numeric::array learns = extract<numeric::array>(model["learns"]);
     int num_resources = len(learns);
