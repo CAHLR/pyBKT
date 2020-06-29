@@ -91,6 +91,8 @@ dict create_synthetic_data(dict& model, numpy::ndarray& starts, numpy::ndarray& 
     result["stateseqs"] = all_stateseqs_arr;
     result["data"] = all_data_arr;
 
+    delete all_stateseqs; delete all_data;
+
     return(result);
 }
 
