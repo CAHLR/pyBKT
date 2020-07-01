@@ -73,7 +73,7 @@ def find_boost_version():
         return int(open("np-include.info", "r").read().strip().replace('_', ''))
     except:
         if 'BOOST_INCLUDE' in os.environ:
-            os.system("cat $(BOOST_INCLUDE)/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
+            os.system("cat $BOOST_INCLUDE/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
             return int(open("np-include.info", "r").read().strip().replace('_', ''))
         return 165
 
