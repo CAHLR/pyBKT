@@ -42,8 +42,9 @@ def find_library_dirs():
 def find_dep_lib_dirs():
     lst = []
     try:
-        os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d\">\" -f2 | xargs | sed 's/libboost.*//' > np-include.info")
-        lst.append(open("np-include.info", "r").read().strip())
+        os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d\">\" -f2 | xargs > np-include.info")
+        x = open("np-include.info", "r").read().strip()
+        lst.append(x[:x.index('libboost')])
     except:
         pass
     os.system("python3-config --exec-prefix > np-include.info")
@@ -53,29 +54,41 @@ def find_dep_lib_dirs():
 def find_dep_lib_name(l = None):
     try:
         if l is None:
-            os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
+            os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         else:
-            os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
-        return open("np-include.info", "r").read().strip()
+            os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+        x = open("np-include.info", "r").read().strip()
+        return x[x.index("libboost_python"): x.index(".so")][3:]
     except:
         return "boost_python"
 
 def find_numpy_lib(l):
     try:
-        os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
-        return open("np-include.info", "r").read().strip()
+        os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+        x = open("np-include.info", "r").read().strip()
+        return x[x.index("libboost_numpy"): x.index(".so")][3:]
     except:
         return "boost_numpy"
 
 def find_boost_version():
     try:
-        os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
-        return int(open("np-include.info", "r").read().strip().replace('_', ''))
+        os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' > np-include.info")
+        return int(open("np-include.info", "r").read().strip()[1:5].replace('_', ''))
     except:
         if 'BOOST_INCLUDE' in os.environ:
-            os.system("cat " + os.environ['BOOST_INCLUDE'] + "/boost/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
-            return int(open("np-include.info", "r").read().strip().replace('_', ''))
+            os.system("cat " + os.environ['BOOST_INCLUDE'] + "/boost/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' > np-include.info")
+            return int(open("np-include.info", "r").read().strip()[1:5].replace('_', ''))
         return 165
+
+def find_includes():
+    try:
+        os.system("whereis boost | awk '{print $2}' > np-include.info")
+        return open("np-include.info", "r").read().strip() + '/..'
+    except:
+        if 'BOOST_INCLUDE' in os.environ:
+            return os.environ['BOOST_INCLUDE']
+        return '/usr/include'
+
 
 def copy_files(l, s):
     for i in l:
@@ -108,6 +121,9 @@ else:
         ALL_LIBRARIES.append(find_numpy_lib(os.environ['LD_LIBRARY_PATH']))
     else:
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
+INCLUDE_DIRS.append(find_includes())
+
+raise ValueError([ALL_LIBRARIES, LIBRARY_DIRS, INCLUDE_DIRS])
 
 clean()
 
