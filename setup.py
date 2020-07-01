@@ -73,12 +73,12 @@ def find_numpy_lib(l):
 
 def find_boost_version():
     try:
-        os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' > np-include.info")
-        return int(open("np-include.info", "r").read().strip()[1:5].replace('_', ''))
-    except:
         if 'BOOST_INCLUDE' in os.environ:
             os.system("cat " + os.environ['BOOST_INCLUDE'] + "/boost/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' > np-include.info")
             return int(open("np-include.info", "r").read().strip()[1:5].replace('_', ''))
+        os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' > np-include.info")
+        return int(open("np-include.info", "r").read().strip()[1:5].replace('_', ''))
+    except:
         return 165
 
 def find_includes():
@@ -86,8 +86,6 @@ def find_includes():
         os.system("whereis boost | awk '{print $2}' > np-include.info")
         return open("np-include.info", "r").read().strip() + '/..'
     except:
-        if 'BOOST_INCLUDE' in os.environ:
-            return os.environ['BOOST_INCLUDE']
         return '/usr/include'
 
 
