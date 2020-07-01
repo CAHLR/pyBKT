@@ -20,7 +20,7 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
          'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
-ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
+ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O3']
 ALL_LINK_ARGS = ['-fopenmp']
 ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
@@ -60,9 +60,18 @@ def find_dep_lib_name(l = None):
     except:
         return "boost_python"
 
+def find_numpy_lib(l):
+    try:
+        os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs | sed 's/.so.*//' | sed 's/.*lib//' > np-include.info")
+        return open("np-include.info", "r").read().strip()
+    except:
+        return "boost_numpy"
+
 def find_boost_version():
     try:
         os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
+        if 'BOOST_INCLUDE' in os.environ:
+            os.system("cat $(BOOST_INCLUDE)/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
         return int(open("np-include.info", "r").read().strip().replace('_', ''))
     except:
         return 165
@@ -80,21 +89,25 @@ def clean():
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-try:
-    if LIBRARY_DIRS:
-        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+if LIBRARY_DIRS:
+    ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
 
-    if find_boost_version() < 165:
-        copy_files(FILES, npath('source-cpp/.DEPRECATED'))
-        LIBRARY_DIRS += find_dep_lib_dirs()
-        ALL_LIBRARIES.append(find_dep_lib_name())
+if find_boost_version() < 165:
+    copy_files(FILES, npath('source-cpp/.DEPRECATED'))
+    LIBRARY_DIRS += find_dep_lib_dirs()
+    ALL_LIBRARIES.append(find_dep_lib_name())
+else:
+    copy_files(FILES, npath('source-cpp/.NEW'))
+    LIBRARY_DIRS += find_library_dirs()
+    if 'LD_LIBRARY_PATH' in os.environ:
+        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+        ALL_LIBRARIES.append(find_numpy_lib(os.environ['LD_LIBRARY_PATH']))
     else:
-        copy_files(FILES, npath('source-cpp/.NEW'))
-        LIBRARY_DIRS += find_library_dirs()
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
 
-    clean()
+clean()
 
+try:
     module1 = Extension('pyBKT/generate/synthetic_data_helper',
                         sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
                         include_dirs = INCLUDE_DIRS,
