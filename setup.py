@@ -31,8 +31,9 @@ LIBRARY_DIRS = [os.environ['LD_LIBRARY_PATH']] if 'LD_LIBRARY_PATH' in os.enviro
 def find_library_dirs():
     lst = []
     try:
-        os.system("whereis libboost_python | cut -d' ' -f 2 | sed 's/libboost.*//' > np-include.info")
-        lst.append(open("np-include.info", "r").read().strip())
+        os.system("whereis libboost_python | cut -d' ' -f 2 > np-include.info")
+        x = open("np-include.info", "r").read().strip()
+        lst.append(x[:x.index('libboost')])
     except:
         pass
     os.system("python3-config --exec-prefix > np-include.info")
@@ -122,8 +123,6 @@ else:
     else:
         ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
 INCLUDE_DIRS.append(find_includes())
-
-raise ValueError([ALL_LIBRARIES, LIBRARY_DIRS, INCLUDE_DIRS])
 
 clean()
 
