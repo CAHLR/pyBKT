@@ -70,10 +70,11 @@ def find_numpy_lib(l):
 def find_boost_version():
     try:
         os.system("cat $(whereis boost | awk '{print $2}')/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
-        if 'BOOST_INCLUDE' in os.environ:
-            os.system("cat $(BOOST_INCLUDE)/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
         return int(open("np-include.info", "r").read().strip().replace('_', ''))
     except:
+        if 'BOOST_INCLUDE' in os.environ:
+            os.system("cat $(BOOST_INCLUDE)/version.hpp | grep \"#define BOOST_LIB_VERSION\" | awk '{print $3}' | sed 's\\\"\\\\g' > np-include.info")
+            return int(open("np-include.info", "r").read().strip().replace('_', ''))
         return 165
 
 def copy_files(l, s):
@@ -95,7 +96,10 @@ if LIBRARY_DIRS:
 if find_boost_version() < 165:
     copy_files(FILES, npath('source-cpp/.DEPRECATED'))
     LIBRARY_DIRS += find_dep_lib_dirs()
-    ALL_LIBRARIES.append(find_dep_lib_name())
+    if 'LD_LIBRARY_PATH' in os.environ:
+        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+    else:    
+        ALL_LIBRARIES.append(find_dep_lib_name())
 else:
     copy_files(FILES, npath('source-cpp/.NEW'))
     LIBRARY_DIRS += find_library_dirs()
@@ -107,84 +111,55 @@ else:
 
 clean()
 
-try:
-    module1 = Extension('pyBKT/generate/synthetic_data_helper',
-                        sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
-                        include_dirs = INCLUDE_DIRS,
-                        extra_compile_args = ALL_COMPILE_ARGS,
-                        library_dirs = LIBRARY_DIRS, 
-                        libraries = ALL_LIBRARIES, 
-                        extra_link_args = ALL_LINK_ARGS)
+module1 = Extension('pyBKT/generate/synthetic_data_helper',
+                    sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
+                    include_dirs = INCLUDE_DIRS,
+                    extra_compile_args = ALL_COMPILE_ARGS,
+                    library_dirs = LIBRARY_DIRS, 
+                    libraries = ALL_LIBRARIES, 
+                    extra_link_args = ALL_LINK_ARGS)
 
-    module2 = Extension('pyBKT/fit/E_step', 
-                        sources = [npath('source-cpp/pyBKT/fit/E_step.cpp')],
-                        include_dirs = INCLUDE_DIRS,
-                        extra_compile_args = ALL_COMPILE_ARGS,
-                        library_dirs = LIBRARY_DIRS, 
-                        libraries = ALL_LIBRARIES, 
-                        extra_link_args = ALL_LINK_ARGS)
+module2 = Extension('pyBKT/fit/E_step', 
+                    sources = [npath('source-cpp/pyBKT/fit/E_step.cpp')],
+                    include_dirs = INCLUDE_DIRS,
+                    extra_compile_args = ALL_COMPILE_ARGS,
+                    library_dirs = LIBRARY_DIRS, 
+                    libraries = ALL_LIBRARIES, 
+                    extra_link_args = ALL_LINK_ARGS)
 
-    module3 = Extension('pyBKT/fit/predict_onestep_states',
-                        sources = [npath('source-cpp/pyBKT/fit/predict_onestep_states.cpp')],
-                        include_dirs = INCLUDE_DIRS,
-                        extra_compile_args = ALL_COMPILE_ARGS,
-                        library_dirs = LIBRARY_DIRS, 
-                        libraries = ALL_LIBRARIES, 
-                        extra_link_args = ALL_LINK_ARGS)
+module3 = Extension('pyBKT/fit/predict_onestep_states',
+                    sources = [npath('source-cpp/pyBKT/fit/predict_onestep_states.cpp')],
+                    include_dirs = INCLUDE_DIRS,
+                    extra_compile_args = ALL_COMPILE_ARGS,
+                    library_dirs = LIBRARY_DIRS, 
+                    libraries = ALL_LIBRARIES, 
+                    extra_link_args = ALL_LINK_ARGS)
 
-    setup(
-        name="pyBKT",
-        version="1.0.1",
-        author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
-        author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
-        license = 'MIT',
-        description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
-        url="https://github.com/CAHLR/pyBKT",
-        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
-        keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
-        classifiers=[
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-            "License :: OSI Approved :: MIT License",
-            "Operating System :: OS Independent",
-        ],
-        long_description = long_description,
-        long_description_content_type='text/markdown',
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
-        package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
-                        'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
-                        'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
-                        'pyBKT.util': npath('source-cpp/pyBKT/util')},
-        install_requires = ["numpy"],
-        ext_modules = [module1, module2, module3]
-    )
-except:
-    setup(
-        name="pyBKT",
-        version="1.0.1",
-        author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
-        author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
-        license = 'MIT',
-        description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
-        url="https://github.com/CAHLR/pyBKT",
-        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
-        keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
-        classifiers=[
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-            "License :: OSI Approved :: MIT License",
-            "Operating System :: OS Independent",
-        ],
-        long_description = long_description,
-        long_description_content_type='text/markdown',
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
-        package_dir = { 'pyBKT': npath('source-py/pyBKT'),
-                        'pyBKT.generate': npath('source-py/pyBKT/generate'),
-                        'pyBKT.fit': npath('source-py/pyBKT/fit'),
-                        'pyBKT.util': npath('source-py/pyBKT/util')},
-        install_requires = ["numpy"],
-    )
+setup(
+    name="pyBKT",
+    version="1.0.1",
+    author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
+    author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
+    license = 'MIT',
+    description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
+    url="https://github.com/CAHLR/pyBKT",
+    download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+    keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
+    classifiers=[
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    long_description = long_description,
+    long_description_content_type='text/markdown',
+    packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+    package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
+                    'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
+                    'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
+                    'pyBKT.util': npath('source-cpp/pyBKT/util')},
+    install_requires = ["numpy"],
+    ext_modules = [module1, module2, module3]
+)
