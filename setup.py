@@ -13,6 +13,7 @@ from shutil import copyfile, move
 import subprocess as s
 from sysconfig import get_paths
 from setuptools import setup, Extension
+import platform
 
 sys.tracebacklimit = 0
 
@@ -20,9 +21,14 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
          'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
-ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
-ALL_LINK_ARGS = ['-fopenmp']
-ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
+if platform.system() == 'Darwin':
+    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++']
+    ALL_LINK_ARGS = ['-stdlib=libc++']
+    ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
+else:
+    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
+    ALL_LINK_ARGS = ['-fopenmp']
+    ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
                 ([os.environ['BOOST_INCLUDE']] if 'BOOST_INCLUDE' in os.environ \
                                                  else [])
@@ -124,6 +130,8 @@ else:
     else:
         ALL_LIBRARIES.append(find_dep_lib_name())
         ALL_LIBRARIES.append(find_numpy_lib())
+    if platform.system() == 'Darwin':
+        copy_files(FILES, npath('source-cpp/.MAC'))
 INCLUDE_DIRS.append(find_includes())
 
 clean()
