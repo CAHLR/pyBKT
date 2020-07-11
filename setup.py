@@ -63,9 +63,12 @@ def find_dep_lib_name(l = None):
     except:
         return "boost_python"
 
-def find_numpy_lib(l):
+def find_numpy_lib(l = None):
     try:
-        os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+        if l is None:
+            os.system("ldconfig -p | grep libboost_numpy | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+        else:
+            os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         x = open("np-include.info", "r").read().strip()
         return x[x.index("libboost_numpy"): x.index(".so")][3:]
     except:
@@ -119,7 +122,8 @@ else:
         ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
         ALL_LIBRARIES.append(find_numpy_lib(os.environ['LD_LIBRARY_PATH']))
     else:
-        ALL_LIBRARIES += ['boost_python3', 'boost_numpy3']
+        ALL_LIBRARIES.append(find_dep_lib_name())
+        ALL_LIBRARIES.append(find_numpy_lib())
 INCLUDE_DIRS.append(find_includes())
 
 clean()
@@ -204,4 +208,4 @@ except:
                         'pyBKT.fit': npath('source-py/pyBKT/fit'),
                         'pyBKT.util': npath('source-py/pyBKT/util')},
         install_requires = ["numpy"],
-    )
+    ) 
