@@ -22,10 +22,12 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
 if platform.system() == 'Darwin':
+    DYNAMIC_LIB = '.dylib'
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++']
     ALL_LINK_ARGS = ['-stdlib=libc++']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
 else:
+    DYNAMIC_LIB = '.so'
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
     ALL_LINK_ARGS = ['-fopenmp']
     ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
@@ -65,7 +67,7 @@ def find_dep_lib_name(l = None):
         else:
             os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         x = open("np-include.info", "r").read().strip()
-        return x[x.index("libboost_python"): x.index(".so")][3:]
+        return x[x.index("libboost_python"): x.index(DYNAMIC_LIB)][3:]
     except:
         return "boost_python"
 
@@ -76,7 +78,7 @@ def find_numpy_lib(l = None):
         else:
             os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         x = open("np-include.info", "r").read().strip()
-        return x[x.index("libboost_numpy"): x.index(".so")][3:]
+        return x[x.index("libboost_numpy"): x.index(DYNAMIC_LIB)][3:]
     except:
         return "boost_numpy"
 
