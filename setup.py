@@ -29,12 +29,11 @@ if platform.system() == 'Darwin':
         os.environ['LD_LIBRARY_PATH'] = '/usr/local/Cellar/boost-python3/' + sorted(os.listdir('/usr/local/Cellar/boost-python3/'))[-1] + '/lib'
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++']
     ALL_LINK_ARGS = ['-stdlib=libc++']
-    ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
 else:
     DYNAMIC_LIB = '.so'
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
     ALL_LINK_ARGS = ['-fopenmp']
-    ALL_LIBRARIES = ['crypt', 'pthread', 'dl', 'util', 'm']
+ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
                 ([os.environ['BOOST_INCLUDE']] if 'BOOST_INCLUDE' in os.environ \
                                                  else [])
