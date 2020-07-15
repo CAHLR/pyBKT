@@ -200,6 +200,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
     /* COMPUTATION */
+    #pragma omp parallel
     {
         double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
         double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
@@ -212,9 +213,9 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
         emission_softcounts_temp.setZero();
         init_softcounts_temp.setZero();
         loglike = 0;
-        int num_threads = 1;
+        int num_threads = omp_get_num_threads();
         int blocklen = 1 + ((num_sequences - 1) / num_threads);
-        int sequence_idx_start = blocklen * 0;
+        int sequence_idx_start = blocklen * omp_get_thread_num();
         int sequence_idx_end = min(sequence_idx_start+blocklen,num_sequences);
         //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
 
@@ -307,6 +308,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
             } */
             alpha_out.block(0,sequence_start,2,T) = alpha;
         }
+        #pragma omp critical
         {
             all_trans_softcounts += trans_softcounts_temp;
             all_emission_softcounts += emission_softcounts_temp;
