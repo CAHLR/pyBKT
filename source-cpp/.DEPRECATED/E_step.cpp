@@ -113,7 +113,7 @@ dict run(dict& data, dict& model, numeric::array& trans_softcounts, numeric::arr
     int num_subparts = len(alldata);
 
     npy_intp ind[2]{0,0};
-	Map<ArrayXXi,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_GetPtr((PyArrayObject*)alldata.view().ptr(), ind)),num_subparts,bigT);
+    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_GetPtr((PyArrayObject*)alldata.view().ptr(), ind)),num_subparts,bigT);
     numeric::array allresources = extract<numeric::array>(data["resources"]);
 
     int len_allresources = len(allresources);

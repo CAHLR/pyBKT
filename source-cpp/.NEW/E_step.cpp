@@ -93,7 +93,7 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
     int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
     int num_subparts = len(alldata);
 
-    Map<ArrayXXi,Aligned> alldata_arr(reinterpret_cast<int*>(alldata.get_data()),num_subparts,bigT);
+    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(alldata.get_data()),num_subparts,bigT);
     numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
 
     int len_allresources = len(allresources);
