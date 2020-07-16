@@ -51,15 +51,15 @@ This is intended as a quick overview of steps to install and setup and to run py
 
 If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on most recent Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without Boost, pip will install pyBKT without C++ speed optimizations.
 
-You can check if libboost has been installed properly with libboost with `ldconfig -p | grep libboost_python`, which should yield an output.
+You can check if libboost has been installed properly with `ldconfig -p | grep libboost_python`, which should yield an output on Linux machines. Note that the version on the dynamic library should match the Python installation version.
 
 ### Mac
 
 Python 3.8 is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
 ```
-brew install boost
-brew install boost-python3
-brew install libomp
+    brew install boost
+    brew install boost-python3
+    brew install libomp
 ```
 
 ## Installing pyBKT ##
@@ -122,28 +122,6 @@ The `fitmodel` also includes the following emission probabilities:
 * `guesses`: the probability of guessing correctly, given "not knowing" state.
 * `slips`: the probability of picking incorrect answer, given "knowing" state.
 
-
-## Running pyBKT ##
-You can add the folder path to the PYTHONPATH env variable in order to run the model from anywhere in your system. In Unix-based systems edit your _.bash_rc_ or _.bash_profile_ file and add:
-
-```
-export PYTHONPATH="${PYTHONPATH}:/path_to_folder_containing_pyBKT_folder"
-```
-
-To start the EM algorithm, initiate a randomly generated `fitmodel`, with two potential options:
-
-1. `generate.random_model_uni`: generates a model from uniform distribution and sets the `forgets` probability to 0.
-
-2. `generate.random_model`: generates a model from dirichlet distribution and allows the `forgets` probability to vary. 
-
-For data observed during a short period of learning activity with a low probability of forgetting, the uniform model is recommended. The following example will initiate fitmodel using the uniform distribution: 
-
-         fitmodel = random_model.random_model_uni(num_resources, num_subparts)
-
-Once the `fitmodel` is generated, the following function can be used to generate an updated `fitmodel` and `log_likelihoods`:
-
-        (fitmodel, log_likelihoods) = EM_fit.EM_fit(fitmodel, data)
-
 ## Examples ##
 
 For examples implementing BKT variants from the literature, see [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
@@ -152,7 +130,6 @@ A basic BKT parameter fitting example using synthesized data is can found in thi
 
 ```python
 import sys
-sys.path.append('../') #path containing pyBKT
 import numpy as np
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit
