@@ -47,7 +47,7 @@ You can check if libboost has been installed properly with libboost with `ldconf
 
 ### Mac
 
-If homebrew is installed, run the following commands to download the necessary dependencies:
+Python 3.8 is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
 ```
 brew install boost
 brew install boost-python3
