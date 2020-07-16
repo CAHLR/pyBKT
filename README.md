@@ -48,9 +48,11 @@ You can check if libboost has been installed properly with libboost with `ldconf
 ### Mac
 
 If homebrew is installed, run the following commands to download the necessary dependencies:
-`brew install boost`
-`brew install boost-python3`
-`brew install libomp`
+```
+brew install boost
+brew install boost-python3
+brew install libomp
+```
 
 ## Installing ##
 
