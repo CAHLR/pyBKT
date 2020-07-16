@@ -37,14 +37,24 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 # Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
 
-## Installing Boost-Python ##
+## Installing Dependencies For Fast C++ Inferencing (for OS X and Linux before Xenial) ##
+
+### Linux
 
 If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution. Without Boost, pip will install pyBKT without C++ speed optimizations.
 
+You can check if libboost has been installed properly with libboost with `ldconfig -p | grep libboost_python`, which should yield an output.
+
+### Mac
+
+If homebrew is installed, run the following commands to download the necessary dependencies:
+`brew install boost`
+`brew install boost-python3`
+`brew install libomp`
+
 ## Installing ##
 
-Once `libboost` is installed (check by doing a quick `ldconfig -p | grep libboost_python`, which should yield an output), you can simply run:
-
+You can simply run:
 ```
     pip install pyBKT
 ``` 
