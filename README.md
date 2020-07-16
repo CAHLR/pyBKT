@@ -35,13 +35,21 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 
 
 # Installation and setup
-This is intended as a quick overview of steps to install and setup and to run pyBKT locally.
+This is intended as a quick overview of steps to install and setup and to run pyBKT locally. While both a pure Python port and a Cython version of pyBKT are offered, the former does not fit models or scale as well as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction):
 
-## Installing Dependencies For Fast C++ Inferencing (for OS X and Linux before Xenial) ##
+|                 Test Description                | pyBKT (Python) | pyBKT (Cython) |
+|:-----------------------------------------------:|:--------------:|---------------:|
+| synthetic data, model fit (500 students)        |     ~1m55s     |      ~1.5s     |
+| synthetic data, model fit (5000 students)       |     ~1h30m     |      ~45s      |
+| cross validated cognitive tutor data            |     ~4m10s     |       ~3s      |
+| synthetic data, predict onestep (500 students)  |       ~2s      |      ~0.8s     |
+| synthetic data, predict onestep (5000 students) |     ~2m15s     |      ~35s      |
+
+## Installing Dependencies for Fast C++ Inferencing (Optional - for OS X and Linux before Xenial) ##
 
 ### Linux
 
-If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution. Without Boost, pip will install pyBKT without C++ speed optimizations.
+If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on most recent Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without Boost, pip will install pyBKT without C++ speed optimizations.
 
 You can check if libboost has been installed properly with libboost with `ldconfig -p | grep libboost_python`, which should yield an output.
 
@@ -54,7 +62,7 @@ brew install boost-python3
 brew install libomp
 ```
 
-## Installing ##
+## Installing pyBKT ##
 
 You can simply run:
 ```
