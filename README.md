@@ -39,7 +39,7 @@ This is intended as a quick overview of steps to install and setup and to run py
 
 ## Installing Boost-Python ##
 
-If you have Lib Boost already installed, pip will install pyBKT with fast c++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution. Without Boot, pip will install pyBKT without c++ speed optimizations.
+If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev`. Use whichever package manager is appropriately suited to your distribution. Without Boost, pip will install pyBKT without C++ speed optimizations.
 
 ## Installing ##
 
@@ -124,13 +124,11 @@ Once the `fitmodel` is generated, the following function can be used to generate
 
         (fitmodel, log_likelihoods) = EM_fit.EM_fit(fitmodel, data)
 
-## Example ##
-[TODO: Update Example Model]
+## Examples ##
 
-See the file `test/hand_specified_model.py` for a fairly complete example,
-which you can run with `python test/hand_specified_model.py`.
+For examples implementing BKT variants from the literature, see [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
 
-Here's a simplified version:
+A basic BKT parameter fitting example using synthesized data is can found in this [(Google Colab link)](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") notebook, and in the code below:
 
 ```python
 import sys
