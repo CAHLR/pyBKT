@@ -35,7 +35,7 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 
 
 # Installation and setup
-This is intended as a quick overview of steps to install and setup and to run pyBKT locally. While both a pure Python port and a Cython version of pyBKT are offered, the former does not fit models or scale as well as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction):
+This is intended as a quick overview of steps to install and setup and to run pyBKT locally. While both a pure Python port and a Cython version of pyBKT are offered, the former does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction):
 
 |                 Test Description                | pyBKT (Python) | pyBKT (Cython) |
 |:-----------------------------------------------:|:--------------:|---------------:|
