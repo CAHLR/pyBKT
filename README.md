@@ -32,7 +32,7 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 
 1. Xu, Y., Johnson, M. J., Pardos, Z. A. (2015) Scaling cognitive modeling to massive open environments. In *Proceedings of the Workshop on Machine Learning for Education at the 32nd International Conference on Machine Learning* (ICML). Lille, France. [[icml ml4ed]](http://ml4ed.cc/attachments/XuY.pdf)
 
-
+pyBKT examples of each of the above models can be found in in the [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
 
 # Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally. While both a pure Python port and a Cython version of pyBKT are offered, the former does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction):
@@ -122,9 +122,7 @@ The `fitmodel` also includes the following emission probabilities:
 * `guesses`: the probability of guessing correctly, given "not knowing" state.
 * `slips`: the probability of picking incorrect answer, given "knowing" state.
 
-## Examples ##
-
-For examples implementing BKT variants from the literature, see [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
+## Example ##
 
 A basic BKT parameter fitting example using synthesized data is can found in this [(Google Colab link)](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") notebook, and in the code below:
 
