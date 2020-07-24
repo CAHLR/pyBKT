@@ -55,7 +55,7 @@ def find_library_dirs():
 def find_dep_lib_dirs():
     lst = []
     try:
-        os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d\">\" -f2 | xargs > np-include.info")
+        os.system('ldconfig -p | grep "libboost_python.*3.*" | sort -r | head -n1 | cut -d\">\" -f2 | xargs > np-include.info')
         x = open("np-include.info", "r").read().strip()
         lst.append(x[:x.index('libboost')])
     except:
@@ -67,24 +67,24 @@ def find_dep_lib_dirs():
 def find_dep_lib_name(l = None):
     try:
         if l is None:
-            os.system("ldconfig -p | grep libboost_python | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+            os.system('ldconfig -p | grep "libboost_python.*3.*" | sort -r | head -n1 | cut -d\'>\' -f1 | xargs > np-include.info')
         else:
-            os.system("ls " + l + "/libboost_pytho* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+            os.system("ls " + l + "/libboost_pytho*3* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         x = open("np-include.info", "r").read().strip()
         return x[x.index("libboost_python"): x.index(DYNAMIC_LIB)][3:]
     except:
-        return "boost_python"
+        return "boost_python3"
 
 def find_numpy_lib(l = None):
     try:
         if l is None:
-            os.system("ldconfig -p | grep libboost_numpy | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+            os.system('ldconfig -p | grep "libboost_numpy.*3.*" | sort -r | head -n1 | cut -d\'>\' -f1 | xargs > np-include.info')
         else:
-            os.system("ls " + l + "/libboost_numpy* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
+            os.system("ls " + l + "/libboost_numpy*3* | sort -r | head -n1 | cut -d'>' -f1 | xargs > np-include.info")
         x = open("np-include.info", "r").read().strip()
         return x[x.index("libboost_numpy"): x.index(DYNAMIC_LIB)][3:]
     except:
-        return "boost_numpy"
+        return "boost_numpy3"
 
 def find_boost_version():
     try:
