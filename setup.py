@@ -169,7 +169,7 @@ try:
 
     setup(
         name="pyBKT",
-        version="1.1",
+        version="1.1.1",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
@@ -198,7 +198,7 @@ try:
 except:
     setup(
         name="pyBKT",
-        version="1.1",
+        version="1.1.1",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
