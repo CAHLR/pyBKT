@@ -23,10 +23,11 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
 
 if platform.system() == 'Darwin':
     DYNAMIC_LIB = '.dylib'
-    if 'BOOST_INCLUDE' not in os.environ:
-        os.environ['BOOST_INCLUDE'] = '/usr/local/Cellar/boost/' + sorted(os.listdir('/usr/local/Cellar/boost/'))[-1] + '/include'
-    if 'LD_LIBRARY_PATH' not in os.environ:
-        os.environ['LD_LIBRARY_PATH'] = '/usr/local/Cellar/boost-python3/' + sorted(os.listdir('/usr/local/Cellar/boost-python3/'))[-1] + '/lib'
+    try:
+        if 'BOOST_INCLUDE' not in os.environ:
+            os.environ['BOOST_INCLUDE'] = '/usr/local/Cellar/boost/' + sorted(os.listdir('/usr/local/Cellar/boost/'))[-1] + '/include'
+        if 'LD_LIBRARY_PATH' not in os.environ:
+            os.environ['LD_LIBRARY_PATH'] = '/usr/local/Cellar/boost-python3/' + sorted(os.listdir('/usr/local/Cellar/boost-python3/'))[-1] + '/lib'
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++', '-Xpreprocessor', '-fopenmp']
     ALL_LINK_ARGS = ['-stdlib=libc++']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm', 'omp']
