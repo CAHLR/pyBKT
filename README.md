@@ -198,3 +198,6 @@ for s in range(num_gs):
     print('slip%d\t%.4f\t%.4f' % (s+1, truemodel['slips'][s], best_model['slips'][s]))
 
 ```
+## TODOs ##
+* Support for parameter tieing and fixing 
+* Boostless Cython
