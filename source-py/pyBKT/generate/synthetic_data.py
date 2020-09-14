@@ -15,6 +15,10 @@ def synthetic_data(model, lengths, resources = None):
     num_resources = len(model["learns"])
     bigT = sum(lengths)
 
+    assert model['learns'].shape == (1, ), "synthetic data generation does not support multilearn"
+    assert model['guesses'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
+    assert model['slips'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
+
     if resources is None:
         resources = np.random.randint(1, high = num_resources+1, size = bigT)
     if "As" not in model:
