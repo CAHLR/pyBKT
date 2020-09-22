@@ -2,8 +2,13 @@ import numpy as np
 
 def run(model, trans_softcounts, emission_softcounts, init_softcounts):
 
-    #is this right??
-    trans_softcounts[np.sum(trans_softcounts, axis=1) == 0,:] = 1
+    z = np.sum(trans_softcounts, axis=1) == 0
+    for i in range(len(z)):
+        for j in range(len(z[0])):
+            if z[i,j]:
+                trans_softcounts[i, 0, j] = 0
+                trans_softcounts[i, 1, j] = 1
+    # trans_softcounts[np.sum(trans_softcounts, axis=1) == 0,:] = 1
     emission_softcounts[np.sum(emission_softcounts, axis=2) == 0,:] = 1
     assert (trans_softcounts.shape[1] == 2)
     assert (trans_softcounts.shape[2] == 2)
@@ -13,7 +18,7 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts):
     #model['As'] = trans_softcounts / np.sum(trans_softcounts, axis=1)
     #model['As'] = np.divide(trans_softcounts, np.sum(trans_softcounts, axis=1))
     for i in range(model['As'].shape[0]):
-    	model['As'][i] = trans_softcounts[i] / np.sum(trans_softcounts, axis=1)[i]
+        model['As'][i] = trans_softcounts[i] / np.sum(trans_softcounts, axis=1)[i]
 
     model['learns'] = model['As'][:, 1, 0]
     model['forgets'] = model['As'][:, 0, 1]
