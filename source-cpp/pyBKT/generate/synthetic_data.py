@@ -16,9 +16,9 @@ def synthetic_data(model, lengths, resources = None):
     num_resources = len(model["learns"])
     bigT = sum(lengths)
 
-    assert model['learns'].shape == (1, ), "synthetic data generation does not support multilearn"
-    assert model['guesses'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
-    assert model['slips'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
+    # assert model['learns'].shape == (1, ), "synthetic data generation does not support multilearn"
+    # assert model['guesses'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
+    # assert model['slips'].shape == (1, ), "synthetic data generation does not support multiguess/slip"
 
     if resources is None:
         resources = np.random.randint(1, high = num_resources+1, size = bigT)
@@ -34,7 +34,7 @@ def synthetic_data(model, lengths, resources = None):
     d = syn_data['data']
     syn_data["data"] = d + 1 
 
-    syn_data["data"][:, resources != 1] = 0 #no data emitted unless resource == 1
+    # syn_data["data"][:, resources != 1] = 0 #no data emitted unless resource == 1
 
     datastruct = {}
     datastruct["stateseqs"] = syn_data["stateseqs"]
