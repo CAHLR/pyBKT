@@ -14,7 +14,6 @@ from pyBKT.fit import M_step
 from multiprocessing import Pool, cpu_count
 
 gs = globals()
-input = None
 
 def EM_fit(model, data, tol = 0.005, maxiter = 100):
 
@@ -49,8 +48,6 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100):
     return(model, log_likelihoods[:i+1])
 
 def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs):
-    global input
-
     # Processed Parameters
     alldata = data["data"]
     bigT, num_subparts = len(alldata[0]), len(alldata)
@@ -89,13 +86,14 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
              'alldata': alldata, 'normalizeLengths': normalizeLengths, 'alpha_out': alpha_out}
 
     num_threads = cpu_count()
-    thread_counts = [() for i in range(num_threads)]
+    thread_counts = [None for i in range(num_threads)]
     for thread_num in range(num_threads):
         blocklen = 1 + ((num_sequences - 1) // num_threads)
         sequence_idx_start = int(blocklen * thread_num)
         sequence_idx_end = min(sequence_idx_start+blocklen, num_sequences)
-        thread_counts[thread_num] = (sequence_idx_start, sequence_idx_end)
-    
+        thread_counts[thread_num] = {'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end}
+        thread_counts[thread_num].update(input)
+
     p = Pool(len(thread_counts))
     x = p.map(inner, thread_counts)
     p.close()
@@ -122,16 +120,14 @@ def interleave(m, v1, v2):
     m[0::2], m[1::2] = v1, v2
 
 def inner(x):
-    for i in input:
-        exec(i + " = input['" + i + "']", gs)
+    As, Bn, initial_distn, allresources, starts, lengths, num_resources, num_subparts, alldata, normalizeLengths, alpha_out, sequence_idx_start, sequence_idx_end = \
+            x['As'], x['Bn'], x['initial_distn'], x['allresources'], x['starts'], x['lengths'], x['num_resources'], x['num_subparts'], x['alldata'], x['normalizeLengths'], \
+            x['alpha_out'], x['sequence_idx_start'], x['sequence_idx_end']
     N_R, N_S = 2 * num_resources, 2 * num_subparts
     trans_softcounts_temp = np.zeros((2, N_R))
     emission_softcounts_temp = np.zeros((2, N_S))
     init_softcounts_temp = np.zeros((2, 1))
     loglike = 0
-
-    sequence_idx_start = x[0]
-    sequence_idx_end = x[1]
 
     alphas = [] 
     dot, sum, log = np.dot, np.sum, np.log

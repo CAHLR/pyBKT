@@ -120,32 +120,32 @@ def clean():
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-if LIBRARY_DIRS:
-    ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
-
-if find_boost_version() < 165:
-    copy_files(FILES, npath('source-cpp/.DEPRECATED'))
-    LIBRARY_DIRS += find_dep_lib_dirs()
-    if 'LD_LIBRARY_PATH' in os.environ:
-        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
-    else:    
-        ALL_LIBRARIES.append(find_dep_lib_name())
-else:
-    copy_files(FILES, npath('source-cpp/.NEW'))
-    LIBRARY_DIRS += find_library_dirs()
-    if 'LD_LIBRARY_PATH' in os.environ:
-        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
-        ALL_LIBRARIES.append(find_numpy_lib(os.environ['LD_LIBRARY_PATH']))
-    else:
-        ALL_LIBRARIES.append(find_dep_lib_name())
-        ALL_LIBRARIES.append(find_numpy_lib())
-    if platform.system() == 'Darwin':
-        copy_files(FILES, npath('source-cpp/.MAC'))
-INCLUDE_DIRS.append(find_includes())
-
-clean()
-
 try:
+    if LIBRARY_DIRS:
+        ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+
+    if find_boost_version() < 165:
+        copy_files(FILES, npath('source-cpp/.DEPRECATED'))
+        LIBRARY_DIRS += find_dep_lib_dirs()
+        if 'LD_LIBRARY_PATH' in os.environ:
+            ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+        else:    
+            ALL_LIBRARIES.append(find_dep_lib_name())
+    else:
+        copy_files(FILES, npath('source-cpp/.NEW'))
+        LIBRARY_DIRS += find_library_dirs()
+        if 'LD_LIBRARY_PATH' in os.environ:
+            ALL_LIBRARIES.append(find_dep_lib_name(os.environ['LD_LIBRARY_PATH']))
+            ALL_LIBRARIES.append(find_numpy_lib(os.environ['LD_LIBRARY_PATH']))
+        else:
+            ALL_LIBRARIES.append(find_dep_lib_name())
+            ALL_LIBRARIES.append(find_numpy_lib())
+        if platform.system() == 'Darwin':
+            copy_files(FILES, npath('source-cpp/.MAC'))
+    INCLUDE_DIRS.append(find_includes())
+
+    clean()
+
     module1 = Extension('pyBKT/generate/synthetic_data_helper',
                         sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
                         include_dirs = INCLUDE_DIRS,
