@@ -1,6 +1,8 @@
 # pyBKT
 
 Python implementation of the Bayesian Knowledge Tracing algorithm and variants, estimating student cognitive mastery from problem solving sequences.
+NOTE: For the codebase that will be used in our upcoming Learning Analytics and Knowledge Pre-Conference Workshop, please see this repo: https://github.com/CAHLR/pyBKT-examples
+
 ```
     pip install pyBKT
 ```
