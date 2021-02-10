@@ -172,7 +172,7 @@ try:
 
     setup(
         name="pyBKT",
-        version="1.1.1",
+        version="1.2",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
@@ -190,18 +190,19 @@ try:
         ],
         long_description = long_description,
         long_description_content_type='text/markdown',
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util', 'pyBKT.models'],
         package_dir = { 'pyBKT': npath('source-cpp/pyBKT'),
                         'pyBKT.generate': npath('source-cpp/pyBKT/generate'),
                         'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
-                        'pyBKT.util': npath('source-cpp/pyBKT/util')},
+                        'pyBKT.util': npath('source-cpp/pyBKT/util'),
+                        'pyBKT.models': npath('source-cpp/pyBKT/models')},
         install_requires = ["numpy"],
         ext_modules = [module1, module2, module3]
     )
 except:
     setup(
         name="pyBKT",
-        version="1.1.1",
+        version="1.2",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
@@ -219,10 +220,11 @@ except:
         ],
         long_description = long_description,
         long_description_content_type='text/markdown',
-        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util'],
+        packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util', 'pyBKT.models'],
         package_dir = { 'pyBKT': npath('source-py/pyBKT'),
                         'pyBKT.generate': npath('source-py/pyBKT/generate'),
                         'pyBKT.fit': npath('source-py/pyBKT/fit'),
-                        'pyBKT.util': npath('source-py/pyBKT/util')},
+                        'pyBKT.util': npath('source-py/pyBKT/util'),
+                        'pyBKT.models': npath('source-py/pyBKT/models')},
         install_requires = ["numpy"],
     )

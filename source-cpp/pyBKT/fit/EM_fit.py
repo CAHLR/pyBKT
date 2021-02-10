@@ -2,13 +2,16 @@ import numpy as np
 from pyBKT.util import check_data
 from pyBKT.fit import E_step
 from pyBKT.fit import M_step
+import os
 
-def EM_fit(model, data, tol = None, maxiter = None):
+def EM_fit(model, data, tol = None, maxiter = None, parallel = True):
 
-    if tol is None: tol = 1e-3
-    if maxiter is None: maxiter = 100
-
-    check_data.check_data(data)
+    if not parallel:
+        os.environ['OMP_NUM_THREADS'] = 1
+    if tol is None: 
+        tol = 1e-3
+    if maxiter is None:
+        maxiter = 100
 
     num_subparts = data["data"].shape[0] #mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])

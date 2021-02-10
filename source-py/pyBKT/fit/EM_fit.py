@@ -15,7 +15,7 @@ from multiprocessing import Pool, cpu_count
 
 gs = globals()
 
-def EM_fit(model, data, tol = 0.005, maxiter = 100):
+def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True):
 
     check_data.check_data(data)
 
@@ -33,7 +33,7 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100):
     result['all_initial_softcounts'] = init_softcounts
 
     for i in range(maxiter):
-        result = run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
+        result = run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):
@@ -47,7 +47,7 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100):
 
     return(model, log_likelihoods[:i+1])
 
-def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs):
+def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True):
     # Processed Parameters
     alldata = data["data"]
     bigT, num_subparts = len(alldata[0]), len(alldata)
@@ -85,7 +85,7 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
              'num_resources': num_resources, 'num_subparts': num_subparts, \
              'alldata': alldata, 'normalizeLengths': normalizeLengths, 'alpha_out': alpha_out}
 
-    num_threads = cpu_count()
+    num_threads = cpu_count() if parallel else 1
     thread_counts = [None for i in range(num_threads)]
     for thread_num in range(num_threads):
         blocklen = 1 + ((num_sequences - 1) // num_threads)
