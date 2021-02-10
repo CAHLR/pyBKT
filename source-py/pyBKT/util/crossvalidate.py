@@ -1,7 +1,6 @@
 import numpy as np
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
-from pyBKT.util import accuracy, rmse, check_data, auc
 from copy import deepcopy
 
 # returns data only for the indices given based on starts array
