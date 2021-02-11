@@ -3,6 +3,7 @@ import numbers
 import os
 import pandas as pd
 import random
+import urllib.request as urllib2
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.util import crossvalidate, data_helper, check_data, metrics
@@ -183,8 +184,7 @@ class Model:
         {'Box and Whisker': {'prior': 0.8221172842316857, 'learns': array([0.17918678]), 'guesses': array([0.27305474]), 'slips': array([0.14679578]), 'forgets': array([0.01293728])}}
 
         """
-        if self.fit_model is None:
-            self.fit_model = {}
+        self.fit_model = {}
         for skill in values:
             if skill not in self.fit_model:
                 self.fit_model[skill] = {}
@@ -193,6 +193,19 @@ class Model:
             for param in values[skill]:
                 self.fit_model[skill][param] = values[skill][param]
         self.manual_param_init = True
+
+    def fetch_dataset(self, link, loc):
+        """
+        Fetches dataset from an online link. Must be accessible without password
+        or other authentication. Saves to the given location.
+
+        >>> model = Model()
+        >>> model.fetch_dataset('https://raw.githubusercontent.com/CAHLR/pyBKT-examples/master/data/as.csv', '.')
+        """
+        file_data = urllib2.urlopen(link)
+        name = link.split('/')[-1]
+        with open(os.path.normpath(loc + '/' + name), 'wb') as f:
+            f.write(file_data.read())
 
     def _data_helper(self, data_path, data, defaults, skills, model_type):
         """ Processes data given defaults, skills, and the model type. """
