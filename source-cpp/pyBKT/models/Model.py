@@ -8,7 +8,7 @@ from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.util import crossvalidate, data_helper, check_data, metrics
 
 class Model:
-    MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multiguess']
+    MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
     FIT_ARGS = ['skills', 'num_fits', 'defaults',
                             'parallel', 'forgets'] + MODELS_BKT
@@ -28,7 +28,7 @@ class Model:
                     'multilearn': 'template_id',
                     'multiprior': 'correct',
                     'multipair': 'problem_id',
-                    'multiguess': 'template_id'}
+                    'multigs': 'template_id'}
     INITIALIZABLE_PARAMS = ['prior', 'learns', 'guesses', 'slips', 'forgets']
 
     def __init__(self, **kwargs):

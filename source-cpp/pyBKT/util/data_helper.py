@@ -8,9 +8,9 @@ import requests
 
 def convert_data(url, skill_name, defaults=None, model_type=None):
     if model_type:
-        multilearn, multiprior, multipair, multiguess = model_type
+        multilearn, multiprior, multipair, multigs = model_type
     else:
-        multilearn, multiprior, multipair, multiguess = [False] * 4
+        multilearn, multiprior, multipair, multigs = [False] * 4
     pd.set_option('mode.chained_assignment', None)
     df = None
 
@@ -48,7 +48,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
                  'multilearn': 'template_id',
                  'multiprior': 'correct',
                  'multipair': 'problem_id',
-                 'multiguess': 'template_id',
+                 'multigs': 'template_id',
                  }
 
     # default column names for cognitive tutors
@@ -59,7 +59,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
                 'multilearn': 'Problem Name',
                 'multiprior': 'Correct First Attempt',
                 'multipair': 'Problem Name',
-                'multiguess': 'Problem Name',
+                'multigs': 'Problem Name',
                                  }
 
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
@@ -157,16 +157,16 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
         else:
             resources=[1]*len(data)
 
-        # multiguess handling, make data n-dimensional where n is number of g/s types
-        if multiguess:
+        # multigs handling, make data n-dimensional where n is number of g/s types
+        if multigs:
             # map each new guess/slip case to a row [0, # total]
-            gs_ref=dict(zip(df3[defaults["multiguess"]].unique(),range(len(df3[defaults["multiguess"]].unique()))))
+            gs_ref=dict(zip(df3[defaults["multigs"]].unique(),range(len(df3[defaults["multigs"]].unique()))))
             data_temp = [[] for _ in range(len(gs_ref))]
             counter = 0
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
             for _, i in df3.iterrows():
                 for j in range(len(gs_ref)):
-                    if gs_ref[i[defaults["multiguess"]]] == j:
+                    if gs_ref[i[defaults["multigs"]]] == j:
                             data_temp[j].append(data[counter])
                             counter += 1 
                     else:
@@ -179,7 +179,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
             resource_ref[""]=1  
-        if not multiguess:
+        if not multigs:
             gs_ref[""]=1
 
         resource=np.asarray(resources)
