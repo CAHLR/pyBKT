@@ -209,9 +209,9 @@ class Model:
 
     def _data_helper(self, data_path, data, defaults, skills, model_type):
         """ Processes data given defaults, skills, and the model type. """
-        if data_path:
+        if data_path is not None:
             data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type)
-        elif data:
+        elif data is not None:
             data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type)
         for d in data_p.values():
             check_data.check_data(d)

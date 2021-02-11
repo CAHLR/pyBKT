@@ -65,11 +65,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
     if defaults is None:
         defaults = {}
-    if all(x in list(df.columns) for x in as_default.values()):
+    if any(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
             if k not in defaults:
                 defaults[k] = as_default[k]
-    elif all(x in list(df.columns) for x in ct_default.values()):
+    elif any(x in list(df.columns) for x in ct_default.values()):
         for k,v in ct_default.items():
             if k not in defaults:
                 defaults[k] = ct_default[k]
