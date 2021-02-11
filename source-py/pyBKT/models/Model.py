@@ -43,6 +43,7 @@ class Model:
 
         """
         self.fit_model = None
+        self.manual_param_init = False
         self._check_args(Model.MODEL_ARGS, kwargs)
         self._update_param(['parallel', 'num_fits', 'seed', 'defaults'], kwargs)
         self._update_param('model_type', self._update_defaults(kwargs))
@@ -64,10 +65,12 @@ class Model:
         self._update_param(['skills', 'num_fits', 'defaults', 
                             'parallel', 'forgets'], kwargs)
         self._update_param('model_type', self._update_defaults(kwargs))
-        self.fit_model = {}
+        if not self.manual_param_init:
+            self.fit_model = {}
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         for skill in all_data:
             self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets)
+        self.manual_param_init = False
 
     def predict(self, data_path = None, data = None):
         """
@@ -189,6 +192,7 @@ class Model:
                 raise ValueError("error in length, type or non-existent parameter")
             for param in values[skill]:
                 self.fit_model[skill][param] = values[skill][param]
+        self.manual_param_init = True
 
     def _data_helper(self, data_path, data, defaults, skills, model_type):
         """ Processes data given defaults, skills, and the model type. """
@@ -204,12 +208,16 @@ class Model:
         """ Helper function for fitting data. """
         num_learns = len(data["resource_names"])
         num_gs = len(data["gs_names"])
-        self._check_learns_gs(num_learns, num_gs, skill)
+        self._check_manual_param_init(num_learns, num_gs, skill)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
+            if self.manual_param_init and skill in self.fit_model:
+                for var in self.fit_model[skill]:
+                    fitmodel[var] = self.fit_model[skill][var]
+
             if forgets:
                 fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
             fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel)
@@ -287,7 +295,7 @@ class Model:
             valid = valid and (len(params['slips']) == len(params['guesses']))
         return valid
 
-    def _check_learns_gs(self, num_learns, num_gs, skill):
+    def _check_manual_param_init(self, num_learns, num_gs, skill):
         if self.fit_model and skill in self.fit_model and 'learns' in self.fit_model[skill] \
                 and len(self.fit_model[skill]['learns']) != num_learns:
             raise ValueError("invalid number of learns in initialization")
