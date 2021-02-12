@@ -6,30 +6,31 @@ from copy import deepcopy
 # returns data only for the indices given based on starts array
 def fix_data(data, indices):
     training_data = {}
-    resources = []
-    d = [[] for _ in range(len(data["data"]))]
-    start_temp = [data["starts"][i] for i in indices]
-    length_temp = [data["lengths"][i] for i in indices]
+    prev_starts = data["lengths"][indices]
+    lengths = data["lengths"][indices]
+    total_length = np.sum(lengths)
+    d = np.zeros((len(data["data"]), total_length), dtype=np.int32)
+    resources = np.ones(total_length, dtype=np.int64)
+    
     if "resource_names" in data:
         training_data["resource_names"] = data["resource_names"]
     if "gs_names" in data:
         training_data["gs_names"] = data["gs_names"]
-    starts = []
-    for i in range(len(start_temp)):
-        starts.append(len(resources)+1)
-        #print("A", start_temp[i], start_temp[i]+length_temp[i])
-        resources.extend(data["resources"][start_temp[i]-1:start_temp[i]+length_temp[i]-1])
-        for j in range(len(data["data"])):
-            d[j].extend(data["data"][j][start_temp[i]-1:start_temp[i]+length_temp[i]-1])
-    training_data["starts"] = np.asarray(starts)
-    training_data["lengths"] = np.asarray(length_temp)
-    training_data["data"] = np.asarray(d,dtype='int32')
-    resource=np.asarray(resources)
-    stateseqs=np.copy(resource)
-    training_data["stateseqs"]=np.asarray([stateseqs],dtype='int32')
-    training_data["resources"]=resource
-    training_data=(training_data)
-    return training_data
+    
+    starts = np.zeros(len(prev_starts), dtype=np.int64)
+    current_index = 1
+    for i in range(len(prev_starts)):
+        starts[i] = current_index
+
+        d[:,starts[i]-1:starts[i]+lengths[i]-1] = data["data"][:,prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
+        resources[starts[i]-1:starts[i]+lengths[i]-1] = data["resources"][prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
+        current_index += lengths[i]
+    
+    training_data["starts"] = starts
+    training_data["lengths"] = lengths
+    training_data["data"] = d
+    training_data["resources"]=resources
+    return (training_data)
 
 def crossvalidate(model, data, skill, folds, metric, seed):
 
