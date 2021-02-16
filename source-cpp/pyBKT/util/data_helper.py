@@ -140,6 +140,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                         # form the resource reference as we iterate through the dataframe, mapping each new pair to a number [1, # total pairs]
                         new_resource_ref[k] = len(new_resource_ref)+1
                     resources[i] = new_resource_ref[k]
+            if resource_ref is None:
+                resource_ref = new_resource_ref
         elif multiprior:
             resources = np.ones(len(data)+len(starts), dtype=np.int64)
             new_data = np.zeros(len(data)+len(starts), dtype=np.int32)
