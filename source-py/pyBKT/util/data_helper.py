@@ -68,11 +68,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         defaults = {}
     if any(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
-            if k not in defaults and k in df.columns:
+            if k not in defaults and as_default[k] in df.columns:
                 defaults[k] = as_default[k]
     if any(x in list(df.columns) for x in ct_default.values()):
         for k,v in ct_default.items():
-            if k not in defaults and k in df.columns:
+            if k not in defaults and ct_default[k] in df.columns:
                 defaults[k] = ct_default[k]
 
     # sort by the order in which the problems were answered
