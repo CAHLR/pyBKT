@@ -6,7 +6,7 @@ import numpy as np
 import io
 import requests
 
-def convert_data(url, skill_name, defaults=None, model_type=None, gs_ref=None, resource_ref=None):
+def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False):
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -92,8 +92,19 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_ref=None, r
         raise ValueError("no matching skills")
     for skill_ in all_skills:
 
+        if resource_refs is None:
+            resource_ref = None
+        else:
+            resource_ref = resource_refs[skill_]["resource_names"]
+        if gs_refs is None:
+            gs_ref = None
+        else:
+            gs_ref = gs_refs[skill_]["resource_names"]
+
         # filter out based on skill
         df3 = df[df[defaults["skill_name"]] == skill_]
+
+        stored_index = df3.index.copy()
 
         # convert from 0=incorrect,1=correct to 1=incorrect,2=correct
         df3.loc[:,defaults["correct"]]+=1
@@ -199,8 +210,12 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_ref=None, r
         Data["resources"]=resources
         Data["resource_names"]=resource_ref
         Data["gs_names"]=gs_ref
+        Data["index"]=stored_index
 
         datas[skill_] = Data
+
+    if return_df:
+        return datas, df
 
     return datas
     

@@ -21,6 +21,7 @@ def fix_data(data, indices):
     current_index = 1
     for i in range(len(prev_starts)):
         starts[i] = current_index
+
         d[:,starts[i]-1:starts[i]+lengths[i]-1] = data["data"][:,prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
         resources[starts[i]-1:starts[i]+lengths[i]-1] = data["resources"][prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
         current_index += lengths[i]

@@ -92,13 +92,18 @@ class Model:
         self._check_data(data_path, data)
         if self.fit_model is None:
             raise ValueError("model has not been fitted yet")
-        preds = {}
-        all_data = self._data_helper(data_path = data_path, data = data,
+        all_data, df = self._data_helper(data_path = data_path, data = data,
                              defaults = self.defaults, skills = self.skills,
-                             model_type = self.model_type)
+                             model_type = self.model_type, gs_ref = self.fit_model,
+                             resource_ref = self.fit_model,
+                             return_df = True)
+        df['correct_predictions'] = 0
+        df['state_predictions'] = 0
         for skill in all_data:
-            preds[skill] = self._predict(self.fit_model[skill], all_data[skill])
-        return preds
+            correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
+            df.loc[all_data[skill]['index'], 'correct_predictions'] = correct_predictions
+            df.loc[all_data[skill]['index'], 'state_predictions'] = state_predictions[0]
+        return df
 
     def evaluate(self, data = None, data_path = None, metric = metrics.rmse):
         """
@@ -119,7 +124,8 @@ class Model:
             if not metric in metrics.SUPPORTED_METRICS:
                 raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
             metric = getattr(metrics, metric)
-        all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
+        all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type,
+                                     gs_ref = self.fit_model, resource_ref = self.fit_model)
         return self._evaluate(all_data, metric)
 
     def crossvalidate(self, data = None, data_path = None, metric = metrics.rmse, **kwargs):
@@ -207,14 +213,20 @@ class Model:
         with open(os.path.normpath(loc + '/' + name), 'wb') as f:
             f.write(file_data.read())
 
-    def _data_helper(self, data_path, data, defaults, skills, model_type):
+    def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False):
         """ Processes data given defaults, skills, and the model type. """
         if data_path is not None:
-            data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type)
+            data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type, 
+                                              gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
         elif data is not None:
-            data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type)
-        for d in data_p.values():
-            check_data.check_data(d)
+            data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type,
+                                                gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
+        if not return_df:
+            for d in data_p.values():
+                check_data.check_data(d)
+        else:
+            for d in data_p[0].values():
+                check_data.check_data(d)
         return data_p
 
     def _fit(self, data, skill, forgets):
@@ -241,6 +253,8 @@ class Model:
         fit_model["learns"] = fit_model["As"][:, 1, 0]
         fit_model["forgets"] = fit_model["As"][:, 0, 1]
         fit_model["prior"] = fit_model["pi_0"][1][0]
+        fit_model["resource_names"] = data["resource_names"]
+        fit_model["gs_names"] = data["gs_names"]
         return fit_model
     
     def _predict(self, model, data):
