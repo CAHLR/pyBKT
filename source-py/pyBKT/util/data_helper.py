@@ -7,6 +7,7 @@ import io
 import requests
 
 def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False):
+    print(gs_refs)
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -67,11 +68,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         defaults = {}
     if any(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
-            if k not in defaults:
+            if k not in defaults and k in df.columns:
                 defaults[k] = as_default[k]
     if any(x in list(df.columns) for x in ct_default.values()):
         for k,v in ct_default.items():
-            if k not in defaults:
+            if k not in defaults and k in df.columns:
                 defaults[k] = ct_default[k]
 
     # sort by the order in which the problems were answered
@@ -99,7 +100,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         if gs_refs is None:
             gs_ref = None
         else:
-            gs_ref = gs_refs[skill_]["resource_names"]
+            gs_ref = gs_refs[skill_]["gs_names"]
 
         # filter out based on skill
         df3 = df[df[defaults["skill_name"]] == skill_]
@@ -183,6 +184,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             if gs_ref is None:
                 gs_ref=dict(zip(all_guess,range(len(df[defaults["multigs"]].unique()))))
             else:
+                print(gs_ref)
                 for i in all_guess:
                     if i not in gs_ref:
                         raise ValueError("Guess rate", i, "not previously fitted")
