@@ -6,7 +6,7 @@ import numpy as np
 import io
 import requests
 
-def convert_data(url, skill_name, defaults=None, model_type=None):
+def convert_data(url, skill_name, defaults=None, model_type=None, gs_ref=None, resource_ref=None):
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -65,11 +65,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
     if defaults is None:
         defaults = {}
-    if any(x in list(df.columns) for x in as_default.values()):
+    if all(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
             if k not in defaults:
                 defaults[k] = as_default[k]
-    elif any(x in list(df.columns) for x in ct_default.values()):
+    elif all(x in list(df.columns) for x in ct_default.values()):
         for k,v in ct_default.items():
             if k not in defaults:
                 defaults[k] = ct_default[k]
@@ -86,7 +86,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
         df = df[(df["original"]==1)]
     
     datas = {}
-    all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna()
+    all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna().apply(lambda x: str(x))
     all_skills = all_skills[all_skills.str.match(skill_name).astype(bool)]
     if all_skills.empty:
         raise ValueError("no matching skills")
@@ -102,7 +102,6 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
         data=np.array(df[defaults["correct"]])
         
         Data={}
-        gs_ref,resource_ref = {}, {}
     
         # create starts and lengths arrays
         lengths = np.array(df.groupby(defaults["user_id"])[defaults["user_id"]].count().values, dtype=np.int64)
@@ -114,8 +113,9 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
         # different types of resources handling: multipair, multiprior, multilearn and n/a
         if multipair:
             resources = np.ones(len(data), dtype=np.int64)
-            counter = 2
-            resource_ref["N/A"] = 1 #no pair
+            if resource_ref is None:
+                new_resource_ref = {}
+                new_resource_ref["N/A"] = 1 #no pair
             for i in range(len(df)):
                 # for the first entry of a new student, no pair
                 if i == 0 or df[i:i+1][defaults["user_id"]].values != df[i-1:i][defaults["user_id"]].values:
@@ -123,17 +123,24 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
                 else:
                     # each pair is keyed via "[item 1] [item 2]"
                     k = (str)(df[i:i+1][defaults["multipair"]].values)+" "+(str)(df[i-1:i][defaults["multipair"]].values)
-                    if k not in resource_ref:
+                    if resource_ref is not None and k not in resource_ref:
+                        raise ValueError("Pair", k, "not fitted")
+                    if k not in new_resource_ref:
                         # form the resource reference as we iterate through the dataframe, mapping each new pair to a number [1, # total pairs]
-                        resource_ref[k] = counter
-                        counter += 1
-                    resources[i] = resource_ref[k]
+                        new_resource_ref[k] = len(new_resource_ref)+1
+                    resources[i] = new_resource_ref[k]
         elif multiprior:
             resources = np.ones(len(data)+len(starts), dtype=np.int64)
             new_data = np.zeros(len(data)+len(starts), dtype=np.int32)
             # create new resources [2, #total + 1] based on how student initially responds
-            resource_ref = dict(zip(df[defaults["multiprior"]].unique(),range(2, len(df[defaults["multiprior"]].unique())+2)))
-            resource_ref["N/A"] = 1
+            all_priors = df[defaults["multiprior"]].unique()
+            if resource_ref is None:
+                resource_ref = dict(zip(all_priors,range(2, len(df[defaults["multiprior"]].unique())+2)))
+                resource_ref["N/A"] = 1
+            else:
+                for i in all_priors:
+                    if i not in resource_ref:
+                        raise ValueError("Prior", i, "not fitted")
             all_resources = np.array(df[defaults["multiprior"]].apply(lambda x: resource_ref[x]))
             # create phantom timeslices with resource 2 or 3 in front of each new student based on their initial response
             for i in range(len(starts)):
@@ -144,8 +151,15 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
                 lengths[i] += 1
             data = new_data
         elif multilearn:
-            # map each new resource found to a number [1, # total]
-            resource_ref=dict(zip(df[defaults["multilearn"]].unique(),range(1,len(df[defaults["multilearn"]].unique())+1)))
+            all_learns = df[defaults["multilearn"]].unique()
+            if resource_ref is None:
+                # map each new resource found to a number [1, # total]
+                resource_ref=dict(zip(all_learns,range(1,len(df[defaults["multilearn"]].unique())+1)))
+            else:
+                for i in all_learns:
+                    if i not in resource_ref:
+                        raise ValueError("Learn rate", i, "not fitted")
+                
             resources = np.array(df[defaults["multilearn"]].apply(lambda x: resource_ref[x]))
         else:
             resources=np.array([1]*len(data))
@@ -153,8 +167,14 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
 
         # multigs handling, make data n-dimensional where n is number of g/s types
         if multigs:
+            all_guess = df[defaults["multigs"]].unique()
             # map each new guess/slip case to a row [0, # total]
-            gs_ref=dict(zip(df[defaults["multigs"]].unique(),range(len(df[defaults["multigs"]].unique()))))
+            if gs_ref is None:
+                gs_ref=dict(zip(all_guess,range(len(df[defaults["multigs"]].unique()))))
+            else:
+                for i in all_guess:
+                    if i not in gs_ref:
+                        raise ValueError("Guess rate", i, "not previously fitted")
             data_ref = np.array(df[defaults["multigs"]].apply(lambda x: gs_ref[x]))
         
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
@@ -168,8 +188,10 @@ def convert_data(url, skill_name, defaults=None, model_type=None):
 
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
+            resource_ref = {}
             resource_ref[""]=1
         if not multigs:
+            gs_ref = {}
             gs_ref[""]=1
             
         Data["starts"]=starts
