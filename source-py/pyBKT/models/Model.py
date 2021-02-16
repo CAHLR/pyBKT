@@ -150,9 +150,12 @@ class Model:
                             'parallel', 'forgets', 'seed', 'folds'], kwargs)
         self._update_param('model_type', self._update_defaults(kwargs))
         metric_vals = {}
+        if not self.manual_param_init:
+            self.fit_model = {}
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
+        self.manual_param_init = False
         return metric_vals
 
     @property
