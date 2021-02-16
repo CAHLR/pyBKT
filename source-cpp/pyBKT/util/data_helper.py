@@ -7,7 +7,6 @@ import io
 import requests
 
 def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False):
-    print(gs_refs)
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -184,7 +183,6 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             if gs_ref is None:
                 gs_ref=dict(zip(all_guess,range(len(df[defaults["multigs"]].unique()))))
             else:
-                print(gs_ref)
                 for i in all_guess:
                     if i not in gs_ref:
                         raise ValueError("Guess rate", i, "not previously fitted")
