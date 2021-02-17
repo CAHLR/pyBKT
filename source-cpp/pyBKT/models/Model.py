@@ -156,7 +156,9 @@ class Model:
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
-        return metric_vals
+        df = pd.DataFrame(metric_vals.items())
+        df.columns = ['skill', 'mean_error']
+        return df.set_index('skill')
 
     @property
     def coef_(self):
@@ -202,6 +204,23 @@ class Model:
             for param in values[skill]:
                 self.fit_model[skill][param] = values[skill][param]
         self.manual_param_init = True
+
+    def params(self):
+        """ 
+        Returns a DataFrame containing fitted parameters for easy
+        printing.
+        """
+        coefs = self.coef_
+        formatted_coefs = []
+        for skill in coefs:
+            for param in coefs[skill]:
+                classes = self._format_param(skill, param, coefs[skill][param])
+                for class_ in classes:
+                   formatted_coefs.append((skill, param, class_, classes[class_])) 
+        df = pd.DataFrame(formatted_coefs)
+        df.columns = ['skill', 'param', 'class', 'value']
+        return df.set_index(['skill', 'param', 'class'])
+
 
     def fetch_dataset(self, link, loc):
         """
@@ -279,6 +298,15 @@ class Model:
         """ Helper function for crossvalidating. """
         return crossvalidate.crossvalidate(self, data, skill, self.folds, metric, self.seed)
 
+    def _format_param(self, skill, param, value):
+        """ Formats parameter for nice printing. """
+        if isinstance(value, np.ndarray):
+            ptype = 'resource_names' if (param == 'learns' or param == 'forgets') \
+                                     else 'gs_names'
+            return dict(zip(self.fit_model[skill][ptype], value))
+        else:
+            return {'default': value}
+
     def _update_param(self, params, args):
         """ Updates parameters given kwargs. """
         if isinstance(args, dict):
@@ -301,6 +329,7 @@ class Model:
                     if self.defaults is None:
                         self.defaults = {}
                     self.defaults[d] = defaults[d]
+                    model_types[Model.MODELS_BKT.index(d)] = True
                 else:
                     raise ValueError("model type must either be boolean for automatic column inference" + \
                                      " or string specifying column")

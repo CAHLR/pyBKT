@@ -30,7 +30,8 @@ def auc(flat_true_values, pred_values):
             pred_values = np.delete(pred_values, i)
             i -= 1
         i += 1
-
+    if len(set(flat_true_values)) == 1:
+        return np.nan
 
     auc = sk.roc_auc_score(flat_true_values, pred_values)
     return auc

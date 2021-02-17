@@ -121,6 +121,9 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         for i in range(1, len(lengths)):
             starts[i] = starts[i-1] + lengths[i-1]
 
+        if multipair + multiprior + multilearn > 1:
+            raise ValueError("cannot specify more than 1 resource handling")
+
         # different types of resources handling: multipair, multiprior, multilearn and n/a
         if multipair:
             resources = np.ones(len(data), dtype=np.int64)
@@ -202,10 +205,10 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
             resource_ref = {}
-            resource_ref[""]=1
+            resource_ref["default"]=1
         if not multigs:
             gs_ref = {}
-            gs_ref[""]=1
+            gs_ref["default"]=1
             
         Data["starts"]=starts
         Data["lengths"]=lengths
@@ -220,6 +223,3 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         return datas, df
 
     return datas
-    
- 
-
