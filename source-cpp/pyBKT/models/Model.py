@@ -349,7 +349,7 @@ class Model:
                 valid = valid and isinstance(params[param], numbers.Number)
             else:
                 valid = valid and isinstance(params[param], np.ndarray) \
-                                   and params[param] in Model.INITIALIZABLE_PARAMS
+                                   and param in Model.INITIALIZABLE_PARAMS
         if 'learns' in params and 'forgets' in params:
             valid = valid and (len(params['learns']) == len(params['forgets']))
         if 'guesses' in params and 'slips' in params:
