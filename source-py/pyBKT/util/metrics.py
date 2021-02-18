@@ -8,7 +8,6 @@ def error_check(flat_true_values, pred_values):
         raise ValueError("preds and true values need to have same shape")
 
 def accuracy(flat_true_values, pred_values):
-    flat_true_values = [x-1 for x in flat_true_values]
     error_check(flat_true_values, pred_values)
 
     correct = 0
@@ -20,7 +19,6 @@ def accuracy(flat_true_values, pred_values):
     return correct/len([x for x in flat_true_values if (x == 0 or x == 1)])
 
 def auc(flat_true_values, pred_values):
-    flat_true_values = [x-1 for x in flat_true_values]
     error_check(flat_true_values, pred_values)
     # multiprior handling, remove phantom nondata
     i = 0
@@ -40,7 +38,6 @@ def rmse(flat_true_values, pred_values):
     # represent correct as 1, incorrect as 0 for RMSE calculation
     if len(flat_true_values) == 0:
         return 0
-    flat_true_values = [x-1 for x in flat_true_values]
     error_check(flat_true_values, pred_values)
     rmse, c = 0, 0
     for i in range(len(flat_true_values)):

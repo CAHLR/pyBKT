@@ -296,6 +296,7 @@ class Model:
             real_data = all_data[skill]['data']
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
+        true = true - 1
         return metric(true, pred)
 
     def _crossvalidate(self, data, skill, metric):
