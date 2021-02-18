@@ -6,7 +6,7 @@ from copy import deepcopy
 # returns data only for the indices given based on starts array
 def fix_data(data, indices):
     training_data = {}
-    prev_starts = data["lengths"][indices]
+    prev_starts = data["starts"][indices]
     lengths = data["lengths"][indices]
     total_length = np.sum(lengths)
     d = np.zeros((len(data["data"]), total_length), dtype=np.int32)
