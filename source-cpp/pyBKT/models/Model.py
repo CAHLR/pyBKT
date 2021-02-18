@@ -99,8 +99,9 @@ class Model:
                              model_type = self.model_type, gs_ref = self.fit_model,
                              resource_ref = self.fit_model,
                              return_df = True)
-        df['correct_predictions'] = 0
-        df['state_predictions'] = 0
+        # default best effort prediction of 0.5
+        df['correct_predictions'] = 0.5
+        df['state_predictions'] = 0.5
         for skill in all_data:
             correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
             df.loc[all_data[skill]['index'], 'correct_predictions'] = correct_predictions
