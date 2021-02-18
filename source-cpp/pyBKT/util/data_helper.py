@@ -39,6 +39,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             f = open(url.split('/')[-1], 'w+')
             # save csv to local file for quick lookup in the future
             df.to_csv(f)
+        else:
+            raise ValueError("File path or dataframe input not found")
 
     # default column names for assistments
     as_default={'order_id': 'order_id',
@@ -79,6 +81,21 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         df[defaults["order_id"]] = df[defaults["order_id"]].apply(lambda x: int(x))
         df.sort_values(defaults["order_id"], inplace=True)
     
+    if "user_id" not in defaults:
+        raise KeyError("user id default column not specified")
+    elif defaults["user_id"] not in df.columns:
+        raise KeyError("specified user id default column not in data")
+        
+    if "correct" not in defaults:
+        raise KeyError("correct default column not specified")
+    elif defaults["correct"] not in df.columns:
+        raise KeyError("specified correct default column not in data")
+        
+    if "skill_name" not in defaults:
+        raise KeyError("skill name default column not specified")
+    elif defaults["skill_name"] not in df.columns:
+        raise KeyError("specified skill name default column not in data")
+    
     # make sure all responses of the same user are grouped together with stable sorting
     df.sort_values(defaults["user_id"], kind="mergesort", inplace=True)
     
@@ -103,6 +120,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
 
         # filter out based on skill
         df3 = df[df[defaults["skill_name"]] == skill_]
+        if df3.empty:
+            raise ValueError("Incorrect Skill or Dataset Specified")
 
         stored_index = df3.index.copy()
 
@@ -126,6 +145,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
 
         # different types of resources handling: multipair, multiprior, multilearn and n/a
         if multipair:
+            if "multipair" not in defaults:
+                raise KeyError("multipair default column not specified")
+            elif defaults["multipair"] not in df3.columns:
+                raise KeyError("specified multipair default column not in data")
+                
             resources = np.ones(len(data), dtype=np.int64)
             if resource_ref is None:
                 new_resource_ref = {}
@@ -146,6 +170,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             if resource_ref is None:
                 resource_ref = new_resource_ref
         elif multiprior:
+            if "multiprior" not in defaults:
+                raise KeyError("multiprior default column not specified")
+            elif defaults["multiprior"] not in df3.columns:
+                raise KeyError("specified multiprior default column not in data")
+                
             resources = np.ones(len(data)+len(starts), dtype=np.int64)
             new_data = np.zeros(len(data)+len(starts), dtype=np.int32)
             # create new resources [2, #total + 1] based on how student initially responds
@@ -167,6 +196,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 lengths[i] += 1
             data = new_data
         elif multilearn:
+            if "multilearn" not in defaults:
+                raise KeyError("multilearn default column not specified")
+            elif defaults["multilearn"] not in df3.columns:
+                raise KeyError("specified multilearn default column not in data")
+                
             all_learns = df3[defaults["multilearn"]].unique()
             if resource_ref is None:
                 # map each new resource found to a number [1, # total]
@@ -183,6 +217,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
 
         # multigs handling, make data n-dimensional where n is number of g/s types
         if multigs:
+            if "multigs" not in defaults:
+                raise KeyError("multigs default column not specified")
+            elif defaults["multigs"] not in df3.columns:
+                raise KeyError("specified multigs default column not in data")
+                
             all_guess = df3[defaults["multigs"]].unique()
             # map each new guess/slip case to a row [0, # total]
             if gs_ref is None:
