@@ -24,7 +24,7 @@ def auc(flat_true_values, pred_values):
     i = 0
     while i < len(flat_true_values):
         if (flat_true_values[i] != 1 and flat_true_values[i] != 0) or (pred_values[i] < 0 or pred_values[i] > 1):
-            flat_true_values.pop(i)
+            flat_true_values = np.delete(flat_true_values, i)
             pred_values = np.delete(pred_values, i)
             i -= 1
         i += 1
