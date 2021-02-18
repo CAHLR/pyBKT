@@ -261,6 +261,7 @@ class Model:
         self._check_manual_param_init(num_learns, num_gs, skill)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
+        best_model = None
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
