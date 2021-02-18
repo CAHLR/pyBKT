@@ -8,6 +8,8 @@ from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.util import crossvalidate, data_helper, check_data, metrics
 
+pd.options.display.float_format = '{:,.5f}'.format
+
 class Model:
     MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
@@ -156,9 +158,9 @@ class Model:
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
-        df = pd.DataFrame(metric_vals)
+        df = pd.DataFrame(metric_vals.items())
         df.columns = ['skill', 'mean_error']
-        return df
+        return df.set_index('skill')
 
     @property
     def coef_(self):

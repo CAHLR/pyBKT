@@ -8,6 +8,8 @@ from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.util import crossvalidate, data_helper, check_data, metrics
 
+pd.options.display.float_format = '{:,.5f}'.format
+
 class Model:
     MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
