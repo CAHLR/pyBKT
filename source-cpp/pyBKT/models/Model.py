@@ -377,7 +377,7 @@ class Model:
                         ", ".join(expected_args))
 
     def _check_data(self, data_path, data):
-        if not data_path and not data:
+        if not data_path and data is None:
             raise ValueError("no data specified")
         elif data_path is not None and data is not None:
             raise ValueError("cannot specify both data location and data")
