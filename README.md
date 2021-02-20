@@ -8,7 +8,7 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 ```
     pip install pyBKT
 ```
-[Quick-start example in Colab notebook](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") 
+[Quick-start example in Colab notebook](https://colab.research.google.com/drive/13abu919edUXbvPV3qeGPpvwnFBExU7Vd "pyBKT quick start in Colab") 
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python boost adaptation by Cristian Garay (c.garay@berkeley.edu). All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
 
@@ -39,7 +39,11 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 1. Xu, Y., Johnson, M. J., Pardos, Z. A. (2015) Scaling cognitive modeling to massive open environments. In *Proceedings of the Workshop on Machine Learning for Education at the 32nd International Conference on Machine Learning* (ICML). Lille, France. [[icml ml4ed]](http://ml4ed.cc/attachments/XuY.pdf)
 
 # Installation and setup
-This is intended as a quick overview of steps to install and setup and to run pyBKT locally. While both a pure Python port and a Cython version of pyBKT are offered, the former does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction):
+This is intended as a quick overview of steps to install and setup and to run pyBKT locally. 
+
+We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. Note that pip, by default, will install the C++/Python version unless the required libraries are not found or there is an error during installation. In the case of such issues, it will revert to the pure Python implementation.
+
+The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). Note that the C++/Python extensions require the Boost libraries as specified below: most Linux machines should come preinstalled with them.
 
 |                 Test Description                | pyBKT (Python) | pyBKT (Cython) |
 |:-----------------------------------------------:|:--------------:|---------------:|
@@ -81,7 +85,163 @@ Alternatively, if `pip` poses some problems, you can clone the repository as suc
 ```
 
 # Preparing Data and Running Model #
+
+The following serves as a mini-tutorial for how to get started with pyBKT. There is more information available at the Colab notebook listed at the top of the README.
+
 ## Input and Output Data ##
+
+The accepted input formats are Pandas DataFrames and data files of type csv (comma separated) or tsv (tab separated). pyBKT will automatically infer which delimiter to use in the case that it is passed a data file. Since column names mapping meaning to each field in the data (i.e. skill name, correct/incorrect) vary per data source, you may need to specify a mapping from your data file's column names to pyBKT's expected column names. In many cases with Cognitive Tutor and Assistments datasets, pyBKT will be able to automatically infer column name mappings, but in the case that it is unable to, it will raise an exception.
+
+## Creating and Training Models ##
+
+The process of creating and training models in pyBKT resemble that of SciKit Learn. pyBKT provides easy methods of fetching online datasets and to fit on a combination or all skills available in any particular dataset.
+
+```python
+from pyBKT.models import Model
+
+# Initialize the model with an optional seed
+model = Model(seed = 42, num_fits = 1)
+
+# Fetch Assistments and CognitiveTutor data (optional - if you have your own dataset, that's fine too!)
+model.fetch_dataset('https://raw.githubusercontent.com/CAHLR/pyBKT-examples/master/data/as.csv', '.')
+model.fetch_dataset('https://raw.githubusercontent.com/CAHLR/pyBKT-examples/master/data/ct.csv', '.')
+
+# Train a simple BKT model on all skills in the CT dataset
+model.fit(data_path = 'ct.csv')
+
+# Train a simple BKT model on one skill in the CT dataset
+# Note that calling fit deletes any previous trained BKT model!
+model.fit(data_path = 'ct.csv', skills = "Plot imperfect radical")
+
+# Train a simple BKT model on multiple skills in the CT dataset
+model.fit(data_path = 'ct.csv', skills = ["Plot imperfect radical",
+                                          "Plot pi"])
+
+# Train a multiguess and slip BKT model on multiple skills in the
+# CT dataset. Note: if you are not using CognitiveTutor or Assistments
+# data, you may need to provide a column mapping for the guess/slip
+# classes to use (i.e. if the column name is gsclasses, you would
+# specify multigs = 'gsclasses' or specify a defaults dictionary
+# defaults = {'multigs': 'gsclasses'}).
+model.fit(data_path = 'ct.csv', skills = ["Plot imperfect radical",
+                                          "Plot pi"],
+                                multigs = True)
+
+# We can combine multiple model variants.
+model.fit(data_path = 'ct.csv', skills = ["Plot imperfect radical",
+                                          "Plot pi"],
+                                multigs = True, forgets = True,
+                                multilearn = True)
+
+# We can use a different column to specify the different learn and 
+# forget classes. In this case, we use student ID.
+model.fit(data_path = 'ct.csv', skills = ["Plot imperfect radical",
+                                          "Plot pi"],
+                                multigs = True, forgets = True,
+                                multilearn = 'Anon Student Id')
+
+# View the trained parameters!
+print(model.params())
+```
+
+Note that if we train on a dataset that has unfamiliar columns to pyBKT, you will be required to specify a mapping of column names in that dataset to expected pyBKT columns. This is referred to as the model defaults (i.e. it specifies the default column names to lookup in the dataset). An example usage is provided below for an unknown dataset which has column names "row", "skill\_t", "answer", and "gs\_classes".
+``` python
+# Load unfamiliar dataset.
+df = pd.read_csv('mystery.csv')
+
+# For other non-Assistments/CogTutor style datasets, we will need to specify the
+# columns corresponding to each required column (i.e. the user ID, correct/incorrect).
+# For that, we use a defaults dictionary.
+# In this case, the order ID that pyBKT expects is specified by the column row in the
+# dataset, the skill_name is specified by a column skill_t and the correctness is specified
+# by the answer column in the dataset.
+defaults = {'order_id': 'row', 'skill_name': 'skill_t', 'correct': 'answer'}
+
+# This defaults dictionary contains columns specifying what columns correspond
+# to the desired guess/slip classes, etc. In this case, our desired column for
+# the guess/slip classes is a column named gs_classes.
+defaults['multigs'] = 'gs_classes'
+
+# Fit using the defaults (column mappings) specified in the dictionary.
+model.fit(data = df, defaults = defaults)
+
+# Predict/evaluate/etc.
+training_acc = model.evaluate(data = df, metric = 'accuracy')
+```
+
+## Model Prediction and Evaluation ##
+
+Prediction and evaluation behave similarly to SciKit-Learn. pyBKT offers a variety of features for prediction and evaluation.
+
+```python
+from pyBKT.models import Model
+
+# Initialize the model with an optional seed
+model = Model(seed = 42, num_fits = 1)
+
+# Load the Cognitive Tutor data (not necessary, but shown
+# for the purposes of the tutorial that pyBKT accepts
+# DataFrames as well as file locations!).
+ct_df = pd.read_csv('ct.csv', encoding = 'latin')
+
+# Train a simple BKT model on all skills in the CT dataset
+model.fit(data_path = 'ct.csv')
+
+# Predict on all skills on the training data.
+# This returns a Pandas DataFrame.
+preds_df = model.predict(data_path = 'ct.csv')
+
+# Evaluate the RMSE of the model on the training data.
+# Note that the default evaluate metric is RMSE.
+training_rmse = model.evaluate(data = ct_df)
+
+# Evaluate the AUC of the model on the training data. The supported
+# metrics are AUC, RMSE and accuracy (they should be lowercased in
+# the argument!).
+training_auc = model.evaluate(data_path = 'ct.csv', metric = 'auc')
+
+# We can define a custom metric as well.
+def mae(true_vals, pred_vals):
+  """ Calculates the mean absolute error. """
+  return np.mean(np.abs(true_vals - pred_vals))
+
+training_mae = model.evaluate(data_path = 'ct.csv', metric = mae)
+```
+
+## Crossvalidation ##
+
+Crossvalidation is offered as a blackbox function similar to a combination of fit and evaluate that accepts a particular number of folds, a seed, and a metric (either one of the 3 provided that are 'rmse', 'auc' or 'accuracy' or a custom Python function taking 2 arguments). Similar arguments for the model types, data path/data, and skill names are accepted as with the fit function.
+
+``` python
+from pyBKT.models import Model
+
+# Initialize the model with an optional seed
+model = Model(seed = 42, num_fits = 1)
+
+# Crossvalidate with 5 folds on all skills in the CT dataset.
+crossvalidated_errors = model.crossvalidate(data_path = 'ct.csv', folds = 5)
+
+# Crossvalidate on a particular set of skills with a given 
+# seed, folds and metric.
+def mae(true_vals, pred_vals):
+  """ Calculates the mean absolute error. """
+  return np.mean(np.abs(true_vals - pred_vals))
+
+# Note that the skills argument accepts a REGEX pattern. In this case, this matches and 
+# crossvalidates on all skills containing the word fraction.
+crossvalidated_mae_errs = model.crossvalidate(data_path = 'ct.csv', skills = ".*fraction.*",
+                                              folds = 10, metric = mae)
+
+# Crossvalidate using multiple model variants.
+crossvalidated_multigsf = model.crossvalidate(data_path = 'ct.csv', multigs = True, forgets = True)
+```
+
+## Extended Features ##
+
+Extended features include model parameter initialization by setting model.coef_, providing a configuration dictionary, setting model default columns, and more. For more information about these features, take a look at the Colab notebook provided at the top of the README.
+
+# Internal Data Format #
+
 _pyBKT_ models student mastery of a skills as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable has two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
 
 To run the pyBKT model, define the following variables:
@@ -126,82 +286,6 @@ The `fitmodel` also includes the following emission probabilities:
 * `guesses`: the probability of guessing correctly, given "not knowing" state.
 * `slips`: the probability of picking incorrect answer, given "knowing" state.
 
-## Example ##
-
-A basic BKT parameter fitting example using synthesized data is can found in this [(Google Colab link)](https://colab.research.google.com/drive/1TKJkKYPAIub5jJSpAe04HJmP08EFYtMV?usp=sharing "pyBKT quick start in Colab") notebook, and in the code below:
-
-```python
-import sys
-import numpy as np
-from pyBKT.generate import synthetic_data, random_model_uni
-from pyBKT.fit import EM_fit
-from copy import deepcopy
-
-#parameters classes
-num_gs = 1 #number of guess/slip classes
-num_learns = 1 #number of learning rates
-
-num_fit_initializations = 20
-
-#true params used for synthetic data generation
-p_T = 0.30
-p_F = 0.00
-p_G = 0.10
-p_S = 0.03
-p_L0 = 0.10
-
-#generate synthetic model and data.
-truemodel = {}
-
-truemodel["As"] =  np.zeros((num_learns,2,2), dtype=np.float_)
-for i in range(num_learns):
-    truemodel["As"][i] = np.transpose([[1-p_T, p_T], [p_F, 1-p_F]])
-
-truemodel["learns"] = truemodel["As"][:,1, 0,]
-truemodel["forgets"] = truemodel["As"][:,0, 1]
-
-truemodel["pi_0"] = np.array([[1-p_L0], [p_L0]])
-truemodel["prior"] = truemodel["pi_0"][1][0]
-
-truemodel["guesses"] = np.full(num_gs, p_G, dtype=np.float_)
-truemodel["slips"] = np.full(num_gs, p_S, dtype=np.float_)
-#can optionally set learn class sequence - set randomly by synthetic_data if not included
-#truemodel["resources"] = np.random.randint(1, high = num_resources, size = sum(observation_sequence_lengths))
-
-#data!
-print("generating data...")
-observation_sequence_lengths = np.full(500, 100, dtype=np.int) #specifies 500 students with 100 observations for synthetic data
-data = synthetic_data.synthetic_data(truemodel, observation_sequence_lengths)
-
-#fit models, starting with random initializations
-print('fitting! each dot is a new EM initialization')
-
-num_fit_initializations = 5
-best_likelihood = float("-inf")
-
-for i in range(num_fit_initializations):
-	fitmodel = random_model_uni.random_model_uni(num_learns, num_gs) # include this line to randomly set initial param values
-	(fitmodel, log_likelihoods) = EM_fit.EM_fit(fitmodel, data)
-	if(log_likelihoods[-1] > best_likelihood):
-		best_likelihood = log_likelihoods[-1]
-		best_model = fitmodel
-
-# compare the fit model to the true model
-
-print('')
-print('\ttruth\tlearned')
-print('prior\t%.4f\t%.4f' % (truemodel['prior'], best_model["pi_0"][1][0]))
-for r in range(num_learns):
-    print('learn%d\t%.4f\t%.4f' % (r+1, truemodel['As'][r, 1, 0].squeeze(), best_model['As'][r, 1, 0].squeeze()))
-for r in range(num_learns):
-    print('forget%d\t%.4f\t%.4f' % (r+1, truemodel['As'][r, 0, 1].squeeze(), best_model['As'][r, 0, 1].squeeze()))
-
-for s in range(num_gs):
-    print('guess%d\t%.4f\t%.4f' % (s+1, truemodel['guesses'][s], best_model['guesses'][s]))
-for s in range(num_gs):
-    print('slip%d\t%.4f\t%.4f' % (s+1, truemodel['slips'][s], best_model['slips'][s]))
-
-```
 ## TODOs ##
 * Support for parameter tieing and fixing 
 * Boostless Cython
