@@ -240,10 +240,10 @@ class Model:
 
     def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False):
         """ Processes data given defaults, skills, and the model type. """
-        if data_path is not None:
+        if isinstance(data_path, str):
             data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type, 
                                               gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
-        elif data is not None:
+        elif isinstance(data, pd.DataFrame):
             data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type,
                                                 gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
         if not return_df:
