@@ -142,7 +142,7 @@ class Model:
         {'Box and Whisker': [0.42907885779555427, 0.43025621177657264, 0.4009203965037577, 0.4198850275047665, 0.4271669758997527]}
 
         """
-        if data is None and data_path is None:
+        if not isinstance(data, pd.DataFrame) and not isinstance(data_path, str):
             raise ValueError("no data specified")
         elif isinstance(metric, str):
             if not metric in metrics.SUPPORTED_METRICS:
@@ -377,13 +377,11 @@ class Model:
                         ", ".join(expected_args))
 
     def _check_data(self, data_path, data):
-        if not data_path and not data:
+        if not isinstance(data_path, str) and not isinstance(data, pd.DataFrame):
             raise ValueError("no data specified")
-        elif data_path is not None and data is not None:
+        elif isinstance(data_path, str) and isinstance(data, pd.DataFrame):
             raise ValueError("cannot specify both data location and data")
-        elif data is not None and not isinstance(data, pd.DataFrame):
-            raise ValueError("data must be a Pandas DataFrame")
-        elif data_path is not None and not os.path.exists(data_path):
+        elif isinstance(data_path, str) and not os.path.exists(data_path):
             raise ValueError("data path is invalid or file not found")
 
     def __repr__(self):
