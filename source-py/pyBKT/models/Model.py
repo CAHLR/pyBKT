@@ -84,12 +84,23 @@ class Model:
 
         >>> model = Model(seed = 42)
         >>> model.fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
-        >>> model.predict(data_path = 'as.csv')
-        {'Box and Whisker': (array([0.75036   , 0.60286553, 0.75036   , ..., 0.80416815, 0.83126012,
-               0.77249206]), array([[0.17072973, 0.41991344, 0.17072973, ..., 0.07982386, 0.03405348,
-                0.13333885],
-               [0.82927027, 0.58008656, 0.82927027, ..., 0.92017614, 0.96594652,
-                0.86666115]]))}
+        >>> preds_df = model.predict(data_path = 'as.csv')
+        >>> preds_df[preds_df['skill_name'] == 'Box and Whisker'][['user_id', 'correct', 'correct_predictions', 'state_predictions']]
+              user_id  correct  correct_predictions  state_predictions
+        0       64525        1              0.69205            0.28276
+        1       64525        1              0.80226            0.10060
+        2       70363        0              0.69205            0.28276
+        3       70363        1              0.54989            0.51775
+        4       70363        0              0.74196            0.20028
+        ...       ...      ...                  ...                ...
+        3952    96297        1              0.84413            0.03139
+        3953    96297        1              0.84429            0.03113
+        3954    96297        1              0.84432            0.03108
+        3955    96298        1              0.69205            0.28276
+        3956    96298        1              0.80226            0.10060
+
+        [3957 rows x 4 columns]
+
         """
         self._check_data(data_path, data)
         if self.fit_model is None:
@@ -138,11 +149,25 @@ class Model:
         default column names, parallelization, and model types) as arguments.
 
         >>> model = Model(seed = 42)
-        >>> model.crossvalidate(data_path = 'as.csv', skills = 'Box and Whisker')
-        {'Box and Whisker': [0.42907885779555427, 0.43025621177657264, 0.4009203965037577, 0.4198850275047665, 0.4271669758997527]}
+        >>> model.crossvalidate(data_path = 'as.csv')
+                                                            mean_error
+        skill
+        Circle Graph                                           0.45840
+        Percent Of                                             0.38005
+        Finding Percents                                       0.42757
+        Equivalent Fractions                                   0.45754
+        Proportion                                             0.45437
+        ...                                                        ...
+        Solving Systems of Linear Equations                    0.38976
+        Simplifying Expressions positive exponents             0.46494
+        Parts of a Polyomial, Terms, Coefficient, Monom...     0.33278
+        Finding Slope From Equation                            0.30684
+        Recognize Quadratic Pattern                            0.00000
+
+        [110 rows x 1 columns]
 
         """
-        if data is None and data_path is None:
+        if not isinstance(data, pd.DataFrame) and not isinstance(data_path, str):
             raise ValueError("no data specified")
         elif isinstance(metric, str):
             if not metric in metrics.SUPPORTED_METRICS:
@@ -212,6 +237,28 @@ class Model:
         """ 
         Returns a DataFrame containing fitted parameters for easy
         printing.
+
+        >>> model = Model(seed = 42)
+        >>> model.fit(data_path = 'as.csv', multilearn = True, forgets = True, skills = 'Box and Whisker')
+        >>> model.params()
+                                          value
+        skill           param   class          
+        Box and Whisker prior   default 0.67443
+                        learns  30799   0.16737
+                                30059   0.33788
+                                30060   0.28723
+                                63448   0.10231
+                                63447   0.07025
+                                63446   0.13453
+                        guesses default 0.31793
+                        slips   default 0.12543
+                        forgets 30799   0.00000
+                                30059   0.04908
+                                30060   0.01721
+                                63448   0.03895
+                                63447   0.00000
+                                63446   0.01058
+
         """
         coefs = self.coef_
         formatted_coefs = []
@@ -219,7 +266,7 @@ class Model:
             for param in coefs[skill]:
                 classes = self._format_param(skill, param, coefs[skill][param])
                 for class_ in classes:
-                   formatted_coefs.append((skill, param, class_, classes[class_])) 
+                   formatted_coefs.append((skill, param, str(class_), classes[class_]))
         df = pd.DataFrame(formatted_coefs)
         df.columns = ['skill', 'param', 'class', 'value']
         return df.set_index(['skill', 'param', 'class'])
@@ -240,10 +287,10 @@ class Model:
 
     def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False):
         """ Processes data given defaults, skills, and the model type. """
-        if data_path is not None:
+        if isinstance(data_path, str):
             data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type, 
                                               gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
-        elif data is not None:
+        elif isinstance(data, pd.DataFrame):
             data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type,
                                                 gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
         if not return_df:
@@ -377,13 +424,11 @@ class Model:
                         ", ".join(expected_args))
 
     def _check_data(self, data_path, data):
-        if not data_path and data is None:
+        if not isinstance(data_path, str) and not isinstance(data, pd.DataFrame):
             raise ValueError("no data specified")
-        elif data_path is not None and data is not None:
+        elif isinstance(data_path, str) and isinstance(data, pd.DataFrame):
             raise ValueError("cannot specify both data location and data")
-        elif data is not None and not isinstance(data, pd.DataFrame):
-            raise ValueError("data must be a Pandas DataFrame")
-        elif data_path is not None and not os.path.exists(data_path):
+        elif isinstance(data_path, str) and not os.path.exists(data_path):
             raise ValueError("data path is invalid or file not found")
 
     def __repr__(self):
