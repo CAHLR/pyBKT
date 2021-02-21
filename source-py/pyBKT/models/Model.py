@@ -185,7 +185,7 @@ class Model:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
         df = pd.DataFrame(metric_vals.items())
-        df.columns = ['skill', 'mean_error']
+        df.columns = ['skill', metric if isinstance(metric, str) else metric.__name__]
         return df.set_index('skill')
 
     @property
