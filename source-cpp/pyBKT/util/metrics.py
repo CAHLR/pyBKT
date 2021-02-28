@@ -9,7 +9,8 @@ def error_check(flat_true_values, pred_values):
 
 def accuracy(flat_true_values, pred_values):
     error_check(flat_true_values, pred_values)
-
+    if len(flat_true_values) == 0:
+        return np.nan
     correct = 0
     for i in range(len(pred_values)):
         if pred_values[i] >= 0.5 and flat_true_values[i] == 1:
@@ -21,6 +22,8 @@ def accuracy(flat_true_values, pred_values):
 def auc(flat_true_values, pred_values):
     error_check(flat_true_values, pred_values)
     # multiprior handling, remove phantom nondata
+    if len(flat_true_values) == 0:
+        return np.nan
     i = 0
     while i < len(flat_true_values):
         if (flat_true_values[i] != 1 and flat_true_values[i] != 0) or (pred_values[i] < 0 or pred_values[i] > 1):
@@ -37,7 +40,7 @@ def auc(flat_true_values, pred_values):
 def rmse(flat_true_values, pred_values):
     # represent correct as 1, incorrect as 0 for RMSE calculation
     if len(flat_true_values) == 0:
-        return 0
+        return np.nan
     error_check(flat_true_values, pred_values)
     rmse, c = 0, 0
     for i in range(len(flat_true_values)):
