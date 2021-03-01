@@ -112,11 +112,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         raise ValueError("no matching skills")
     for skill_ in all_skills:
 
-        if resource_refs is None:
+        if resource_refs is None or skill_ not in resource_refs:
             resource_ref = None
         else:
             resource_ref = resource_refs[skill_]["resource_names"]
-        if gs_refs is None:
+        if gs_refs is None or skill_ not in gs_refs:
             gs_ref = None
         else:
             gs_ref = gs_refs[skill_]["gs_names"]
