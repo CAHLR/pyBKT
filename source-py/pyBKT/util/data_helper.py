@@ -101,10 +101,12 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     
     if "original" in df.columns:
         df = df[(df["original"]==1)]
+        
+    df[defaults["skill_name"]] = df[defaults["skill_name"]].apply(str)
     
     datas = {}
     skill_name = '^(' + skill_name + ')$'
-    all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna().apply(lambda x: str(x))
+    all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna()
     all_skills = all_skills[all_skills.str.match(skill_name).astype(bool)]
     if all_skills.empty:
         raise ValueError("no matching skills")
