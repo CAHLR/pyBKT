@@ -41,7 +41,7 @@ def crossvalidate(model, data, skill, folds, metric, seed):
     # create random permutation to act as indices for folds for crossvalidation
     shuffle = np.random.RandomState(seed=seed).permutation(len(data["starts"]))
     all_true, all_pred = [], []
-    metrics = []
+    metrics = np.zeros((len(metric), ))
 
     # crossvalidation on students which are identified by the starts array
     for iteration in range(folds):
@@ -54,6 +54,6 @@ def crossvalidate(model, data, skill, folds, metric, seed):
 
         test = shuffle[iteration*split_size:(iteration+1)*split_size]
         test_data = fix_data(data, test)
-        metrics.append(model._evaluate({skill: test_data}, metric))
+        metrics += model._evaluate({skill: test_data}, metric)
 
-    return np.mean(metrics)
+    return metrics / folds

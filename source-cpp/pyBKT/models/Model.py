@@ -71,6 +71,7 @@ class Model:
         if not self.manual_param_init:
             self.fit_model = {}
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
+        self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
             self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets)
         self.manual_param_init = False
@@ -132,15 +133,24 @@ class Model:
 
         """
         self._check_data(data_path, data)
+        if not isinstance(metric, (tuple, list)):
+            metric = [metric]
         if self.fit_model is None:
             raise ValueError("model has not been fitted yet")
-        elif isinstance(metric, str):
-            if not metric in metrics.SUPPORTED_METRICS:
-                raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
-            metric = getattr(metrics, metric)
+        else:
+            for i in range(len(metric)):
+                m = metric[i]
+                if isinstance(m, str):
+                    if not m in metrics.SUPPORTED_METRICS:
+                        raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
+                    metric[i] = getattr(metrics, m)
+                elif not callable(m):
+                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type,
                                      gs_ref = self.fit_model, resource_ref = self.fit_model)
-        return self._evaluate(all_data, metric)
+        results = self._evaluate(all_data, metric)
+        return results[0] if len(results) == 1 else results
 
     def crossvalidate(self, data = None, data_path = None, metric = metrics.rmse, **kwargs):
         """
@@ -167,12 +177,24 @@ class Model:
         [110 rows x 1 columns]
 
         """
+        metric_names = []
+        if not isinstance(metric, (tuple, list)):
+            metric = [metric]
         if not isinstance(data, pd.DataFrame) and not isinstance(data_path, str):
             raise ValueError("no data specified")
-        elif isinstance(metric, str):
-            if not metric in metrics.SUPPORTED_METRICS:
-                raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
-            metric = getattr(metrics, metric)
+        else:
+            for i in range(len(metric)):
+                m = metric[i]
+                if isinstance(m, str):
+                    if not m in metrics.SUPPORTED_METRICS:
+                        raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
+                    metric[i] = getattr(metrics, m)
+                    metric_names.append(m)
+                elif callable(m):
+                    metric_names.append(m.__name__)
+                else:
+                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+
         self._check_args(Model.CV_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
                             'parallel', 'forgets', 'seed', 'folds'], kwargs)
@@ -185,8 +207,9 @@ class Model:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
         df = pd.DataFrame(metric_vals.items())
-        df.columns = ['skill', metric if isinstance(metric, str) else metric.__name__]
-        return df.set_index('skill')
+        df.columns = ['skill', 'dummy']
+        df[metric_names] = pd.DataFrame(df['dummy'].tolist(), index = df.index)
+        return df.set_index('skill').drop(columns = 'dummy')
 
     @property
     def coef_(self):
@@ -344,7 +367,7 @@ class Model:
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
         true = true - 1
-        return metric(true, pred)
+        return [m(true, pred) for m in metric]
 
     def _crossvalidate(self, data, skill, metric):
         """ Helper function for crossvalidating. """
