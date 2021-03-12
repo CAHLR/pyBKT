@@ -1,4 +1,4 @@
-import sys
+ import sys
 sys.path.append('../')
 import os
 import pandas as pd
@@ -6,7 +6,7 @@ import numpy as np
 import io
 import requests
 
-def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False):
+def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, read_folds=False):
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -51,6 +51,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                  'multiprior': 'correct',
                  'multipair': 'template_id',
                  'multigs': 'template_id',
+                 'crossvalidate': 'user_id',
                  }
 
     # default column names for cognitive tutors
@@ -62,6 +63,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 'multiprior': 'Correct First Attempt',
                 'multipair': 'Problem Name',
                 'multigs': 'Problem Name',
+                'crossvalidate': 'Anon Student Id',
                                  }
 
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
@@ -258,6 +260,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         Data["resource_names"]=resource_ref
         Data["gs_names"]=gs_ref
         Data["index"]=stored_index
+        if read_folds:
+            Data["folds"] = np.array(df3[defaults["crossvalidate"]])
 
         datas[skill_] = Data
 
