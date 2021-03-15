@@ -1,4 +1,4 @@
- import sys
+import sys
 sys.path.append('../')
 import os
 import pandas as pd
@@ -131,6 +131,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         stored_index = df3.index.copy()
 
         # convert from 0=incorrect,1=correct to 1=incorrect,2=correct
+        if set(df3.loc[:,defaults["correct"]].unique()) - set([-1, 0, 1]) != set():
+            raise ValueError("correctness must be -1 (no response), 0 (incorrect), or 1 (correct)")
         df3.loc[:,defaults["correct"]]+=1
         
         # array representing correctness of student answers
