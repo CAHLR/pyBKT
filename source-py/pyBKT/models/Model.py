@@ -370,7 +370,11 @@ class Model:
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
         true = true - 1
-        return [m(true, pred) for m in metric]
+        try:
+            res = [m(true, pred) for m in metric]
+        except ValueError:
+            res = [m(true, pred.round(0)) for m in metric]
+        return res
 
     def _crossvalidate(self, data, skill, metric):
         """ Helper function for crossvalidating. """
