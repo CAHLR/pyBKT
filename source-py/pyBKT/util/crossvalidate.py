@@ -36,15 +36,15 @@ def fix_data_specified(data, label, count):
     training_data = {}
     testing_data = {}
     
-    train_starts = np.zeros(len(data["starts"]))
-    train_lengths = np.zeros(len(data["lengths"]))
-    train_resources = np.zeros(len(data["resources"]) - count)
-    train_data = np.zeros((len(data["data"]), len(data["resources"]) - count))
+    train_starts = np.zeros(len(data["starts"]), dtype = 'int')
+    train_lengths = np.zeros(len(data["lengths"]), dtype = 'int')
+    train_resources = np.zeros(len(data["resources"]) - count, dtype = 'int')
+    train_data = np.zeros((len(data["data"]), len(data["resources"]) - count), dtype = 'int')
     
-    test_starts = np.zeros(len(data["starts"]))
-    test_lengths = np.zeros(len(data["lengths"]))
-    test_resources = np.zeros(count)
-    test_data = np.zeros((len(data["data"]), count))
+    test_starts = np.zeros(len(data["starts"]), dtype = 'int')
+    test_lengths = np.zeros(len(data["lengths"]), dtype = 'int')
+    test_resources = np.zeros(count, dtype = 'int')
+    test_data = np.zeros((len(data["data"]), count), dtype = 'int')
      
     train_idx = 1
     test_idx = 1
@@ -82,7 +82,6 @@ def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
 
     num_learns = len(data["resource_names"]) if "resource_names" in data else 1
     num_gs = len(data["gs_names"]) if "gs_names" in data else num_gs
-    split_size = len(data["starts"]) // folds
 
     # create random permutation to act as indices for folds for crossvalidation
     shuffle = np.random.RandomState(seed=seed).permutation(len(data["starts"]))
@@ -95,12 +94,13 @@ def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
         all_folds = dict(zip(all_labels, all_counts))
         folds = len(all_folds)
         
-        for label, count in all_folds:
+        for label, count in all_folds.items():
             training_data, test_data = fix_data_specified(data, label, count)
             model.fit_model[skill] = model._fit(training_data, skill, model.forgets)
             metrics += model._evaluate({skill: test_data}, metric)
             
     else: # crossvalidation on students which are identified by the starts array
+        split_size = len(data["starts"]) // folds
         for iteration in range(folds):
             model.fit_model = {}
             # create training/test data based on random permutation from earlier
