@@ -31,7 +31,8 @@ class Model:
                     'multilearn': 'template_id',
                     'multiprior': 'correct',
                     'multipair': 'problem_id',
-                    'multigs': 'template_id'}
+                    'multigs': 'template_id',
+                    'folds': 'template_id'}
     INITIALIZABLE_PARAMS = ['prior', 'learns', 'guesses', 'slips', 'forgets']
 
     def __init__(self, **kwargs):
@@ -202,7 +203,9 @@ class Model:
         metric_vals = {}
         if not self.manual_param_init:
             self.fit_model = {}
-        all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
+        if isinstance(self.folds, str):
+            self._update_defaults({'folds': self.folds})
+        all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type, folds = isinstance(self.folds, str))
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
@@ -308,14 +311,14 @@ class Model:
         with open(os.path.normpath(loc + '/' + name), 'wb') as f:
             f.write(file_data.read())
 
-    def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False):
+    def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False, folds = False):
         """ Processes data given defaults, skills, and the model type. """
         if isinstance(data_path, str):
             data_p = data_helper.convert_data(data_path, skills, defaults = defaults, model_type = model_type, 
-                                              gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
+                                              gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df, folds = folds)
         elif isinstance(data, pd.DataFrame):
             data_p = data_helper.convert_data(data, skills, defaults = defaults, model_type = model_type,
-                                                gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df)
+                                                gs_refs = gs_ref, resource_refs = resource_ref, return_df = return_df, folds = folds)
         if not return_df:
             for d in data_p.values():
                 check_data.check_data(d)
@@ -367,11 +370,18 @@ class Model:
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
         true = true - 1
-        return [m(true, pred) for m in metric]
+        try:
+            res = [m(true, pred) for m in metric]
+        except ValueError:
+            res = [m(true, pred.round(0)) for m in metric]
+        return res
 
     def _crossvalidate(self, data, skill, metric):
         """ Helper function for crossvalidating. """
-        return crossvalidate.crossvalidate(self, data, skill, self.folds, metric, self.seed)
+        if isinstance(self.folds, str):
+            return crossvalidate.crossvalidate(self, data, skill, self.folds, metric, self.seed, True)
+        else:
+            return crossvalidate.crossvalidate(self, data, skill, self.folds, metric, self.seed)
 
     def _format_param(self, skill, param, value):
         """ Formats parameter for nice printing. """

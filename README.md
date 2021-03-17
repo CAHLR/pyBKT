@@ -87,7 +87,7 @@ The following serves as a mini-tutorial for how to get started with pyBKT. There
 
 ## Input and Output Data ##
 
-The accepted input formats are Pandas DataFrames and data files of type csv (comma separated) or tsv (tab separated). pyBKT will automatically infer which delimiter to use in the case that it is passed a data file. Since column names mapping meaning to each field in the data (i.e. skill name, correct/incorrect) vary per data source, you may need to specify a mapping from your data file's column names to pyBKT's expected column names. In many cases with Cognitive Tutor and Assistments datasets, pyBKT will be able to automatically infer column name mappings, but in the case that it is unable to, it will raise an exception.
+The accepted input formats are Pandas DataFrames and data files of type csv (comma separated) or tsv (tab separated). pyBKT will automatically infer which delimiter to use in the case that it is passed a data file. Since column names mapping meaning to each field in the data (i.e. skill name, correct/incorrect) vary per data source, you may need to specify a mapping from your data file's column names to pyBKT's expected column names. In many cases with Cognitive Tutor and Assistments datasets, pyBKT will be able to automatically infer column name mappings, but in the case that it is unable to, it will raise an exception. Note that the correctness is given by -1 (no response), 0 (incorrect), or 1 (correct).
 
 ## Creating and Training Models ##
 

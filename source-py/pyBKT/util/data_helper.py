@@ -1,4 +1,4 @@
- import sys
+import sys
 sys.path.append('../')
 import os
 import pandas as pd
@@ -6,7 +6,7 @@ import numpy as np
 import io
 import requests
 
-def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, read_folds=False):
+def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, folds=False):
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -51,7 +51,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                  'multiprior': 'correct',
                  'multipair': 'template_id',
                  'multigs': 'template_id',
-                 'crossvalidate': 'user_id',
+                 'folds': 'user_id',
                  }
 
     # default column names for cognitive tutors
@@ -63,7 +63,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 'multiprior': 'Correct First Attempt',
                 'multipair': 'Problem Name',
                 'multigs': 'Problem Name',
-                'crossvalidate': 'Anon Student Id',
+                'folds': 'Anon Student Id',
                                  }
 
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
@@ -131,6 +131,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         stored_index = df3.index.copy()
 
         # convert from 0=incorrect,1=correct to 1=incorrect,2=correct
+        if set(df3.loc[:,defaults["correct"]].unique()) - set([-1, 0, 1]) != set():
+            raise ValueError("correctness must be -1 (no response), 0 (incorrect), or 1 (correct)")
         df3.loc[:,defaults["correct"]]+=1
         
         # array representing correctness of student answers
@@ -260,8 +262,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         Data["resource_names"]=resource_ref
         Data["gs_names"]=gs_ref
         Data["index"]=stored_index
-        if read_folds:
-            Data["folds"] = np.array(df3[defaults["crossvalidate"]])
+        if folds:
+            Data["folds"] = np.array(df3[defaults["folds"]])
 
         datas[skill_] = Data
 
