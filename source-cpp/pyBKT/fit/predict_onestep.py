@@ -31,9 +31,12 @@ def run(model, data):
     correct_emission_predictions = np.expand_dims(model["guesses"], axis = 1) @ np.expand_dims(state_predictions[0,:], axis = 0) + np.expand_dims(1-model["slips"], axis = 1) @ np.expand_dims(state_predictions[1,:], axis = 0)
     #correct_emission_predictions = model['guesses'] * np.asarray([state_predictions[0,:]]).T + (1 - model['slips']) * np.asarray([state_predictions[1,:]]).T
     flattened_predictions = np.zeros((len(correct_emission_predictions[0]),))
-    for i in range(len(correct_emission_predictions)):
-        for j in range(len(correct_emission_predictions[0])):
-            if data["data"][i][j] != 0:
-                flattened_predictions[j] = correct_emission_predictions[i][j]
+    for j in range(len(correct_emission_predictions[0])):
+        if np.sum(data["data"][:,j]) == 0:
+            flattened_predictions[j] = np.mean(correct_emission_predictions[:,j])
+        else:
+            for i in range(len(correct_emission_predictions)):
+                if data["data"][i][j] != 0:
+                    flattened_predictions[j] = correct_emission_predictions[i][j]
     return (flattened_predictions, state_predictions)
 
