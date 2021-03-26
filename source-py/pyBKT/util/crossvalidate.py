@@ -54,27 +54,44 @@ def fix_data_specified(data, label, count):
         for j in range(data["lengths"][i]):
             current_idx = data["starts"][i] + j - 1
             if data["folds"][current_idx] != label:
-                train_lengths[i] += 1
                 save_idx = train_starts[i]+train_lengths[i]-1
+                train_lengths[i] += 1
                 train_data[:,save_idx] = data["data"][:,current_idx]
                 train_resources[save_idx] = data["resources"][current_idx]
             else:
-                test_lengths[i] += 1
                 save_idx = test_starts[i]+test_lengths[i]-1
+                test_lengths[i] += 1
                 test_data[:,save_idx] = data["data"][:,current_idx]
                 test_resources[save_idx] = data["resources"][current_idx]
         train_idx += train_lengths[i]
         test_idx += test_lengths[i]
+        
+    real_train = np.nonzero(train_lengths)
+    train_lengths = train_lengths[real_train]
+    train_starts = train_starts[real_train]
+
+    real_test = np.nonzero(test_lengths)
+    test_lengths = test_lengths[real_test]
+    test_starts = test_starts[real_test]
     
     training_data["starts"] = train_starts
     training_data["lengths"] = train_lengths
     training_data["data"] = train_data
     training_data["resources"] = train_resources
     
+    if "resource_names" in data:
+        training_data["resource_names"] = data["resource_names"]
+        testing_data["resource_names"] = data["resource_names"]
+    if "gs_names" in data:
+        training_data["gs_names"] = data["gs_names"]
+        testing_data["gs_names"] = data["gs_names"]
+    
     testing_data["starts"] = test_starts
     testing_data["lengths"] = test_lengths
     testing_data["data"] = test_data
     testing_data["resources"] = test_resources
+    
+    
     
     return training_data, testing_data
 
