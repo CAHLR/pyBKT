@@ -1,7 +1,6 @@
 import numpy as np
+import re
 import sklearn.metrics as sk
-
-SUPPORTED_METRICS = ['accuracy', 'auc', 'rmse']
 
 def error_check(flat_true_values, pred_values):
     if len(flat_true_values) != len(pred_values):
@@ -51,3 +50,19 @@ def rmse(flat_true_values, pred_values):
     rmse = rmse ** 0.5
     return rmse
 
+def fetch_supported_metrics():
+    supported_metrics = {}
+    dummy_x, dummy_y = [0, 1] * 5, [1, 0] * 5
+    for metric_locs in sk._regression, sk._classification:
+        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs) if re.search('_loss$|_score$|_error$', i)}
+        for metric in potential_metrics:
+            try:
+                potential_metrics[metric](dummy_x, dummy_y)
+                supported_metrics[metric] = potential_metrics[metric]
+            except TypeError:
+                pass
+    return supported_metrics
+
+
+SUPPORTED_METRICS = {'accuracy': accuracy, 'auc': auc, 'rmse': rmse}
+SUPPORTED_METRICS.update(fetch_supported_metrics())

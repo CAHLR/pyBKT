@@ -144,7 +144,7 @@ class Model:
                 if isinstance(m, str):
                     if not m in metrics.SUPPORTED_METRICS:
                         raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
-                    metric[i] = getattr(metrics, m)
+                    metric[i] = metrics.SUPPORTED_METRICS[m] 
                 elif not callable(m):
                     raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
 
@@ -189,7 +189,7 @@ class Model:
                 if isinstance(m, str):
                     if not m in metrics.SUPPORTED_METRICS:
                         raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
-                    metric[i] = getattr(metrics, m)
+                    metric[i] = metrics.SUPPORTED_METRICS[m]
                     metric_names.append(m)
                 elif callable(m):
                     metric_names.append(m.__name__)
