@@ -56,7 +56,7 @@ class Model:
         """
         Fits a BKT model given model and data information. Takes arguments skills,
         number of initialization fits, default column names (i.e. correct, skill_name),
-        parallelization, and model types.
+        parallelization, and model types. Resets model state if uninitialized.
 
         >>> model = Model(seed = 42)
         >>> model.fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
@@ -64,13 +64,36 @@ class Model:
         0.6128265543747811
 
         """
+        if not self.manual_param_init:
+            self.fit_model = {}
+        self.partial_fit(data_path = data_path, data = data, **kwargs)
+
+    def partial_fit(self, data_path = None, data = None, **kwargs):
+        """
+        Partially fits a BKT model given model and data information. Takes arguments skills,
+        number of initialization fits, default column names (i.e. correct, skill_name),
+        parallelization, and model types. Behaviour is to ignore if the model is changed
+        between partial fits since parameters are copied but data is reprocessed. Note
+        that model type need not be specified when using partial fit after the first partial
+        fit.
+
+        >>> model = Model(seed = 42)
+        >>> model.partial_fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
+        >>> model.partial_fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
+        >>> model.partial_fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
+        >>> model.evaluate(data_path = 'as.csv', metric = 'auc')
+        0.6579800168987382
+
+        """
+        self.manual_param_init = True
+        if self.fit_model is None or self.fit_model == {}:
+            self.fit_model = {}
+            self._update_param('model_type', self._update_defaults(kwargs))
+
         self._check_data(data_path, data)
         self._check_args(Model.FIT_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
                             'parallel', 'forgets'], kwargs)
-        self._update_param('model_type', self._update_defaults(kwargs))
-        if not self.manual_param_init:
-            self.fit_model = {}
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
@@ -338,12 +361,12 @@ class Model:
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
-            if self.manual_param_init and skill in self.fit_model:
-                for var in self.fit_model[skill]:
-                    fitmodel[var] = self.fit_model[skill][var]
-
             if forgets:
                 fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
+            if self.manual_param_init and skill in self.fit_model:
+                for var in self.fit_model[skill]:
+                    if var in fitmodel:
+                        fitmodel[var] = self.fit_model[skill][var]
             fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel)
             if log_likelihoods[-1] > best_likelihood:
                 best_likelihood = log_likelihoods[-1]
