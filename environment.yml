@@ -7,3 +7,4 @@ dependencies:
   - pip=21.0.1
   - pip:
     - sklearn==0.0
+    - requests==2.25.1
