@@ -1,3 +1,11 @@
+#########################################
+# Model.py                              #
+# Model                                 #
+#                                       #
+# @author Anirudhan Badrinath           #
+# Last edited: 07 April 2021            #
+#########################################
+
 import numpy as np
 import numbers
 import os

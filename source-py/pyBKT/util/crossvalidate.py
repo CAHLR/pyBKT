@@ -1,3 +1,11 @@
+#########################################
+# data_helper.py                        #
+# data_helper                           #
+#                                       #
+# @author Frederic Wang                 #
+# Last edited: 27 March 2021            #
+#########################################
+
 import numpy as np
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep

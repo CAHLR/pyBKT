@@ -1,3 +1,11 @@
+#########################################
+# data_helper.py                        #
+# data_helper                           #
+#                                       #
+# @author Frederic Wang                 #
+# Last edited: 07 April 2021            #
+#########################################
+
 import sys
 sys.path.append('../')
 import os
