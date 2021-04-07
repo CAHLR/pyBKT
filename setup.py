@@ -51,8 +51,11 @@ def find_library_dirs():
         lst.append(x[:x.index('libboost')])
     except:
         pass
-    os.system("python3-config --exec-prefix > np-include.info")
-    lst.append(open("np-include.info", "r").read().strip() + "/lib")
+    try:
+        os.system("python3-config --exec-prefix > np-include.info")
+        lst.append(open("np-include.info", "r").read().strip() + "/lib")
+    except:
+        pass
     return lst
 
 def find_dep_lib_dirs():
@@ -63,8 +66,11 @@ def find_dep_lib_dirs():
         lst.append(x[:x.index('libboost')])
     except:
         pass
-    os.system("python3-config --exec-prefix > np-include.info")
-    lst.append(open("np-include.info", "r").read().strip() + "/lib")
+    try:
+        os.system("python3-config --exec-prefix > np-include.info")
+        lst.append(open("np-include.info", "r").read().strip() + "/lib")
+    except:
+        pass
     return lst
 
 def find_dep_lib_name(l = None):
@@ -105,7 +111,6 @@ def find_includes():
         return open("np-include.info", "r").read().strip() + '/..'
     except:
         return '/usr/include'
-
 
 def copy_files(l, s):
     for i in l:
