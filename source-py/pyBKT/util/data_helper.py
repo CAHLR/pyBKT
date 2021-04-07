@@ -160,7 +160,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             resources = np.ones(len(data), dtype=np.int64)
             if resource_ref is None:
                 new_resource_ref = {}
-                new_resource_ref["N/A"] = 1 #no pair
+                new_resource_ref["Default"] = 1 #no pair
             for i in range(len(df3)):
                 # for the first entry of a new student, no pair
                 if i == 0 or df3[i:i+1][defaults["user_id"]].values != df3[i-1:i][defaults["user_id"]].values:
@@ -188,7 +188,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             all_priors = df3[defaults["multiprior"]].unique()
             if resource_ref is None:
                 resource_ref = dict(zip(all_priors,range(2, len(df3[defaults["multiprior"]].unique())+2)))
-                resource_ref["N/A"] = 1
+                resource_ref["Default"] = 1
             else:
                 for i in all_priors:
                     if i not in resource_ref:
