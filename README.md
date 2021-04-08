@@ -58,14 +58,28 @@ If you have Boost already installed, pip will install pyBKT with fast C++ infere
 
 You can check if libboost has been installed properly with `ldconfig -p | grep libboost_python`, which should yield an output on Linux machines. Note that the version on the dynamic library should match the Python installation version.
 
+In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
+
+``` source setup_conda.sh ```
+
+You may need to run the above as root.
+
 ### Mac
 
-Python 3.8 is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
+The latest version of Python is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
 ```
     brew install boost
     brew install boost-python3
     brew install libomp
 ```
+
+Note that if you see an error about a symbol not being found when you import pyBKT.models.Model, you likely have a mismatched Boost and Python version. Check if libboost_pythonXX.dylib and your Python version X.X are the same (i.e. libboost_python39 and Python 3.9).
+
+In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
+
+``` source setup_conda.sh ```
+
+You may need to run the above as root.
 
 ## Installing pyBKT ##
 
