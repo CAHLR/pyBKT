@@ -22,7 +22,7 @@ class Model:
     MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
     FIT_ARGS = ['skills', 'num_fits', 'defaults',
-                            'parallel', 'forgets'] + MODELS_BKT
+                            'parallel', 'forgets', 'preload'] + MODELS_BKT
     CV_ARGS = FIT_ARGS + ['folds', 'seed']
     DEFAULTS = {'num_fits': 5,
                 'defaults': None,
@@ -105,7 +105,8 @@ class Model:
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
-            self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets)
+            self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets, 
+                                              preload = kwargs['preload'] if 'preload' in kwargs else False)
         self.manual_param_init = False
 
     def predict(self, data_path = None, data = None):
@@ -358,7 +359,7 @@ class Model:
                 check_data.check_data(d)
         return data_p
 
-    def _fit(self, data, skill, forgets):
+    def _fit(self, data, skill, forgets, preload = False):
         """ Helper function for fitting data. """
         num_learns = len(data["resource_names"])
         num_gs = len(data["gs_names"])
@@ -375,9 +376,12 @@ class Model:
                 for var in self.fit_model[skill]:
                     if var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
-            fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel)
-            if log_likelihoods[-1] > best_likelihood:
-                best_likelihood = log_likelihoods[-1]
+            if not preload:
+                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel)
+                if log_likelihoods[-1] > best_likelihood:
+                    best_likelihood = log_likelihoods[-1]
+                    best_model = fitmodel
+            else:
                 best_model = fitmodel
         fit_model = best_model
         fit_model["learns"] = fit_model["As"][:, 1, 0]
