@@ -94,14 +94,13 @@ class Model:
 
         """
         self.manual_param_init = True
-        if self.fit_model is None or self.fit_model == {}:
-            self.fit_model = {}
-            self._update_param('model_type', self._update_defaults(kwargs))
-
         self._check_data(data_path, data)
         self._check_args(Model.FIT_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
                             'parallel', 'forgets'], kwargs)
+        if self.fit_model is None or self.fit_model == {}:
+            self.fit_model = {}
+            self._update_param('model_type', self._update_defaults(kwargs))
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
@@ -238,6 +237,7 @@ class Model:
         if isinstance(self.folds, str):
             self._update_defaults({'folds': self.folds})
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type, folds = isinstance(self.folds, str))
+        self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
