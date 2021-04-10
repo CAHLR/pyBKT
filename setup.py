@@ -6,7 +6,7 @@
 # Last edited: 01 April 2021            #
 #########################################
 
-import numpy as np, os
+import os
 from os.path import normpath as npath
 import sys
 from shutil import copyfile, move
@@ -14,8 +14,17 @@ import subprocess as s
 from sysconfig import get_paths
 from setuptools import setup, Extension
 import platform
+from distutils.command.build_ext import build_ext
 
 sys.tracebacklimit = 0
+
+class CustomBuildExtCommand(build_ext):
+    """build_ext command for use when numpy headers are needed."""
+    """ https://stackoverflow.com/questions/2379898/make-distutils-look-for-numpy-header-files-in-the-correct-place """
+    def run(self):
+        import numpy
+        self.include_dirs.append(numpy.get_include())
+        build_ext.run(self)
 
 FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
@@ -202,6 +211,7 @@ try:
                         'pyBKT.util': npath('source-cpp/pyBKT/util'),
                         'pyBKT.models': npath('source-cpp/pyBKT/models')},
         install_requires = ["numpy", "sklearn", "pandas", "requests"],
+        cmdclass = {'build_ext': CustomBuildExtCommand},
         ext_modules = [module1, module2, module3]
     )
 except:
