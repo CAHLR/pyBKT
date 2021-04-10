@@ -47,7 +47,7 @@ else:
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
     ALL_LINK_ARGS = ['-fopenmp']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
-INCLUDE_DIRS = sys.path + [np.get_include(), 'source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
+INCLUDE_DIRS = sys.path + ['source-cpp/pyBKT/Eigen/', get_paths()['include']] + \
                 ([os.environ['BOOST_INCLUDE']] if 'BOOST_INCLUDE' in os.environ \
                                                  else [])
 LIBRARY_DIRS = [os.environ['LD_LIBRARY_PATH']] if 'LD_LIBRARY_PATH' in os.environ \
@@ -211,6 +211,7 @@ try:
                         'pyBKT.util': npath('source-cpp/pyBKT/util'),
                         'pyBKT.models': npath('source-cpp/pyBKT/models')},
         install_requires = ["numpy", "sklearn", "pandas", "requests"],
+        setup_requires = ["numpy"],
         cmdclass = {'build_ext': CustomBuildExtCommand},
         ext_modules = [module1, module2, module3]
     )
