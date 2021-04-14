@@ -9,8 +9,6 @@
 import os
 from os.path import normpath as npath
 import sys
-from shutil import copyfile, move
-import subprocess as s
 from sysconfig import get_paths
 from setuptools import setup, Extension
 import platform
@@ -41,25 +39,15 @@ else:
 INCLUDE_DIRS = sys.path + ['source-cpp/pyBKT/Eigen/', get_paths()['include']]
 LIBRARY_DIRS = [os.environ['LD_LIBRARY_PATH']] if 'LD_LIBRARY_PATH' in os.environ \
                                                else []
-def find_library_dirs():
-    lst = []
-    try:
-        os.system("python3-config --exec-prefix > np-include.info")
-        lst.append(open("np-include.info", "r").read().strip() + "/lib")
-    except:
-        pass
-    return lst
-
 def clean():
     global LIBRARY_DIRS, ALL_LIBRARIES
-    os.remove('np-include.info')
     LIBRARY_DIRS = [i for i in LIBRARY_DIRS if i != ""]
     ALL_LIBRARIES = [i for i in ALL_LIBRARIES if i != ""]
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-LIBRARY_DIRS += find_library_dirs()
+LIBRARY_DIRS += [sys.exec_prefix + '/lib']
 clean()
 
 module1 = Extension('pyBKT/generate/synthetic_data_helper',
