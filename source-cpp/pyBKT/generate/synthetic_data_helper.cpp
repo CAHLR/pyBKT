@@ -123,7 +123,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
 static PyMethodDef synthetic_data_helper_Methods[] = {
     {"create_synthetic_data",  run, METH_VARARGS,
-     "Pass 3D numpy array (double or complex) and dx,dy,dz step size. Returns Reimman integral"},
+     "Helper for creating synthetic data from true model"},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

@@ -310,7 +310,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
 static PyMethodDef E_step_Methods[] = {
     {"run",  run, METH_VARARGS,
-     "Pass 3D numpy array (double or complex) and dx,dy,dz step size. Returns Reimman integral"},
+     "Runs E-step of Expectation Maximization in C++ module"},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

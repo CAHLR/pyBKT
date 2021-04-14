@@ -109,7 +109,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
 static PyMethodDef predict_onestep_states_Methods[] = {
     {"run",  run, METH_VARARGS,
-     "Pass 3D numpy array (double or complex) and dx,dy,dz step size. Returns Reimman integral"},
+     "Generates predictions for BKT model"},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
