@@ -117,3 +117,35 @@ setup(
     cmdclass = {'build_ext': CustomBuildExtCommand},
     ext_modules = [module1, module2, module3]
 )
+
+# LEGACY PURE PYTHON VERSION:
+"""
+setup(
+    name="pyBKT",
+    version="1.2.2",
+    author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
+    author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
+    license = 'MIT',
+    description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
+    url="https://github.com/CAHLR/pyBKT",
+    download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+    keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
+    classifiers=[
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    long_description = long_description,
+    long_description_content_type='text/markdown',
+    packages=['pyBKT', 'pyBKT.generate', 'pyBKT.fit', 'pyBKT.util', 'pyBKT.models'],
+    package_dir = { 'pyBKT': npath('source-py/pyBKT'),
+                    'pyBKT.generate': npath('source-py/pyBKT/generate'),
+                    'pyBKT.fit': npath('source-py/pyBKT/fit'),
+                    'pyBKT.util': npath('source-py/pyBKT/util'),
+                    'pyBKT.models': npath('source-py/pyBKT/models')},
+    install_requires = ["numpy", "sklearn", "pandas", "requests"],
+)
+"""
