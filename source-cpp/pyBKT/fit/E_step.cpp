@@ -13,18 +13,11 @@
 #include <alloca.h>
 #include <Eigen/Core>
 #include <omp.h>
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
-#include <boost/python/ptr.hpp>
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
 
 using namespace Eigen;
 using namespace std;
-using namespace boost::python;
-
-namespace p = boost::python;
-namespace np = boost::python::numpy;
 
 //original comment:
 //"TODO if we aren't outputting gamma, don't need to write it to memory (just
@@ -32,93 +25,61 @@ namespace np = boost::python::numpy;
 //a branch"
 //
 
-#if PY_VERSION_HEX >= 0x03000000
-void *
-#else
-void
-#endif
-init_numpy(){
-  //Py_Initialize;
-  import_array();
+static double extract_double(PyArrayObject *arr, int i) {
+    return ((double*) PyArray_DATA(arr))[i];
 }
-//numpy scalar converters.
-template <typename T, NPY_TYPES NumPyScalarType>
-struct enable_numpy_scalar_converter
-{
- enable_numpy_scalar_converter()
- {
-  // Required NumPy call in order to use the NumPy C API within another
-  // extension module.
-  // import_array();
-  init_numpy();  boost::python::converter::registry::push_back(
-   &convertible,
-   &construct,
-   boost::python::type_id<T>());
- } static void* convertible(PyObject* object)
- {
-  // The object is convertible if all of the following are true:
-  // - is a valid object.
-  // - is a numpy array scalar.
-  // - its descriptor type matches the type for this converter.
-  return (
-   object &&                          // Valid
-   PyArray_CheckScalar(object) &&                // Scalar
-   PyArray_DescrFromScalar(object)->type_num == NumPyScalarType // Match
-  )
-   ? object // The Python object can be converted.
-   : NULL;
- } static void construct(
-  PyObject* object,
-  boost::python::converter::rvalue_from_python_stage1_data* data)
- {
-  // Obtain a handle to the memory block that the converter has allocated
-  // for the C++ type.
-  namespace python = boost::python;
-  typedef python::converter::rvalue_from_python_storage<T> storage_type;
-  void* storage = reinterpret_cast<storage_type*>(data)->storage.bytes;  // Extract the array scalar type directly into the storage.
-  PyArray_ScalarAsCtype(object, storage);  // Set convertible to indicate success.
-  data->convertible = storage;
- }
-};
 
-dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs){
+static PyObject* run(PyObject * module, PyObject * args) {
     //TODO: check if parameters are null.
     //TODO: check that dicts have the required members.
     //TODO: check that all parameters have the right sizes.
     //TODO: i'm not sending any error messages.
     IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
     Eigen::initParallel();    
+    import_array();
 
-    numpy::ndarray alldata = extract<numpy::ndarray>(data["data"]); //multidimensional array, so i need to keep extracting arrays.
-    int bigT = len(alldata[0]); //this should be the number of columns in the alldata object. i'm assuming is 2d array.
-    int num_subparts = len(alldata);
+    PyObject *data_ptr = NULL, *model_ptr = NULL, *t_softcounts = NULL, *e_softcounts = NULL, *i_softcounts = NULL;
+    PyArrayObject *t_softcounts_np = NULL, *e_softcounts_np = NULL, *i_softcounts_np = NULL,
+                  *alldata = NULL, *allresources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL;   // Extended Numpy/C API
+    int num_outputs;
+    double prior;
+    // dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs
 
-    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(alldata.get_data()),num_subparts,bigT);
-    numpy::ndarray allresources = extract<numpy::ndarray>(data["resources"]);
+    // "O" format -> read argument as a PyObject type into argy (Python/C API)
+    if (!PyArg_ParseTuple(args, "OOOOOi", &data_ptr, &model_ptr, &t_softcounts, &e_softcounts, &i_softcounts, &num_outputs)) {
+        PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
+        return NULL;
+    }
 
-    int len_allresources = len(allresources);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(allresources.get_data()),len_allresources,1);
-
-    numpy::ndarray starts = extract<numpy::ndarray>(data["starts"]);
-    int num_sequences = len(starts);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(starts.get_data()),num_sequences,1);
-
-
-    numpy::ndarray lengths = extract<numpy::ndarray>(data["lengths"]);
-    int len_lengths = len(lengths);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(lengths.get_data()),len_lengths,1);
+    // Load all given numpy arrays
+    int DTYPE = PyArray_ObjectType(t_softcounts, NPY_FLOAT);
+    t_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(t_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
+    DTYPE = PyArray_ObjectType(e_softcounts, NPY_FLOAT);
+    e_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(e_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
+    DTYPE = PyArray_ObjectType(i_softcounts, NPY_FLOAT);
+    i_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(i_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
 
 
-    numpy::ndarray learns = extract<numpy::ndarray>(model["learns"]);
-    int num_resources = len(learns);
+    // Load all the numpy arrays in data & model
+    char* DM_NAMES[] = {"data", "resources", "starts", "lengths", "learns", "forgets", "guesses", "slips"};
+    PyArrayObject** DM_PTRS[] = {&alldata, &allresources, &starts, &lengths, &learns, &forgets, &guesses, &slips};
+    for (int i = 0; i < 8; i++) {
+        PyObject *dp = PyDict_GetItemString(i < 4 ? data_ptr : model_ptr, DM_NAMES[i]);
+        DTYPE = PyArray_ObjectType(dp, (i < 4 ? (i < 1 ? NPY_INT : NPY_INT64) : NPY_FLOAT)); // hack to force correct type
+        *DM_PTRS[i] = (PyArrayObject *)PyArray_FROM_OTF(dp, DTYPE, NPY_ARRAY_IN_ARRAY);
+    }
+    prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    numpy::ndarray forgets = extract<numpy::ndarray>(model["forgets"]);
+    int bigT = (int) PyArray_DIM(alldata, 1), num_subparts = (int) PyArray_DIM(alldata, 0);
+    int len_allresources = (int) PyArray_DIM(allresources, 0);
+    int num_sequences = (int) PyArray_DIM(starts, 0);
+    int len_lengths = (int) PyArray_DIM(lengths, 0);
+    int num_resources = (int) PyArray_DIM(learns, 0);
 
-    numpy::ndarray guesses = extract<numpy::ndarray>(model["guesses"]);
-
-    numpy::ndarray slips = extract<numpy::ndarray>(model["slips"]);
-
-    double prior = extract<double>(model["prior"]);
+    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_DATA(alldata)),num_subparts,bigT);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(PyArray_DATA(allresources)),len_allresources,1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(PyArray_DATA(starts)),num_sequences,1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(PyArray_DATA(lengths)),len_lengths,1);
 
     bool normalizeLengths = false;
     //then the original code goes to find the optional parameters.
@@ -128,16 +89,16 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
 
     MatrixXd As(2,2*num_resources);
     for (int n=0; n<num_resources; n++) {
-        double learn = extract<double>(learns[n]);
-        double forget = extract<double>(forgets[n]);
+        double learn = extract_double(learns, n);
+        double forget = extract_double(forgets, n);
         As.col(2*n) << 1-learn, learn;
         As.col(2*n+1) << forget, 1-forget;
     }
 
     Array2Xd Bn(2,2*num_subparts);
     for (int n=0; n<num_subparts; n++) {
-        double guess = extract<double>(guesses[n]);
-        double slip = extract<double>(slips[n]);
+        double guess = extract_double(guesses, n);
+        double slip = extract_double(slips, n);
         Bn.col(2*n) << 1-guess, slip; // incorrect
         Bn.col(2*n+1) << guess, 1-slip; // correct
     }
@@ -316,39 +277,54 @@ dict run(dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarr
             *total_loglike += loglike;
         }
     }
-    dict result;
-    result["total_loglike"] = *total_loglike;
 
+    PyObject *result = PyDict_New();
 
-    numpy::ndarray all_trans_softcounts_arr = numpy::from_data(r_trans_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(num_resources, 2, 2),
-                                                               boost::python::make_tuple(32, 16, 8), boost::python::object()).copy();
-    result["all_trans_softcounts"] = all_trans_softcounts_arr;
+    npy_intp dims1[] = {num_resources, 2, 2};
+    PyObject *all_trans_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims1, NPY_DOUBLE, r_trans_softcounts);
+    PyArray_ENABLEFLAGS((PyArrayObject*) all_trans_softcounts_arr, NPY_ARRAY_OWNDATA);
 
+    npy_intp dims2[] = {num_subparts, 2, 2};
+    PyObject *all_emission_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims2, NPY_DOUBLE, r_emission_softcounts);
+    PyArray_ENABLEFLAGS((PyArrayObject*) all_emission_softcounts_arr, NPY_ARRAY_OWNDATA);
 
-    numpy::ndarray all_emission_softcounts_arr = numpy::from_data(r_emission_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(num_subparts, 2, 2),
-                                                               boost::python::make_tuple(32, 16, 8), boost::python::object()).copy();
-    result["all_emission_softcounts"] = all_emission_softcounts_arr;
+    npy_intp dims3[] = {2, 1};
+    PyObject *all_initial_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims3, NPY_DOUBLE, r_init_softcounts);
+    PyArray_ENABLEFLAGS((PyArrayObject*) all_initial_softcounts_arr, NPY_ARRAY_OWNDATA);
 
-    numpy::ndarray all_initial_softcounts_arr = numpy::from_data(r_init_softcounts, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, 1),
-                                                               boost::python::make_tuple(8, 8), boost::python::object()).copy();
-    result["all_initial_softcounts"] = all_initial_softcounts_arr;
+    npy_intp dims4[] = {2, bigT};
+    PyObject *alpha_out_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims4, NPY_DOUBLE, r_alpha_out);
+    PyArray_ENABLEFLAGS((PyArrayObject*) alpha_out_arr, NPY_ARRAY_OWNDATA);
 
-    numpy::ndarray alpha_out_arr = numpy::from_data(r_alpha_out, numpy::dtype::get_builtin<double>(), boost::python::make_tuple(2, bigT),
-                                                               boost::python::make_tuple(bigT * 8, 8), boost::python::object()).copy();
-    result["alpha"] = alpha_out_arr;
+    PyDict_SetItemString(result, "all_trans_softcounts", all_trans_softcounts_arr);
+    PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr);
+    PyDict_SetItemString(result, "all_initial_softcounts", all_initial_softcounts_arr);
+    PyDict_SetItemString(result, "alpha", alpha_out_arr);
+    PyDict_SetItemString(result, "total_loglike", PyLong_FromLong(*total_loglike));
 
-    delete r_alpha_out;
-    delete r_trans_softcounts;
-    delete r_emission_softcounts;
-    delete r_init_softcounts;
 
     return(result);
 }
 
 
-BOOST_PYTHON_MODULE(E_step){
-    Py_Initialize();
-    numpy::initialize();
-	enable_numpy_scalar_converter<boost::int64_t, NPY_INT64>();
-    def("run", run);
+
+static PyMethodDef E_step_Methods[] = {
+    {"run",  run, METH_VARARGS,
+     "Pass 3D numpy array (double or complex) and dx,dy,dz step size. Returns Reimman integral"},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+
+static struct PyModuleDef E_step_module = {
+   PyModuleDef_HEAD_INIT,
+   "E_step",   /* name of module */
+   NULL, /* module documentation, may be NULL */
+   -1,       /* size of per-interpreter state of the module,
+                or -1 if the module keeps state in global variables. */
+   E_step_Methods
+};
+
+PyMODINIT_FUNC PyInit_E_step() {
+    return PyModule_Create(&E_step_module);
 }
+
