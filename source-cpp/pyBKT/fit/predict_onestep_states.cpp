@@ -23,6 +23,11 @@ static double extract_int64_t(PyArrayObject *arr, int i) {
     return ((int64_t*) PyArray_DATA(arr))[i];
 }
 
+void capsule_cleanup(PyObject *capsule) {
+    void *memory = PyCapsule_GetPointer(capsule, NULL);
+    delete memory;
+}
+
 static PyObject* run(PyObject * module, PyObject * args) {
     //TODO: check if parameters are null.
     //TODO: check that dicts have the required members.
@@ -104,7 +109,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     npy_intp dims[] = {2, bigT};
     PyObject *all_predictions_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims, NPY_DOUBLE, all_predictions);
-    PyArray_ENABLEFLAGS((PyArrayObject*) all_predictions_arr, NPY_ARRAY_OWNDATA);
+    PyObject *capsule = PyCapsule_New(all_predictions, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) all_predictions_arr, capsule);
+
 
     return(all_predictions_arr);
 }
