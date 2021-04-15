@@ -15,6 +15,7 @@ def EM_fit(model, data, tol = None, maxiter = None, parallel = True):
 
     num_subparts = data["data"].shape[0] #mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
+    log_likelihoods = np.zeros((maxiter, 1))
 
     for i in range(maxiter):
         result = E_step.run(data, model, 1)
