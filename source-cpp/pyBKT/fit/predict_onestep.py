@@ -9,16 +9,7 @@ def run(model, data):
     num_subparts = data["data"].shape[0]  # mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
 
-    trans_softcounts = np.zeros((num_resources, 2, 2))
-    emission_softcounts = np.zeros((num_subparts, 2, 2))
-    init_softcounts = np.zeros((2, 1))
-
-    result = {}
-    result['all_trans_softcounts'] = trans_softcounts
-    result['all_emission_softcounts'] = emission_softcounts
-    result['all_initial_softcounts'] = init_softcounts
-
-    result = E_step.run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
+    result = E_step.run(data, model, 1)
     for j in range(num_resources):
         result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
     for j in range(num_subparts):
