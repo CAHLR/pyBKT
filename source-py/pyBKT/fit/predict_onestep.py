@@ -36,7 +36,7 @@ def run(model, data):
     correct_emission_predictions = np.expand_dims(model["guesses"], axis = 1) @ np.expand_dims(state_predictions[0,:], axis = 0) + np.expand_dims(1-model["slips"], axis = 1) @ np.expand_dims(state_predictions[1,:], axis = 0)
     #correct_emission_predictions = model['guesses'] * np.asarray([state_predictions[0,:]]).T + (1 - model['slips']) * np.asarray([state_predictions[1,:]]).T
     flattened_predictions = np.take_along_axis(correct_emission_predictions, (data['data'] != 0).argmax(axis = 0)[:, None].T, axis = 0)
-    return (flattened_predictions, state_predictions)
+    return (flattened_predictions.ravel(), state_predictions)
 
 def predict_onestep_states(data, model, forward_messages):
     alldata, allresources, starts, lengths, learns, forgets, guesses, slips, prior = \
