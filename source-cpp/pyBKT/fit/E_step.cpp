@@ -302,6 +302,8 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyDict_SetItemString(result, "alpha", alpha_out_arr);
     PyDict_SetItemString(result, "total_loglike", PyLong_FromLong(*total_loglike));
 
+    for (int i = 0; i < 8; i++)
+        Py_XDECREF(*DM_PTRS[i]);
 
     return(result);
 }

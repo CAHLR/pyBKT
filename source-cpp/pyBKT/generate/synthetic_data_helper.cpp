@@ -130,6 +130,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Py_XDECREF(starts);
     Py_XDECREF(lengths);
 
+    for (int i = 0; i < 4; i++)
+        Py_XDECREF(*DM_PTRS[i]);
+
     return(result);
 }
 

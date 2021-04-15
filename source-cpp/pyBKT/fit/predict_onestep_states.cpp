@@ -112,6 +112,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyObject *capsule = PyCapsule_New(all_predictions, NULL, capsule_cleanup);
     PyArray_SetBaseObject((PyArrayObject *) all_predictions_arr, capsule);
 
+    for (int i = 0; i < 8; i++)
+        Py_XDECREF(*DM_PTRS[i]);
+    Py_XDECREF(forward_messages);
 
     return(all_predictions_arr);
 }
