@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <alloca.h>
+#include <omp.h>
 #include <Eigen/Core>
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
@@ -84,6 +85,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     /* COMPUTATION */
 
+    #pragma omp parallel for
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
         // NOTE: -1 because Matlab indexing starts at 1
         int64_t sequence_start = extract_int64_t(starts, sequence_index) - 1;

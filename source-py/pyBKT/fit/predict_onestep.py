@@ -35,14 +35,7 @@ def run(model, data):
     # multiguess solution, should work
     correct_emission_predictions = np.expand_dims(model["guesses"], axis = 1) @ np.expand_dims(state_predictions[0,:], axis = 0) + np.expand_dims(1-model["slips"], axis = 1) @ np.expand_dims(state_predictions[1,:], axis = 0)
     #correct_emission_predictions = model['guesses'] * np.asarray([state_predictions[0,:]]).T + (1 - model['slips']) * np.asarray([state_predictions[1,:]]).T
-    flattened_predictions = np.zeros((len(correct_emission_predictions[0]),))
-    for j in range(len(correct_emission_predictions[0])):
-        if np.sum(data["data"][:,j]) == 0:
-            flattened_predictions[j] = np.mean(correct_emission_predictions[:,j])
-        else:
-            for i in range(len(correct_emission_predictions)):
-                if data["data"][i][j] != 0:
-                    flattened_predictions[j] = correct_emission_predictions[i][j]
+    flattened_predictions = np.take_along_axis(correct_emission_predictions, (data['data'] != 0).argmax(axis = 0)[:, None].T, axis = 0)
     return (flattened_predictions, state_predictions)
 
 def predict_onestep_states(data, model, forward_messages):
