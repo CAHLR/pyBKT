@@ -129,6 +129,8 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Py_XDECREF(resources);
     Py_XDECREF(starts);
     Py_XDECREF(lengths);
+    Py_XDECREF(all_stateseqs_arr);
+    Py_XDECREF(all_data_arr);
 
     for (int i = 0; i < 4; i++)
         Py_XDECREF(*DM_PTRS[i]);

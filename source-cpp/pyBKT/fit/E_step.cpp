@@ -304,6 +304,10 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     for (int i = 0; i < 8; i++)
         Py_XDECREF(*DM_PTRS[i]);
+    Py_XDECREF(all_trans_softcounts_arr);
+    Py_XDECREF(all_emission_softcounts_arr);
+    Py_XDECREF(all_initial_softcounts_arr);
+    Py_XDECREF(alpha_out_arr);
 
     return(result);
 }
