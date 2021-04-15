@@ -27,7 +27,7 @@ def EM_fit(model, data, tol = None, maxiter = None, parallel = True):
     result['all_initial_softcounts'] = init_softcounts
 
     for i in range(maxiter):
-        result = E_step.run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
+        result = E_step.run(data, model, 1)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):

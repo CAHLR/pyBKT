@@ -29,6 +29,11 @@ static double extract_double(PyArrayObject *arr, int i) {
     return ((double*) PyArray_DATA(arr))[i];
 }
 
+void capsule_cleanup(PyObject *capsule) {
+    void *memory = PyCapsule_GetPointer(capsule, NULL);
+    delete memory;
+}
+
 static PyObject* run(PyObject * module, PyObject * args) {
     //TODO: check if parameters are null.
     //TODO: check that dicts have the required members.
@@ -46,26 +51,17 @@ static PyObject* run(PyObject * module, PyObject * args) {
     // dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs
 
     // "O" format -> read argument as a PyObject type into argy (Python/C API)
-    if (!PyArg_ParseTuple(args, "OOOOOi", &data_ptr, &model_ptr, &t_softcounts, &e_softcounts, &i_softcounts, &num_outputs)) {
+    if (!PyArg_ParseTuple(args, "OOi", &data_ptr, &model_ptr, &num_outputs)) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
         return NULL;
     }
-
-    // Load all given numpy arrays
-    int DTYPE = PyArray_ObjectType(t_softcounts, NPY_FLOAT);
-    t_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(t_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
-    DTYPE = PyArray_ObjectType(e_softcounts, NPY_FLOAT);
-    e_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(e_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
-    DTYPE = PyArray_ObjectType(i_softcounts, NPY_FLOAT);
-    i_softcounts_np = (PyArrayObject *)PyArray_FROM_OTF(i_softcounts, DTYPE, NPY_ARRAY_IN_ARRAY);
-
 
     // Load all the numpy arrays in data & model
     char* DM_NAMES[] = {"data", "resources", "starts", "lengths", "learns", "forgets", "guesses", "slips"};
     PyArrayObject** DM_PTRS[] = {&alldata, &allresources, &starts, &lengths, &learns, &forgets, &guesses, &slips};
     for (int i = 0; i < 8; i++) {
         PyObject *dp = PyDict_GetItemString(i < 4 ? data_ptr : model_ptr, DM_NAMES[i]);
-        DTYPE = PyArray_ObjectType(dp, (i < 4 ? (i < 1 ? NPY_INT : NPY_INT64) : NPY_FLOAT)); // hack to force correct type
+        int DTYPE = PyArray_ObjectType(dp, (i < 4 ? (i < 1 ? NPY_INT : NPY_INT64) : NPY_FLOAT)); // hack to force correct type
         *DM_PTRS[i] = (PyArrayObject *)PyArray_FROM_OTF(dp, DTYPE, NPY_ARRAY_IN_ARRAY);
     }
     prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
@@ -282,19 +278,23 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     npy_intp dims1[] = {num_resources, 2, 2};
     PyObject *all_trans_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims1, NPY_DOUBLE, r_trans_softcounts);
-    PyArray_ENABLEFLAGS((PyArrayObject*) all_trans_softcounts_arr, NPY_ARRAY_OWNDATA);
+    PyObject *capsule1 = PyCapsule_New(r_trans_softcounts, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) all_trans_softcounts_arr, capsule1);
 
     npy_intp dims2[] = {num_subparts, 2, 2};
     PyObject *all_emission_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims2, NPY_DOUBLE, r_emission_softcounts);
-    PyArray_ENABLEFLAGS((PyArrayObject*) all_emission_softcounts_arr, NPY_ARRAY_OWNDATA);
+    PyObject *capsule2 = PyCapsule_New(r_emission_softcounts, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) all_emission_softcounts_arr, capsule2);
 
     npy_intp dims3[] = {2, 1};
     PyObject *all_initial_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims3, NPY_DOUBLE, r_init_softcounts);
-    PyArray_ENABLEFLAGS((PyArrayObject*) all_initial_softcounts_arr, NPY_ARRAY_OWNDATA);
+    PyObject *capsule3 = PyCapsule_New(r_init_softcounts, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) all_initial_softcounts_arr, capsule3);
 
     npy_intp dims4[] = {2, bigT};
     PyObject *alpha_out_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims4, NPY_DOUBLE, r_alpha_out);
-    PyArray_ENABLEFLAGS((PyArrayObject*) alpha_out_arr, NPY_ARRAY_OWNDATA);
+    PyObject *capsule4 = PyCapsule_New(r_alpha_out, NULL, capsule_cleanup);
+    PyArray_SetBaseObject((PyArrayObject *) alpha_out_arr, capsule4);
 
     PyDict_SetItemString(result, "all_trans_softcounts", all_trans_softcounts_arr);
     PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr);
