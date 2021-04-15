@@ -41,7 +41,7 @@ class PolynomialSolverBase
   protected:
     template< typename OtherPolynomial >
     inline void setPolynomial( const OtherPolynomial& poly ){
-      m_roots.resize(poly.size()); }
+      m_roots.resize(poly.size()-1); }
 
   public:
     template< typename OtherPolynomial >
@@ -69,10 +69,11 @@ class PolynomialSolverBase
     inline void realRoots( Stl_back_insertion_sequence& bi_seq,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
+      using std::abs;
       bi_seq.clear();
       for(Index i=0; i<m_roots.size(); ++i )
       {
-        if( internal::abs( m_roots[i].imag() ) < absImaginaryThreshold ){
+        if( abs( m_roots[i].imag() ) < absImaginaryThreshold ){
           bi_seq.push_back( m_roots[i].real() ); }
       }
     }
@@ -82,10 +83,10 @@ class PolynomialSolverBase
     inline const RootType& selectComplexRoot_withRespectToNorm( squaredNormBinaryPredicate& pred ) const
     {
       Index res=0;
-      RealScalar norm2 = internal::abs2( m_roots[0] );
+      RealScalar norm2 = numext::abs2( m_roots[0] );
       for( Index i=1; i<m_roots.size(); ++i )
       {
-        const RealScalar currNorm2 = internal::abs2( m_roots[i] );
+        const RealScalar currNorm2 = numext::abs2( m_roots[i] );
         if( pred( currNorm2, norm2 ) ){
           res=i; norm2=currNorm2; }
       }
@@ -98,7 +99,7 @@ class PolynomialSolverBase
      */
     inline const RootType& greatestRoot() const
     {
-      std::greater<Scalar> greater;
+      std::greater<RealScalar> greater;
       return selectComplexRoot_withRespectToNorm( greater );
     }
 
@@ -107,7 +108,7 @@ class PolynomialSolverBase
      */
     inline const RootType& smallestRoot() const
     {
-      std::less<Scalar> less;
+      std::less<RealScalar> less;
       return selectComplexRoot_withRespectToNorm( less );
     }
 
@@ -118,13 +119,14 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
+      using std::abs;
       hasArealRoot = false;
       Index res=0;
       RealScalar abs2(0);
 
       for( Index i=0; i<m_roots.size(); ++i )
       {
-        if( internal::abs( m_roots[i].imag() ) < absImaginaryThreshold )
+        if( abs( m_roots[i].imag() ) <= absImaginaryThreshold )
         {
           if( !hasArealRoot )
           {
@@ -142,13 +144,13 @@ class PolynomialSolverBase
             }
           }
         }
-        else
+        else if(!hasArealRoot)
         {
-          if( internal::abs( m_roots[i].imag() ) < internal::abs( m_roots[res].imag() ) ){
-            res = i; }
+          if( abs( m_roots[i].imag() ) < abs( m_roots[res].imag() ) ){
+            res = i;}
         }
       }
-      return internal::real_ref(m_roots[res]);
+      return numext::real_ref(m_roots[res]);
     }
 
 
@@ -158,13 +160,14 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
+      using std::abs;
       hasArealRoot = false;
       Index res=0;
       RealScalar val(0);
 
       for( Index i=0; i<m_roots.size(); ++i )
       {
-        if( internal::abs( m_roots[i].imag() ) < absImaginaryThreshold )
+        if( abs( m_roots[i].imag() ) <= absImaginaryThreshold )
         {
           if( !hasArealRoot )
           {
@@ -184,11 +187,11 @@ class PolynomialSolverBase
         }
         else
         {
-          if( internal::abs( m_roots[i].imag() ) < internal::abs( m_roots[res].imag() ) ){
+          if( abs( m_roots[i].imag() ) < abs( m_roots[res].imag() ) ){
             res = i; }
         }
       }
-      return internal::real_ref(m_roots[res]);
+      return numext::real_ref(m_roots[res]);
     }
 
   public:
@@ -210,7 +213,7 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
-      std::greater<Scalar> greater;
+      std::greater<RealScalar> greater;
       return selectRealRoot_withRespectToAbsRealPart( greater, hasArealRoot, absImaginaryThreshold );
     }
 
@@ -233,7 +236,7 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
-      std::less<Scalar> less;
+      std::less<RealScalar> less;
       return selectRealRoot_withRespectToAbsRealPart( less, hasArealRoot, absImaginaryThreshold );
     }
 
@@ -256,7 +259,7 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
-      std::greater<Scalar> greater;
+      std::greater<RealScalar> greater;
       return selectRealRoot_withRespectToRealPart( greater, hasArealRoot, absImaginaryThreshold );
     }
 
@@ -279,7 +282,7 @@ class PolynomialSolverBase
         bool& hasArealRoot,
         const RealScalar& absImaginaryThreshold = NumTraits<Scalar>::dummy_precision() ) const
     {
-      std::less<Scalar> less;
+      std::less<RealScalar> less;
       return selectRealRoot_withRespectToRealPart( less, hasArealRoot, absImaginaryThreshold );
     }
 
@@ -313,7 +316,7 @@ class PolynomialSolverBase
   * - real roots with greatest, smallest absolute real value.
   * - greatest, smallest real roots.
   *
-  * WARNING: this polynomial solver is experimental, part of the unsuported Eigen modules.
+  * WARNING: this polynomial solver is experimental, part of the unsupported Eigen modules.
   *
   *
   * Currently a QR algorithm is used to compute the eigenvalues of the companion matrix of
@@ -324,7 +327,7 @@ class PolynomialSolverBase
   * However, almost always, correct accuracy is reached even in these cases for 64bit
   * (double) floating types and small polynomial degree (<20).
   */
-template< typename _Scalar, int _Deg >
+template<typename _Scalar, int _Deg>
 class PolynomialSolver : public PolynomialSolverBase<_Scalar,_Deg>
 {
   public:
@@ -334,18 +337,49 @@ class PolynomialSolver : public PolynomialSolverBase<_Scalar,_Deg>
     EIGEN_POLYNOMIAL_SOLVER_BASE_INHERITED_TYPES( PS_Base )
 
     typedef Matrix<Scalar,_Deg,_Deg>                 CompanionMatrixType;
-    typedef EigenSolver<CompanionMatrixType>         EigenSolverType;
+    typedef typename internal::conditional<NumTraits<Scalar>::IsComplex,
+                                          ComplexEigenSolver<CompanionMatrixType>,
+                                          EigenSolver<CompanionMatrixType> >::type EigenSolverType;
+    typedef typename internal::conditional<NumTraits<Scalar>::IsComplex, Scalar, std::complex<Scalar> >::type ComplexScalar;
 
   public:
     /** Computes the complex roots of a new polynomial. */
     template< typename OtherPolynomial >
     void compute( const OtherPolynomial& poly )
     {
-      assert( Scalar(0) != poly[poly.size()-1] );
-      internal::companion<Scalar,_Deg> companion( poly );
-      companion.balance();
-      m_eigenSolver.compute( companion.denseMatrix() );
-      m_roots = m_eigenSolver.eigenvalues();
+      eigen_assert( Scalar(0) != poly[poly.size()-1] );
+      eigen_assert( poly.size() > 1 );
+      if(poly.size() >  2 )
+      {
+        internal::companion<Scalar,_Deg> companion( poly );
+        companion.balance();
+        m_eigenSolver.compute( companion.denseMatrix() );
+        m_roots = m_eigenSolver.eigenvalues();
+        // cleanup noise in imaginary part of real roots:
+        // if the imaginary part is rather small compared to the real part
+        // and that cancelling the imaginary part yield a smaller evaluation,
+        // then it's safe to keep the real part only.
+        RealScalar coarse_prec = RealScalar(std::pow(4,poly.size()+1))*NumTraits<RealScalar>::epsilon();
+        for(Index i = 0; i<m_roots.size(); ++i)
+        {
+          if( internal::isMuchSmallerThan(numext::abs(numext::imag(m_roots[i])),
+                                          numext::abs(numext::real(m_roots[i])),
+                                          coarse_prec) )
+          {
+            ComplexScalar as_real_root = ComplexScalar(numext::real(m_roots[i]));
+            if(    numext::abs(poly_eval(poly, as_real_root))
+                <= numext::abs(poly_eval(poly, m_roots[i])))
+            {
+              m_roots[i] = as_real_root;
+            }
+          }
+        }
+      }
+      else if(poly.size () == 2)
+      {
+        m_roots.resize(1);
+        m_roots[0] = -poly[0]/poly[1];
+      }
     }
 
   public:
@@ -373,9 +407,17 @@ class PolynomialSolver<_Scalar,1> : public PolynomialSolverBase<_Scalar,1>
     template< typename OtherPolynomial >
     void compute( const OtherPolynomial& poly )
     {
-      assert( Scalar(0) != poly[poly.size()-1] );
-      m_roots[0] = -poly[0]/poly[poly.size()-1];
+      eigen_assert( poly.size() == 2 );
+      eigen_assert( Scalar(0) != poly[1] );
+      m_roots[0] = -poly[0]/poly[1];
     }
+
+  public:
+    template< typename OtherPolynomial >
+    inline PolynomialSolver( const OtherPolynomial& poly ){
+      compute( poly ); }
+
+    inline PolynomialSolver(){}
 
   protected:
     using                   PS_Base::m_roots;

@@ -20,8 +20,8 @@ namespace Eigen {
  *  e.g. \f$ 1 + 3x^2 \f$ is stored as a vector \f$ [ 1, 0, 3 ] \f$.
  * \param[in] x : the value to evaluate the polynomial at.
  *
- * <i><b>Note for stability:</b></i>
- *  <dd> \f$ |x| \le 1 \f$ </dd>
+ * \note for stability:
+ *   \f$ |x| \le 1 \f$
  */
 template <typename Polynomials, typename T>
 inline
@@ -47,7 +47,7 @@ T poly_eval( const Polynomials& poly, const T& x )
 {
   typedef typename NumTraits<T>::Real Real;
 
-  if( internal::abs2( x ) <= Real(1) ){
+  if( numext::abs2( x ) <= Real(1) ){
     return poly_eval_horner( poly, x ); }
   else
   {
@@ -56,7 +56,7 @@ T poly_eval( const Polynomials& poly, const T& x )
     for( DenseIndex i=1; i<poly.size(); ++i ){
       val = val*inv_x + poly[i]; }
 
-    return std::pow(x,(T)(poly.size()-1)) * val;
+    return numext::pow(x,(T)(poly.size()-1)) * val;
   }
 }
 
@@ -67,22 +67,23 @@ T poly_eval( const Polynomials& poly, const T& x )
  *  by degrees i.e. poly[i] is the coefficient of degree i of the polynomial
  *  e.g. \f$ 1 + 3x^2 \f$ is stored as a vector \f$ [ 1, 0, 3 ] \f$.
  *
- *  <i><b>Precondition:</b></i>
- *  <dd> the leading coefficient of the input polynomial poly must be non zero </dd>
+ *  \pre
+ *   the leading coefficient of the input polynomial poly must be non zero
  */
 template <typename Polynomial>
 inline
 typename NumTraits<typename Polynomial::Scalar>::Real cauchy_max_bound( const Polynomial& poly )
 {
+  using std::abs;
   typedef typename Polynomial::Scalar Scalar;
   typedef typename NumTraits<Scalar>::Real Real;
 
-  assert( Scalar(0) != poly[poly.size()-1] );
+  eigen_assert( Scalar(0) != poly[poly.size()-1] );
   const Scalar inv_leading_coeff = Scalar(1)/poly[poly.size()-1];
   Real cb(0);
 
   for( DenseIndex i=0; i<poly.size()-1; ++i ){
-    cb += internal::abs(poly[i]*inv_leading_coeff); }
+    cb += abs(poly[i]*inv_leading_coeff); }
   return cb + Real(1);
 }
 
@@ -96,6 +97,7 @@ template <typename Polynomial>
 inline
 typename NumTraits<typename Polynomial::Scalar>::Real cauchy_min_bound( const Polynomial& poly )
 {
+  using std::abs;
   typedef typename Polynomial::Scalar Scalar;
   typedef typename NumTraits<Scalar>::Real Real;
 
@@ -107,7 +109,7 @@ typename NumTraits<typename Polynomial::Scalar>::Real cauchy_min_bound( const Po
   const Scalar inv_min_coeff = Scalar(1)/poly[i];
   Real cb(1);
   for( DenseIndex j=i+1; j<poly.size(); ++j ){
-    cb += internal::abs(poly[j]*inv_min_coeff); }
+    cb += abs(poly[j]*inv_min_coeff); }
   return Real(1)/cb;
 }
 

@@ -1,7 +1,7 @@
 // This file is part of Eigen, a lightweight C++ template library
 // for linear algebra.
 //
-// Copyright (C) 2008 Gael Guennebaud <gael.guennebaud@inria.fr>
+// Copyright (C) 2008-2014 Gael Guennebaud <gael.guennebaud@inria.fr>
 // Copyright (C) 2009 Benoit Jacob <jacob.benoit.1@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla
@@ -14,179 +14,45 @@
 #include "main.h"
 #include <Eigen/SVD>
 
-template<typename MatrixType, int QRPreconditioner>
-void jacobisvd_check_full(const MatrixType& m, const JacobiSVD<MatrixType, QRPreconditioner>& svd)
-{
-  typedef typename MatrixType::Index Index;
-  Index rows = m.rows();
-  Index cols = m.cols();
+#define SVD_DEFAULT(M) JacobiSVD<M>
+#define SVD_FOR_MIN_NORM(M) JacobiSVD<M,ColPivHouseholderQRPreconditioner>
+#include "svd_common.h"
 
-  enum {
-    RowsAtCompileTime = MatrixType::RowsAtCompileTime,
-    ColsAtCompileTime = MatrixType::ColsAtCompileTime
-  };
-
-  typedef typename MatrixType::Scalar Scalar;
-  typedef typename NumTraits<Scalar>::Real RealScalar;
-  typedef Matrix<Scalar, RowsAtCompileTime, RowsAtCompileTime> MatrixUType;
-  typedef Matrix<Scalar, ColsAtCompileTime, ColsAtCompileTime> MatrixVType;
-  typedef Matrix<Scalar, RowsAtCompileTime, 1> ColVectorType;
-  typedef Matrix<Scalar, ColsAtCompileTime, 1> InputVectorType;
-
-  MatrixType sigma = MatrixType::Zero(rows,cols);
-  sigma.diagonal() = svd.singularValues().template cast<Scalar>();
-  MatrixUType u = svd.matrixU();
-  MatrixVType v = svd.matrixV();
-
-  VERIFY_IS_APPROX(m, u * sigma * v.adjoint());
-  VERIFY_IS_UNITARY(u);
-  VERIFY_IS_UNITARY(v);
-}
-
-template<typename MatrixType, int QRPreconditioner>
-void jacobisvd_compare_to_full(const MatrixType& m,
-                               unsigned int computationOptions,
-                               const JacobiSVD<MatrixType, QRPreconditioner>& referenceSvd)
-{
-  typedef typename MatrixType::Index Index;
-  Index rows = m.rows();
-  Index cols = m.cols();
-  Index diagSize = (std::min)(rows, cols);
-
-  JacobiSVD<MatrixType, QRPreconditioner> svd(m, computationOptions);
-
-  VERIFY_IS_APPROX(svd.singularValues(), referenceSvd.singularValues());
-  if(computationOptions & ComputeFullU)
-    VERIFY_IS_APPROX(svd.matrixU(), referenceSvd.matrixU());
-  if(computationOptions & ComputeThinU)
-    VERIFY_IS_APPROX(svd.matrixU(), referenceSvd.matrixU().leftCols(diagSize));
-  if(computationOptions & ComputeFullV)
-    VERIFY_IS_APPROX(svd.matrixV(), referenceSvd.matrixV());
-  if(computationOptions & ComputeThinV)
-    VERIFY_IS_APPROX(svd.matrixV(), referenceSvd.matrixV().leftCols(diagSize));
-}
-
-template<typename MatrixType, int QRPreconditioner>
-void jacobisvd_solve(const MatrixType& m, unsigned int computationOptions)
-{
-  typedef typename MatrixType::Scalar Scalar;
-  typedef typename MatrixType::Index Index;
-  Index rows = m.rows();
-  Index cols = m.cols();
-
-  enum {
-    RowsAtCompileTime = MatrixType::RowsAtCompileTime,
-    ColsAtCompileTime = MatrixType::ColsAtCompileTime
-  };
-
-  typedef Matrix<Scalar, RowsAtCompileTime, Dynamic> RhsType;
-  typedef Matrix<Scalar, ColsAtCompileTime, Dynamic> SolutionType;
-
-  RhsType rhs = RhsType::Random(rows, internal::random<Index>(1, cols));
-  JacobiSVD<MatrixType, QRPreconditioner> svd(m, computationOptions);
-  SolutionType x = svd.solve(rhs);
-  // evaluate normal equation which works also for least-squares solutions
-  VERIFY_IS_APPROX(m.adjoint()*m*x,m.adjoint()*rhs);
-}
-
-template<typename MatrixType, int QRPreconditioner>
-void jacobisvd_test_all_computation_options(const MatrixType& m)
-{
-  if (QRPreconditioner == NoQRPreconditioner && m.rows() != m.cols())
-    return;
-  JacobiSVD<MatrixType, QRPreconditioner> fullSvd(m, ComputeFullU|ComputeFullV);
-
-  jacobisvd_check_full(m, fullSvd);
-  jacobisvd_solve<MatrixType, QRPreconditioner>(m, ComputeFullU | ComputeFullV);
-
-  if(QRPreconditioner == FullPivHouseholderQRPreconditioner)
-    return;
-
-  jacobisvd_compare_to_full(m, ComputeFullU, fullSvd);
-  jacobisvd_compare_to_full(m, ComputeFullV, fullSvd);
-  jacobisvd_compare_to_full(m, 0, fullSvd);
-
-  if (MatrixType::ColsAtCompileTime == Dynamic) {
-    // thin U/V are only available with dynamic number of columns
-    jacobisvd_compare_to_full(m, ComputeFullU|ComputeThinV, fullSvd);
-    jacobisvd_compare_to_full(m,              ComputeThinV, fullSvd);
-    jacobisvd_compare_to_full(m, ComputeThinU|ComputeFullV, fullSvd);
-    jacobisvd_compare_to_full(m, ComputeThinU             , fullSvd);
-    jacobisvd_compare_to_full(m, ComputeThinU|ComputeThinV, fullSvd);
-    jacobisvd_solve<MatrixType, QRPreconditioner>(m, ComputeFullU | ComputeThinV);
-    jacobisvd_solve<MatrixType, QRPreconditioner>(m, ComputeThinU | ComputeFullV);
-    jacobisvd_solve<MatrixType, QRPreconditioner>(m, ComputeThinU | ComputeThinV);
-
-    // test reconstruction
-    typedef typename MatrixType::Index Index;
-    Index diagSize = (std::min)(m.rows(), m.cols());
-    JacobiSVD<MatrixType, QRPreconditioner> svd(m, ComputeThinU | ComputeThinV);
-    VERIFY_IS_APPROX(m, svd.matrixU().leftCols(diagSize) * svd.singularValues().asDiagonal() * svd.matrixV().leftCols(diagSize).adjoint());
-  }
-}
-
+// Check all variants of JacobiSVD
 template<typename MatrixType>
 void jacobisvd(const MatrixType& a = MatrixType(), bool pickrandom = true)
 {
-  MatrixType m = pickrandom ? MatrixType::Random(a.rows(), a.cols()) : a;
+  MatrixType m = a;
+  if(pickrandom)
+    svd_fill_random(m);
 
-  jacobisvd_test_all_computation_options<MatrixType, FullPivHouseholderQRPreconditioner>(m);
-  jacobisvd_test_all_computation_options<MatrixType, ColPivHouseholderQRPreconditioner>(m);
-  jacobisvd_test_all_computation_options<MatrixType, HouseholderQRPreconditioner>(m);
-  jacobisvd_test_all_computation_options<MatrixType, NoQRPreconditioner>(m);
+  CALL_SUBTEST(( svd_test_all_computation_options<JacobiSVD<MatrixType, FullPivHouseholderQRPreconditioner> >(m, true)  )); // check full only
+  CALL_SUBTEST(( svd_test_all_computation_options<JacobiSVD<MatrixType, ColPivHouseholderQRPreconditioner>  >(m, false) ));
+  CALL_SUBTEST(( svd_test_all_computation_options<JacobiSVD<MatrixType, HouseholderQRPreconditioner>        >(m, false) ));
+  if(m.rows()==m.cols())
+    CALL_SUBTEST(( svd_test_all_computation_options<JacobiSVD<MatrixType, NoQRPreconditioner>               >(m, false) ));
 }
 
 template<typename MatrixType> void jacobisvd_verify_assert(const MatrixType& m)
 {
-  typedef typename MatrixType::Scalar Scalar;
-  typedef typename MatrixType::Index Index;
+  svd_verify_assert<JacobiSVD<MatrixType> >(m);
   Index rows = m.rows();
   Index cols = m.cols();
 
   enum {
-    RowsAtCompileTime = MatrixType::RowsAtCompileTime,
     ColsAtCompileTime = MatrixType::ColsAtCompileTime
   };
 
-  typedef Matrix<Scalar, RowsAtCompileTime, 1> RhsType;
-
-  RhsType rhs(rows);
-
-  JacobiSVD<MatrixType> svd;
-  VERIFY_RAISES_ASSERT(svd.matrixU())
-  VERIFY_RAISES_ASSERT(svd.singularValues())
-  VERIFY_RAISES_ASSERT(svd.matrixV())
-  VERIFY_RAISES_ASSERT(svd.solve(rhs))
 
   MatrixType a = MatrixType::Zero(rows, cols);
   a.setZero();
-  svd.compute(a, 0);
-  VERIFY_RAISES_ASSERT(svd.matrixU())
-  VERIFY_RAISES_ASSERT(svd.matrixV())
-  svd.singularValues();
-  VERIFY_RAISES_ASSERT(svd.solve(rhs))
 
   if (ColsAtCompileTime == Dynamic)
   {
-    svd.compute(a, ComputeThinU);
-    svd.matrixU();
-    VERIFY_RAISES_ASSERT(svd.matrixV())
-    VERIFY_RAISES_ASSERT(svd.solve(rhs))
-
-    svd.compute(a, ComputeThinV);
-    svd.matrixV();
-    VERIFY_RAISES_ASSERT(svd.matrixU())
-    VERIFY_RAISES_ASSERT(svd.solve(rhs))
-
     JacobiSVD<MatrixType, FullPivHouseholderQRPreconditioner> svd_fullqr;
     VERIFY_RAISES_ASSERT(svd_fullqr.compute(a, ComputeFullU|ComputeThinV))
     VERIFY_RAISES_ASSERT(svd_fullqr.compute(a, ComputeThinU|ComputeThinV))
     VERIFY_RAISES_ASSERT(svd_fullqr.compute(a, ComputeThinU|ComputeFullV))
-  }
-  else
-  {
-    VERIFY_RAISES_ASSERT(svd.compute(a, ComputeThinU))
-    VERIFY_RAISES_ASSERT(svd.compute(a, ComputeThinV))
   }
 }
 
@@ -203,93 +69,19 @@ void jacobisvd_method()
   VERIFY_IS_APPROX(m.jacobiSvd(ComputeFullU|ComputeFullV).solve(m), m);
 }
 
-// work around stupid msvc error when constructing at compile time an expression that involves
-// a division by zero, even if the numeric type has floating point
-template<typename Scalar>
-EIGEN_DONT_INLINE Scalar zero() { return Scalar(0); }
-
-// workaround aggressive optimization in ICC
-template<typename T> EIGEN_DONT_INLINE  T sub(T a, T b) { return a - b; }
-
-template<typename MatrixType>
-void jacobisvd_inf_nan()
-{
-  // all this function does is verify we don't iterate infinitely on nan/inf values
-
-  JacobiSVD<MatrixType> svd;
-  typedef typename MatrixType::Scalar Scalar;
-  Scalar some_inf = Scalar(1) / zero<Scalar>();
-  VERIFY(sub(some_inf, some_inf) != sub(some_inf, some_inf));
-  svd.compute(MatrixType::Constant(10,10,some_inf), ComputeFullU | ComputeFullV);
-
-  Scalar some_nan = zero<Scalar>() / zero<Scalar>();
-  VERIFY(some_nan != some_nan);
-  svd.compute(MatrixType::Constant(10,10,some_nan), ComputeFullU | ComputeFullV);
-
-  MatrixType m = MatrixType::Zero(10,10);
-  m(internal::random<int>(0,9), internal::random<int>(0,9)) = some_inf;
-  svd.compute(m, ComputeFullU | ComputeFullV);
-
-  m = MatrixType::Zero(10,10);
-  m(internal::random<int>(0,9), internal::random<int>(0,9)) = some_nan;
-  svd.compute(m, ComputeFullU | ComputeFullV);
+namespace Foo {
+// older compiler require a default constructor for Bar
+// cf: https://stackoverflow.com/questions/7411515/
+class Bar {public: Bar() {}};
+bool operator<(const Bar&, const Bar&) { return true; }
 }
-
-// Regression test for bug 286: JacobiSVD loops indefinitely with some
-// matrices containing denormal numbers.
-void jacobisvd_bug286()
+// regression test for a very strange MSVC issue for which simply
+// including SVDBase.h messes up with std::max and custom scalar type
+void msvc_workaround()
 {
-#if defined __INTEL_COMPILER
-// shut up warning #239: floating point underflow
-#pragma warning push
-#pragma warning disable 239
-#endif
-  Matrix2d M;
-  M << -7.90884e-313, -4.94e-324,
-                 0, 5.60844e-313;
-#if defined __INTEL_COMPILER
-#pragma warning pop
-#endif
-  JacobiSVD<Matrix2d> svd;
-  svd.compute(M); // just check we don't loop indefinitely
-}
-
-void jacobisvd_preallocate()
-{
-  Vector3f v(3.f, 2.f, 1.f);
-  MatrixXf m = v.asDiagonal();
-
-  internal::set_is_malloc_allowed(false);
-  VERIFY_RAISES_ASSERT(VectorXf v(10);)
-  JacobiSVD<MatrixXf> svd;
-  internal::set_is_malloc_allowed(true);
-  svd.compute(m);
-  VERIFY_IS_APPROX(svd.singularValues(), v);
-
-  JacobiSVD<MatrixXf> svd2(3,3);
-  internal::set_is_malloc_allowed(false);
-  svd2.compute(m);
-  internal::set_is_malloc_allowed(true);
-  VERIFY_IS_APPROX(svd2.singularValues(), v);
-  VERIFY_RAISES_ASSERT(svd2.matrixU());
-  VERIFY_RAISES_ASSERT(svd2.matrixV());
-  svd2.compute(m, ComputeFullU | ComputeFullV);
-  VERIFY_IS_APPROX(svd2.matrixU(), Matrix3f::Identity());
-  VERIFY_IS_APPROX(svd2.matrixV(), Matrix3f::Identity());
-  internal::set_is_malloc_allowed(false);
-  svd2.compute(m);
-  internal::set_is_malloc_allowed(true);
-
-  JacobiSVD<MatrixXf> svd3(3,3,ComputeFullU|ComputeFullV);
-  internal::set_is_malloc_allowed(false);
-  svd2.compute(m);
-  internal::set_is_malloc_allowed(true);
-  VERIFY_IS_APPROX(svd2.singularValues(), v);
-  VERIFY_IS_APPROX(svd2.matrixU(), Matrix3f::Identity());
-  VERIFY_IS_APPROX(svd2.matrixV(), Matrix3f::Identity());
-  internal::set_is_malloc_allowed(false);
-  svd2.compute(m, ComputeFullU|ComputeFullV);
-  internal::set_is_malloc_allowed(true);
+  const Foo::Bar a;
+  const Foo::Bar b;
+  std::max EIGEN_NOT_A_MACRO (a,b);
 }
 
 void test_jacobisvd()
@@ -298,24 +90,11 @@ void test_jacobisvd()
   CALL_SUBTEST_4(( jacobisvd_verify_assert(Matrix4d()) ));
   CALL_SUBTEST_7(( jacobisvd_verify_assert(MatrixXf(10,12)) ));
   CALL_SUBTEST_8(( jacobisvd_verify_assert(MatrixXcd(7,5)) ));
+  
+  CALL_SUBTEST_11(svd_all_trivial_2x2(jacobisvd<Matrix2cd>));
+  CALL_SUBTEST_12(svd_all_trivial_2x2(jacobisvd<Matrix2d>));
 
   for(int i = 0; i < g_repeat; i++) {
-    Matrix2cd m;
-    m << 0, 1,
-         0, 1;
-    CALL_SUBTEST_1(( jacobisvd(m, false) ));
-    m << 1, 0,
-         1, 0;
-    CALL_SUBTEST_1(( jacobisvd(m, false) ));
-
-    Matrix2d n;
-    n << 0, 0,
-         0, 0;
-    CALL_SUBTEST_2(( jacobisvd(n, false) ));
-    n << 0, 0,
-         0, 1;
-    CALL_SUBTEST_2(( jacobisvd(n, false) ));
-    
     CALL_SUBTEST_3(( jacobisvd<Matrix3f>() ));
     CALL_SUBTEST_4(( jacobisvd<Matrix4d>() ));
     CALL_SUBTEST_5(( jacobisvd<Matrix<float,3,5> >() ));
@@ -323,13 +102,25 @@ void test_jacobisvd()
 
     int r = internal::random<int>(1, 30),
         c = internal::random<int>(1, 30);
+    
+    TEST_SET_BUT_UNUSED_VARIABLE(r)
+    TEST_SET_BUT_UNUSED_VARIABLE(c)
+    
+    CALL_SUBTEST_10(( jacobisvd<MatrixXd>(MatrixXd(r,c)) ));
     CALL_SUBTEST_7(( jacobisvd<MatrixXf>(MatrixXf(r,c)) ));
     CALL_SUBTEST_8(( jacobisvd<MatrixXcd>(MatrixXcd(r,c)) ));
     (void) r;
     (void) c;
 
     // Test on inf/nan matrix
-    CALL_SUBTEST_7( jacobisvd_inf_nan<MatrixXf>() );
+    CALL_SUBTEST_7(  (svd_inf_nan<JacobiSVD<MatrixXf>, MatrixXf>()) );
+    CALL_SUBTEST_10( (svd_inf_nan<JacobiSVD<MatrixXd>, MatrixXd>()) );
+
+    // bug1395 test compile-time vectors as input
+    CALL_SUBTEST_13(( jacobisvd_verify_assert(Matrix<double,6,1>()) ));
+    CALL_SUBTEST_13(( jacobisvd_verify_assert(Matrix<double,1,6>()) ));
+    CALL_SUBTEST_13(( jacobisvd_verify_assert(Matrix<double,Dynamic,1>(r)) ));
+    CALL_SUBTEST_13(( jacobisvd_verify_assert(Matrix<double,1,Dynamic>(c)) ));
   }
 
   CALL_SUBTEST_7(( jacobisvd<MatrixXf>(MatrixXf(internal::random<int>(EIGEN_TEST_MAX_SIZE/4, EIGEN_TEST_MAX_SIZE/2), internal::random<int>(EIGEN_TEST_MAX_SIZE/4, EIGEN_TEST_MAX_SIZE/2))) ));
@@ -343,8 +134,9 @@ void test_jacobisvd()
   CALL_SUBTEST_7( JacobiSVD<MatrixXf>(10,10) );
 
   // Check that preallocation avoids subsequent mallocs
-  CALL_SUBTEST_9( jacobisvd_preallocate() );
+  CALL_SUBTEST_9( svd_preallocate<void>() );
 
-  // Regression check for bug 286
-  CALL_SUBTEST_2( jacobisvd_bug286() );
+  CALL_SUBTEST_2( svd_underoverflow<void>() );
+
+  msvc_workaround();
 }

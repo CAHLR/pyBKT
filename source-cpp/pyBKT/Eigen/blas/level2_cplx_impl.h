@@ -16,13 +16,22 @@
   *  where alpha and beta are scalars, x and y are n element vectors and
   *  A is an n by n hermitian matrix.
   */
-int EIGEN_BLAS_FUNC(hemv)(char *uplo, int *n, RealScalar *palpha, RealScalar *pa, int *lda, RealScalar *px, int *incx, RealScalar *pbeta, RealScalar *py, int *incy)
+int EIGEN_BLAS_FUNC(hemv)(const char *uplo, const int *n, const RealScalar *palpha, const RealScalar *pa, const int *lda,
+                          const RealScalar *px, const int *incx, const RealScalar *pbeta, RealScalar *py, const int *incy)
 {
-  Scalar* a = reinterpret_cast<Scalar*>(pa);
-  Scalar* x = reinterpret_cast<Scalar*>(px);
+  typedef void (*functype)(int, const Scalar*, int, const Scalar*, Scalar*, Scalar);
+  static const functype func[2] = {
+    // array index: UP
+    (internal::selfadjoint_matrix_vector_product<Scalar,int,ColMajor,Upper,false,false>::run),
+    // array index: LO
+    (internal::selfadjoint_matrix_vector_product<Scalar,int,ColMajor,Lower,false,false>::run),
+  };
+
+  const Scalar* a = reinterpret_cast<const Scalar*>(pa);
+  const Scalar* x = reinterpret_cast<const Scalar*>(px);
   Scalar* y = reinterpret_cast<Scalar*>(py);
-  Scalar alpha  = *reinterpret_cast<Scalar*>(palpha);
-  Scalar beta   = *reinterpret_cast<Scalar*>(pbeta);
+  Scalar alpha  = *reinterpret_cast<const Scalar*>(palpha);
+  Scalar beta   = *reinterpret_cast<const Scalar*>(pbeta);
 
   // check arguments
   int info = 0;
@@ -37,20 +46,22 @@ int EIGEN_BLAS_FUNC(hemv)(char *uplo, int *n, RealScalar *palpha, RealScalar *pa
   if(*n==0)
     return 1;
 
-  Scalar* actual_x = get_compact_vector(x,*n,*incx);
+  const Scalar* actual_x = get_compact_vector(x,*n,*incx);
   Scalar* actual_y = get_compact_vector(y,*n,*incy);
 
   if(beta!=Scalar(1))
   {
-    if(beta==Scalar(0)) vector(actual_y, *n).setZero();
-    else                vector(actual_y, *n) *= beta;
+    if(beta==Scalar(0)) make_vector(actual_y, *n).setZero();
+    else                make_vector(actual_y, *n) *= beta;
   }
 
   if(alpha!=Scalar(0))
   {
-    // TODO performs a direct call to the underlying implementation function
-         if(UPLO(*uplo)==UP) vector(actual_y,*n).noalias() += matrix(a,*n,*n,*lda).selfadjointView<Upper>() * (alpha * vector(actual_x,*n));
-    else if(UPLO(*uplo)==LO) vector(actual_y,*n).noalias() += matrix(a,*n,*n,*lda).selfadjointView<Lower>() * (alpha * vector(actual_x,*n));
+    int code = UPLO(*uplo);
+    if(code>=2 || func[code]==0)
+      return 0;
+
+    func[code](*n, a, *lda, actual_x, actual_y, alpha);
   }
 
   if(actual_x!=x) delete[] actual_x;
@@ -91,10 +102,42 @@ int EIGEN_BLAS_FUNC(hemv)(char *uplo, int *n, RealScalar *palpha, RealScalar *pa
   *  where alpha is a real scalar, x is an n element vector and A is an
   *  n by n hermitian matrix, supplied in packed form.
   */
-// int EIGEN_BLAS_FUNC(hpr)(char *uplo, int *n, RealScalar *alpha, RealScalar *x, int *incx, RealScalar *ap)
-// {
-//   return 1;
-// }
+int EIGEN_BLAS_FUNC(hpr)(char *uplo, int *n, RealScalar *palpha, RealScalar *px, int *incx, RealScalar *pap)
+{
+  typedef void (*functype)(int, Scalar*, const Scalar*, RealScalar);
+  static const functype func[2] = {
+    // array index: UP
+    (internal::selfadjoint_packed_rank1_update<Scalar,int,ColMajor,Upper,false,Conj>::run),
+    // array index: LO
+    (internal::selfadjoint_packed_rank1_update<Scalar,int,ColMajor,Lower,false,Conj>::run),
+  };
+
+  Scalar* x = reinterpret_cast<Scalar*>(px);
+  Scalar* ap = reinterpret_cast<Scalar*>(pap);
+  RealScalar alpha = *palpha;
+
+  int info = 0;
+  if(UPLO(*uplo)==INVALID)                                            info = 1;
+  else if(*n<0)                                                       info = 2;
+  else if(*incx==0)                                                   info = 5;
+  if(info)
+    return xerbla_(SCALAR_SUFFIX_UP"HPR  ",&info,6);
+
+  if(alpha==Scalar(0))
+    return 1;
+
+  Scalar* x_cpy = get_compact_vector(x, *n, *incx);
+
+  int code = UPLO(*uplo);
+  if(code>=2 || func[code]==0)
+    return 0;
+
+  func[code](*n, ap, x_cpy, alpha);
+
+  if(x_cpy!=x)  delete[] x_cpy;
+
+  return 1;
+}
 
 /**  ZHPR2  performs the hermitian rank 2 operation
   *
@@ -103,10 +146,46 @@ int EIGEN_BLAS_FUNC(hemv)(char *uplo, int *n, RealScalar *palpha, RealScalar *pa
   *  where alpha is a scalar, x and y are n element vectors and A is an
   *  n by n hermitian matrix, supplied in packed form.
   */
-// int EIGEN_BLAS_FUNC(hpr2)(char *uplo, int *n, RealScalar *palpha, RealScalar *x, int *incx, RealScalar *y, int *incy, RealScalar *ap)
-// {
-//   return 1;
-// }
+int EIGEN_BLAS_FUNC(hpr2)(char *uplo, int *n, RealScalar *palpha, RealScalar *px, int *incx, RealScalar *py, int *incy, RealScalar *pap)
+{
+  typedef void (*functype)(int, Scalar*, const Scalar*, const Scalar*, Scalar);
+  static const functype func[2] = {
+    // array index: UP
+    (internal::packed_rank2_update_selector<Scalar,int,Upper>::run),
+    // array index: LO
+    (internal::packed_rank2_update_selector<Scalar,int,Lower>::run),
+  };
+
+  Scalar* x = reinterpret_cast<Scalar*>(px);
+  Scalar* y = reinterpret_cast<Scalar*>(py);
+  Scalar* ap = reinterpret_cast<Scalar*>(pap);
+  Scalar alpha = *reinterpret_cast<Scalar*>(palpha);
+
+  int info = 0;
+  if(UPLO(*uplo)==INVALID)                                            info = 1;
+  else if(*n<0)                                                       info = 2;
+  else if(*incx==0)                                                   info = 5;
+  else if(*incy==0)                                                   info = 7;
+  if(info)
+    return xerbla_(SCALAR_SUFFIX_UP"HPR2 ",&info,6);
+
+  if(alpha==Scalar(0))
+    return 1;
+
+  Scalar* x_cpy = get_compact_vector(x, *n, *incx);
+  Scalar* y_cpy = get_compact_vector(y, *n, *incy);
+
+  int code = UPLO(*uplo);
+  if(code>=2 || func[code]==0)
+    return 0;
+
+  func[code](*n, ap, x_cpy, y_cpy, alpha);
+
+  if(x_cpy!=x)  delete[] x_cpy;
+  if(y_cpy!=y)  delete[] y_cpy;
+
+  return 1;
+}
 
 /**  ZHER   performs the hermitian rank 1 operation
   *
@@ -117,6 +196,14 @@ int EIGEN_BLAS_FUNC(hemv)(char *uplo, int *n, RealScalar *palpha, RealScalar *pa
   */
 int EIGEN_BLAS_FUNC(her)(char *uplo, int *n, RealScalar *palpha, RealScalar *px, int *incx, RealScalar *pa, int *lda)
 {
+  typedef void (*functype)(int, Scalar*, int, const Scalar*, const Scalar*, const Scalar&);
+  static const functype func[2] = {
+    // array index: UP
+    (selfadjoint_rank1_update<Scalar,int,ColMajor,Upper,false,Conj>::run),
+    // array index: LO
+    (selfadjoint_rank1_update<Scalar,int,ColMajor,Lower,false,Conj>::run),
+  };
+
   Scalar* x = reinterpret_cast<Scalar*>(px);
   Scalar* a = reinterpret_cast<Scalar*>(pa);
   RealScalar alpha = *reinterpret_cast<RealScalar*>(palpha);
@@ -134,16 +221,11 @@ int EIGEN_BLAS_FUNC(her)(char *uplo, int *n, RealScalar *palpha, RealScalar *px,
 
   Scalar* x_cpy = get_compact_vector(x, *n, *incx);
 
-  // TODO perform direct calls to underlying implementation
-//   if(UPLO(*uplo)==LO)       matrix(a,*n,*n,*lda).selfadjointView<Lower>().rankUpdate(vector(x_cpy,*n), alpha);
-//   else if(UPLO(*uplo)==UP)  matrix(a,*n,*n,*lda).selfadjointView<Upper>().rankUpdate(vector(x_cpy,*n), alpha);
+  int code = UPLO(*uplo);
+  if(code>=2 || func[code]==0)
+    return 0;
 
-  if(UPLO(*uplo)==LO)
-    for(int j=0;j<*n;++j)
-      matrix(a,*n,*n,*lda).col(j).tail(*n-j) += alpha * internal::conj(x_cpy[j]) * vector(x_cpy+j,*n-j);
-  else
-    for(int j=0;j<*n;++j)
-      matrix(a,*n,*n,*lda).col(j).head(j+1) += alpha * internal::conj(x_cpy[j]) * vector(x_cpy,j+1);
+  func[code](*n, a, *lda, x_cpy, x_cpy, alpha);
 
   matrix(a,*n,*n,*lda).diagonal().imag().setZero();
 
@@ -161,6 +243,14 @@ int EIGEN_BLAS_FUNC(her)(char *uplo, int *n, RealScalar *palpha, RealScalar *px,
   */
 int EIGEN_BLAS_FUNC(her2)(char *uplo, int *n, RealScalar *palpha, RealScalar *px, int *incx, RealScalar *py, int *incy, RealScalar *pa, int *lda)
 {
+  typedef void (*functype)(int, Scalar*, int, const Scalar*, const Scalar*, Scalar);
+  static const functype func[2] = {
+    // array index: UP
+    (internal::rank2_update_selector<Scalar,int,Upper>::run),
+    // array index: LO
+    (internal::rank2_update_selector<Scalar,int,Lower>::run),
+  };
+
   Scalar* x = reinterpret_cast<Scalar*>(px);
   Scalar* y = reinterpret_cast<Scalar*>(py);
   Scalar* a = reinterpret_cast<Scalar*>(pa);
@@ -181,9 +271,11 @@ int EIGEN_BLAS_FUNC(her2)(char *uplo, int *n, RealScalar *palpha, RealScalar *px
   Scalar* x_cpy = get_compact_vector(x, *n, *incx);
   Scalar* y_cpy = get_compact_vector(y, *n, *incy);
 
-  // TODO perform direct calls to underlying implementation
-  if(UPLO(*uplo)==LO)       matrix(a,*n,*n,*lda).selfadjointView<Lower>().rankUpdate(vector(x_cpy,*n),vector(y_cpy,*n),alpha);
-  else if(UPLO(*uplo)==UP)  matrix(a,*n,*n,*lda).selfadjointView<Upper>().rankUpdate(vector(x_cpy,*n),vector(y_cpy,*n),alpha);
+  int code = UPLO(*uplo);
+  if(code>=2 || func[code]==0)
+    return 0;
+
+  func[code](*n, a, *lda, x_cpy, y_cpy, alpha);
 
   matrix(a,*n,*n,*lda).diagonal().imag().setZero();
 
@@ -222,8 +314,7 @@ int EIGEN_BLAS_FUNC(geru)(int *m, int *n, RealScalar *palpha, RealScalar *px, in
   Scalar* x_cpy = get_compact_vector(x,*m,*incx);
   Scalar* y_cpy = get_compact_vector(y,*n,*incy);
 
-  // TODO perform direct calls to underlying implementation
-  matrix(a,*m,*n,*lda) += alpha * vector(x_cpy,*m) * vector(y_cpy,*n).transpose();
+  internal::general_rank1_update<Scalar,int,ColMajor,false,false>::run(*m, *n, a, *lda, x_cpy, y_cpy, alpha);
 
   if(x_cpy!=x)  delete[] x_cpy;
   if(y_cpy!=y)  delete[] y_cpy;
@@ -260,8 +351,7 @@ int EIGEN_BLAS_FUNC(gerc)(int *m, int *n, RealScalar *palpha, RealScalar *px, in
   Scalar* x_cpy = get_compact_vector(x,*m,*incx);
   Scalar* y_cpy = get_compact_vector(y,*n,*incy);
 
-  // TODO perform direct calls to underlying implementation
-  matrix(a,*m,*n,*lda) += alpha * vector(x_cpy,*m) * vector(y_cpy,*n).adjoint();
+  internal::general_rank1_update<Scalar,int,ColMajor,false,Conj>::run(*m, *n, a, *lda, x_cpy, y_cpy, alpha);
 
   if(x_cpy!=x)  delete[] x_cpy;
   if(y_cpy!=y)  delete[] y_cpy;

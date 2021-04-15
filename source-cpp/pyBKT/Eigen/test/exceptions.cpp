@@ -69,6 +69,10 @@ class ScalarWithExceptions
     static int countdown;
 };
 
+ScalarWithExceptions real(const ScalarWithExceptions &x) { return x; }
+ScalarWithExceptions imag(const ScalarWithExceptions & ) { return 0; }
+ScalarWithExceptions conj(const ScalarWithExceptions &x) { return x; }
+
 int ScalarWithExceptions::instances = 0;
 int ScalarWithExceptions::countdown = 0;
 
@@ -105,5 +109,7 @@ void memoryleak()
 
 void test_exceptions()
 {
-  CALL_SUBTEST( memoryleak() );
+  EIGEN_TRY {
+    CALL_SUBTEST( memoryleak() );
+  } EIGEN_CATCH(...) {}
 }

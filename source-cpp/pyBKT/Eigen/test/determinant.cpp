@@ -16,7 +16,6 @@ template<typename MatrixType> void determinant(const MatrixType& m)
   /* this test covers the following files:
      Determinant.h
   */
-  typedef typename MatrixType::Index Index;
   Index size = m.rows();
 
   MatrixType m1(size, size), m2(size, size);
@@ -39,7 +38,7 @@ template<typename MatrixType> void determinant(const MatrixType& m)
   m2.col(i).swap(m2.col(j));
   VERIFY_IS_APPROX(m2.determinant(), -m1.determinant());
   VERIFY_IS_APPROX(m2.determinant(), m2.transpose().determinant());
-  VERIFY_IS_APPROX(internal::conj(m2.determinant()), m2.adjoint().determinant());
+  VERIFY_IS_APPROX(numext::conj(m2.determinant()), m2.adjoint().determinant());
   m2 = m1;
   m2.row(i) += x*m2.row(j);
   VERIFY_IS_APPROX(m2.determinant(), m1.determinant());
@@ -53,8 +52,8 @@ template<typename MatrixType> void determinant(const MatrixType& m)
 
 void test_determinant()
 {
-  int s;
   for(int i = 0; i < g_repeat; i++) {
+    int s = 0;
     CALL_SUBTEST_1( determinant(Matrix<float, 1, 1>()) );
     CALL_SUBTEST_2( determinant(Matrix<double, 2, 2>()) );
     CALL_SUBTEST_3( determinant(Matrix<double, 3, 3>()) );
@@ -62,6 +61,6 @@ void test_determinant()
     CALL_SUBTEST_5( determinant(Matrix<std::complex<double>, 10, 10>()) );
     s = internal::random<int>(1,EIGEN_TEST_MAX_SIZE/4);
     CALL_SUBTEST_6( determinant(MatrixXd(s, s)) );
+    TEST_SET_BUT_UNUSED_VARIABLE(s)
   }
-  EIGEN_UNUSED_VARIABLE(s)
 }

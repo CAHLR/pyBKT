@@ -1,7 +1,7 @@
 // This file is part of Eigen, a lightweight C++ template library
 // for linear algebra.
 //
-// Copyright (C) 2010 Jitse Niesen <jitse@maths.leeds.ac.uk>
+// Copyright (C) 2010,2012 Jitse Niesen <jitse@maths.leeds.ac.uk>
 //
 // This Source Code Form is subject to the terms of the Mozilla
 // Public License v. 2.0. If a copy of the MPL was not distributed
@@ -13,8 +13,6 @@
 
 template<typename MatrixType> void verifyIsQuasiTriangular(const MatrixType& T)
 {
-  typedef typename MatrixType::Index Index;
-
   const Index size = T.cols();
   typedef typename MatrixType::Scalar Scalar;
 
@@ -66,13 +64,32 @@ template<typename MatrixType> void schur(int size = MatrixType::ColsAtCompileTim
   VERIFY_IS_EQUAL(rs1.matrixT(), rs2.matrixT());
   VERIFY_IS_EQUAL(rs1.matrixU(), rs2.matrixU());
 
+  // Test maximum number of iterations
+  RealSchur<MatrixType> rs3;
+  rs3.setMaxIterations(RealSchur<MatrixType>::m_maxIterationsPerRow * size).compute(A);
+  VERIFY_IS_EQUAL(rs3.info(), Success);
+  VERIFY_IS_EQUAL(rs3.matrixT(), rs1.matrixT());
+  VERIFY_IS_EQUAL(rs3.matrixU(), rs1.matrixU());
+  if (size > 2) {
+    rs3.setMaxIterations(1).compute(A);
+    VERIFY_IS_EQUAL(rs3.info(), NoConvergence);
+    VERIFY_IS_EQUAL(rs3.getMaxIterations(), 1);
+  }
+
+  MatrixType Atriangular = A;
+  Atriangular.template triangularView<StrictlyLower>().setZero(); 
+  rs3.setMaxIterations(1).compute(Atriangular); // triangular matrices do not need any iterations
+  VERIFY_IS_EQUAL(rs3.info(), Success);
+  VERIFY_IS_APPROX(rs3.matrixT(), Atriangular); // approx because of scaling...
+  VERIFY_IS_EQUAL(rs3.matrixU(), MatrixType::Identity(size, size));
+
   // Test computation of only T, not U
   RealSchur<MatrixType> rsOnlyT(A, false);
   VERIFY_IS_EQUAL(rsOnlyT.info(), Success);
   VERIFY_IS_EQUAL(rs1.matrixT(), rsOnlyT.matrixT());
   VERIFY_RAISES_ASSERT(rsOnlyT.matrixU());
 
-  if (size > 2)
+  if (size > 2 && size < 20)
   {
     // Test matrix with NaN
     A(0,0) = std::numeric_limits<typename MatrixType::Scalar>::quiet_NaN();

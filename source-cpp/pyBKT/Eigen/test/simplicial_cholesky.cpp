@@ -9,32 +9,39 @@
 
 #include "sparse_solver.h"
 
-template<typename T> void test_simplicial_cholesky_T()
+template<typename T, typename I> void test_simplicial_cholesky_T()
 {
-  SimplicialCholesky<SparseMatrix<T>, Lower> chol_colmajor_lower;
-  SimplicialCholesky<SparseMatrix<T>, Upper> chol_colmajor_upper;
-  SimplicialLLT<SparseMatrix<T>, Lower> llt_colmajor_lower;
-  SimplicialLDLT<SparseMatrix<T>, Upper> llt_colmajor_upper;
-  SimplicialLDLT<SparseMatrix<T>, Lower> ldlt_colmajor_lower;
-  SimplicialLDLT<SparseMatrix<T>, Upper> ldlt_colmajor_upper;
+  typedef SparseMatrix<T,0,I> SparseMatrixType;
+  SimplicialCholesky<SparseMatrixType, Lower> chol_colmajor_lower_amd;
+  SimplicialCholesky<SparseMatrixType, Upper> chol_colmajor_upper_amd;
+  SimplicialLLT<     SparseMatrixType, Lower> llt_colmajor_lower_amd;
+  SimplicialLLT<     SparseMatrixType, Upper> llt_colmajor_upper_amd;
+  SimplicialLDLT<    SparseMatrixType, Lower> ldlt_colmajor_lower_amd;
+  SimplicialLDLT<    SparseMatrixType, Upper> ldlt_colmajor_upper_amd;
+  SimplicialLDLT<    SparseMatrixType, Lower, NaturalOrdering<I> > ldlt_colmajor_lower_nat;
+  SimplicialLDLT<    SparseMatrixType, Upper, NaturalOrdering<I> > ldlt_colmajor_upper_nat;
 
-  check_sparse_spd_solving(chol_colmajor_lower);
-  check_sparse_spd_solving(chol_colmajor_upper);
-  check_sparse_spd_solving(llt_colmajor_lower);
-  check_sparse_spd_solving(llt_colmajor_upper);
-  check_sparse_spd_solving(ldlt_colmajor_lower);
-  check_sparse_spd_solving(ldlt_colmajor_upper);
+  check_sparse_spd_solving(chol_colmajor_lower_amd);
+  check_sparse_spd_solving(chol_colmajor_upper_amd);
+  check_sparse_spd_solving(llt_colmajor_lower_amd);
+  check_sparse_spd_solving(llt_colmajor_upper_amd);
+  check_sparse_spd_solving(ldlt_colmajor_lower_amd);
+  check_sparse_spd_solving(ldlt_colmajor_upper_amd);
   
-  check_sparse_spd_determinant(chol_colmajor_lower);
-  check_sparse_spd_determinant(chol_colmajor_upper);
-  check_sparse_spd_determinant(llt_colmajor_lower);
-  check_sparse_spd_determinant(llt_colmajor_upper);
-  check_sparse_spd_determinant(ldlt_colmajor_lower);
-  check_sparse_spd_determinant(ldlt_colmajor_upper);
+  check_sparse_spd_determinant(chol_colmajor_lower_amd);
+  check_sparse_spd_determinant(chol_colmajor_upper_amd);
+  check_sparse_spd_determinant(llt_colmajor_lower_amd);
+  check_sparse_spd_determinant(llt_colmajor_upper_amd);
+  check_sparse_spd_determinant(ldlt_colmajor_lower_amd);
+  check_sparse_spd_determinant(ldlt_colmajor_upper_amd);
+  
+  check_sparse_spd_solving(ldlt_colmajor_lower_nat, 300, 1000);
+  check_sparse_spd_solving(ldlt_colmajor_upper_nat, 300, 1000);
 }
 
 void test_simplicial_cholesky()
 {
-  CALL_SUBTEST_1(test_simplicial_cholesky_T<double>());
-  CALL_SUBTEST_2(test_simplicial_cholesky_T<std::complex<double> >());
+  CALL_SUBTEST_1(( test_simplicial_cholesky_T<double,int>() ));
+  CALL_SUBTEST_2(( test_simplicial_cholesky_T<std::complex<double>, int>() ));
+  CALL_SUBTEST_3(( test_simplicial_cholesky_T<double,long int>() ));
 }

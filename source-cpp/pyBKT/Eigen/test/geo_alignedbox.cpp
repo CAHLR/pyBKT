@@ -15,12 +15,16 @@
 #include<iostream>
 using namespace std;
 
+// TODO not sure if this is actually still necessary anywhere ...
+template<typename T> EIGEN_DONT_INLINE
+void kill_extra_precision(T& ) {  }
+
+
 template<typename BoxType> void alignedbox(const BoxType& _box)
 {
   /* this test covers the following files:
      AlignedBox.h
   */
-  typedef typename BoxType::Index Index;  
   typedef typename BoxType::Scalar Scalar;
   typedef typename NumTraits<Scalar>::Real RealScalar;
   typedef Matrix<Scalar, BoxType::AmbientDimAtCompileTime, 1> VectorType;
@@ -36,16 +40,29 @@ template<typename BoxType> void alignedbox(const BoxType& _box)
   BoxType b0(dim);
   BoxType b1(VectorType::Random(dim),VectorType::Random(dim));
   BoxType b2;
+  
+  kill_extra_precision(b1);
+  kill_extra_precision(p0);
+  kill_extra_precision(p1);
 
   b0.extend(p0);
   b0.extend(p1);
   VERIFY(b0.contains(p0*s1+(Scalar(1)-s1)*p1));
+  VERIFY(b0.contains(b0.center()));
+  VERIFY_IS_APPROX(b0.center(),(p0+p1)/Scalar(2));
 
   (b2 = b0).extend(b1);
   VERIFY(b2.contains(b0));
   VERIFY(b2.contains(b1));
   VERIFY_IS_APPROX(b2.clamp(b0), b0);
 
+  // intersection
+  BoxType box1(VectorType::Random(dim));
+  box1.extend(VectorType::Random(dim));
+  BoxType box2(VectorType::Random(dim));
+  box2.extend(VectorType::Random(dim));
+
+  VERIFY(box1.intersects(box2) == !box1.intersection(box2).isEmpty()); 
 
   // alignment -- make sure there is no memory alignment assertion
   BoxType *bp0 = new BoxType(dim);
@@ -69,9 +86,7 @@ template<typename BoxType>
 void alignedboxCastTests(const BoxType& _box)
 {
   // casting  
-  typedef typename BoxType::Index Index;
   typedef typename BoxType::Scalar Scalar;
-  typedef typename NumTraits<Scalar>::Real RealScalar;
   typedef Matrix<Scalar, BoxType::AmbientDimAtCompileTime, 1> VectorType;
 
   const Index dim = _box.dim();
@@ -109,7 +124,7 @@ void specificTest1()
 
     VERIFY_IS_APPROX( 14.0f, box.volume() );
     VERIFY_IS_APPROX( 53.0f, box.diagonal().squaredNorm() );
-    VERIFY_IS_APPROX( internal::sqrt( 53.0f ), box.diagonal().norm() );
+    VERIFY_IS_APPROX( std::sqrt( 53.0f ), box.diagonal().norm() );
 
     VERIFY_IS_APPROX( m, box.corner( BoxType::BottomLeft ) );
     VERIFY_IS_APPROX( M, box.corner( BoxType::TopRight ) );
@@ -165,6 +180,8 @@ void test_geo_alignedbox()
     CALL_SUBTEST_9( alignedbox(AlignedBox1i()) );
     CALL_SUBTEST_10( alignedbox(AlignedBox2i()) );
     CALL_SUBTEST_11( alignedbox(AlignedBox3i()) );
+
+    CALL_SUBTEST_14( alignedbox(AlignedBox<double,Dynamic>(4)) );
   }
   CALL_SUBTEST_12( specificTest1() );
   CALL_SUBTEST_13( specificTest2() );

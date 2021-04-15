@@ -12,14 +12,11 @@
 
 template<typename MatrixType> void qr(const MatrixType& m)
 {
-  typedef typename MatrixType::Index Index;
-
   Index rows = m.rows();
   Index cols = m.cols();
 
   typedef typename MatrixType::Scalar Scalar;
   typedef Matrix<Scalar, MatrixType::RowsAtCompileTime, MatrixType::RowsAtCompileTime> MatrixQType;
-  typedef Matrix<Scalar, MatrixType::ColsAtCompileTime, 1> VectorType;
 
   MatrixType a = MatrixType::Random(rows,cols);
   HouseholderQR<MatrixType> qrOfA(a);
@@ -53,6 +50,10 @@ template<typename MatrixType, int Cols2> void qr_fixedsize()
 
 template<typename MatrixType> void qr_invertible()
 {
+  using std::log;
+  using std::abs;
+  using std::pow;
+  using std::max;
   typedef typename NumTraits<typename MatrixType::Scalar>::Real RealScalar;
   typedef typename MatrixType::Scalar Scalar;
 
@@ -64,7 +65,7 @@ template<typename MatrixType> void qr_invertible()
   if (internal::is_same<RealScalar,float>::value)
   {
     // let's build a matrix more stable to inverse
-    MatrixType a = MatrixType::Random(size,size*2);
+    MatrixType a = MatrixType::Random(size,size*4);
     m1 += a * a.adjoint();
   }
 
@@ -76,12 +77,15 @@ template<typename MatrixType> void qr_invertible()
   // now construct a matrix with prescribed determinant
   m1.setZero();
   for(int i = 0; i < size; i++) m1(i,i) = internal::random<Scalar>();
-  RealScalar absdet = internal::abs(m1.diagonal().prod());
+  RealScalar absdet = abs(m1.diagonal().prod());
   m3 = qr.householderQ(); // get a unitary
   m1 = m3 * m1 * m3;
   qr.compute(m1);
-  VERIFY_IS_APPROX(absdet, qr.absDeterminant());
-  VERIFY_IS_APPROX(internal::log(absdet), qr.logAbsDeterminant());
+  VERIFY_IS_APPROX(log(absdet), qr.logAbsDeterminant());
+  // This test is tricky if the determinant becomes too small.
+  // Since we generate random numbers with magnitude rrange [0,1], the average determinant is 0.5^size
+  VERIFY_IS_MUCH_SMALLER_THAN( abs(absdet-qr.absDeterminant()), numext::maxi(RealScalar(pow(0.5,size)),numext::maxi<RealScalar>(abs(absdet),abs(qr.absDeterminant()))) );
+  
 }
 
 template<typename MatrixType> void qr_verify_assert()
