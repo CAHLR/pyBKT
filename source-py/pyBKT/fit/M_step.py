@@ -17,8 +17,7 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts):
 
     #model['As'] = trans_softcounts / np.sum(trans_softcounts, axis=1)
     #model['As'] = np.divide(trans_softcounts, np.sum(trans_softcounts, axis=1))
-    for i in range(model['As'].shape[0]):
-        model['As'][i] = trans_softcounts[i] / np.sum(trans_softcounts, axis=1)[i]
+    model['As'][:model['As'].shape[0]] = (trans_softcounts / np.sum(trans_softcounts, axis=1)[:model['As'].shape[0], None])
 
     model['learns'] = model['As'][:, 1, 0]
     model['forgets'] = model['As'][:, 0, 1]
