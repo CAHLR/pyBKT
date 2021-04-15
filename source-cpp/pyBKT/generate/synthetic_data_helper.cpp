@@ -118,6 +118,10 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyDict_SetItemString(result, "stateseqs", all_stateseqs_arr);
     PyDict_SetItemString(result, "data", all_data_arr);
 
+    Py_XDECREF(resources);
+    Py_XDECREF(starts);
+    Py_XDECREF(lengths);
+
     return(result);
 }
 
