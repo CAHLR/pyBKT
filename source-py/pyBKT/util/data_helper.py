@@ -113,6 +113,10 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         df = df[(df["original"]==1)]
         
     df[defaults["skill_name"]] = df[defaults["skill_name"]].apply(str)
+    try:
+        df[defaults["correct"]] = df[defaults["correct"]].apply(int)
+    except:
+        raise ValueError("Invalid Data In Specified Corrects Column")
     
     datas = {}
     skill_name = '^(' + skill_name + ')$'
