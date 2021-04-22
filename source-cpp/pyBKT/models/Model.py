@@ -423,7 +423,8 @@ class Model:
         if isinstance(value, np.ndarray):
             ptype = 'resource_names' if (param == 'learns' or param == 'forgets') \
                                      else 'gs_names'
-            return dict(sorted(zip(self.fit_model[skill][ptype], value)))
+            names = [str(i) for i in self.fit_model[skill][ptype]]
+            return dict(sorted(zip(names, value)))
         else:
             return {'default': value}
 

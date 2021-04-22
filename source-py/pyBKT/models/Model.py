@@ -423,7 +423,8 @@ class Model:
         if isinstance(value, np.ndarray):
             ptype = 'resource_names' if (param == 'learns' or param == 'forgets') \
                                      else 'gs_names'
-            return dict(sorted(zip(self.fit_model[skill][ptype], value)))
+            names = [str(i) for i in self.fit_model[skill][ptype]]
+            return dict(sorted(zip(names, value)))
         else:
             return {'default': value}
 
@@ -431,9 +432,10 @@ class Model:
         """ Updates parameters given kwargs. """
         if isinstance(args, dict):
             for param in params:
-                if param not in args:
+                value = getattr(self, param) if hasattr(self, param) else None
+                if param not in args and (value is None or value == Model.DEFAULTS[param]):
                     setattr(self, param, Model.DEFAULTS[param])
-                else:
+                elif param in args:
                     setattr(self, param, args[param])
         else:
             setattr(self, params, args)
