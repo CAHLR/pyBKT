@@ -78,9 +78,9 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     if defaults is None:
         defaults = {}
     elif isinstance(defaults, dict):
-        ks = tuple(defaults.values())
-        for k in ks:
-            if k not in df.columns:
+        ks = tuple(defaults.items())
+        for k, v in ks:
+            if v not in df.columns and k in as_default:
                 defaults.pop(k)
     else:
         raise ValueError("incorrectly specified defaults")
