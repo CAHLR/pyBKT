@@ -78,7 +78,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     if defaults is None:
         defaults = {}
     elif isinstance(defaults, dict):
-        ks = tuple(defaults.keys())
+        ks = tuple(defaults.values())
         for k in ks:
             if k not in df.columns:
                 defaults.pop(k)
