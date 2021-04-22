@@ -271,8 +271,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         Data["starts"]=starts
         Data["lengths"]=lengths
         Data["resources"]=resources
-        Data["resource_names"]=resource_ref
-        Data["gs_names"]=gs_ref
+        Data["resource_names"]=[str(i) for i in resource_ref]
+        Data["gs_names"]=[str(i) for i in gs_ref]
         Data["index"]=stored_index
         if folds:
             Data["folds"] = np.array(df3[defaults["folds"]])

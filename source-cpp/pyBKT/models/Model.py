@@ -431,9 +431,10 @@ class Model:
         """ Updates parameters given kwargs. """
         if isinstance(args, dict):
             for param in params:
-                if param not in args:
+                value = getattr(self, param) if hasattr(self, param) else None
+                if param not in args and (value is None or value == Model.DEFAULTS[param]):
                     setattr(self, param, Model.DEFAULTS[param])
-                else:
+                elif param in args:
                     setattr(self, param, args[param])
         else:
             setattr(self, params, args)
