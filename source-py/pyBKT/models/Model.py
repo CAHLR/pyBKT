@@ -57,8 +57,9 @@ class Model:
         self.fit_model = None
         self.manual_param_init = False
         self._check_args(Model.MODEL_ARGS, kwargs)
-        self._update_param(['parallel', 'num_fits', 'seed', 'defaults'], kwargs)
-        self._update_param('model_type', self._update_defaults(kwargs))
+        self.keep = {}
+        self._update_param(['parallel', 'num_fits', 'seed', 'defaults'], kwargs, keep = True)
+        self._update_param('model_type', self._update_defaults(kwargs), keep = True)
 
     def fit(self, data_path = None, data = None, **kwargs):
         """
@@ -428,17 +429,18 @@ class Model:
         else:
             return {'default': value}
 
-    def _update_param(self, params, args):
+    def _update_param(self, params, args, keep = False):
         """ Updates parameters given kwargs. """
         if isinstance(args, dict):
             for param in params:
-                value = getattr(self, param) if hasattr(self, param) else None
-                if param not in args and (value is None or value == Model.DEFAULTS[param]):
+                if param not in args and (param not in self.keep or not self.keep[param]):
                     setattr(self, param, Model.DEFAULTS[param])
                 elif param in args:
                     setattr(self, param, args[param])
+                self.keep[param] = keep
         else:
             setattr(self, params, args)
+            self.keep[params] = keep
 
     def _update_defaults(self, defaults):
         """ Update the default column names. """

@@ -77,6 +77,14 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     # integrate custom defaults with default assistments/ct columns if they are still unspecified
     if defaults is None:
         defaults = {}
+    elif isinstance(defaults, dict):
+        ks = tuple(defaults.keys())
+        for k in ks:
+            if k not in df.columns:
+                defaults.pop(k)
+    else:
+        raise ValueError("incorrectly specified defaults")
+
     if any(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
             if k not in defaults and as_default[k] in df.columns:
