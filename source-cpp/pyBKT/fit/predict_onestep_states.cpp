@@ -38,12 +38,15 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyObject *data_ptr = NULL, *model_ptr = NULL, *fwd_msgs = NULL;
     PyArrayObject *alldata = NULL, *allresources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL, *forward_messages = NULL;
     double prior;
+    int parallel;
 
-    if (!PyArg_ParseTuple(args, "OOO", &data_ptr, &model_ptr, &fwd_msgs)) {
+    if (!PyArg_ParseTuple(args, "OOOi", &data_ptr, &model_ptr, &fwd_msgs, &parallel)) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
         return NULL;
     }
 
+    if (!parallel)
+        omp_set_num_threads(1);
 
     int DTYPE = PyArray_ObjectType(fwd_msgs, NPY_FLOAT);
     forward_messages = (PyArrayObject *)PyArray_FROM_OTF(fwd_msgs, DTYPE, NPY_ARRAY_IN_ARRAY);

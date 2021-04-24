@@ -6,8 +6,6 @@ import os
 
 def EM_fit(model, data, tol = None, maxiter = None, parallel = True):
 
-    if not parallel:
-        os.environ['OMP_NUM_THREADS'] = 1
     if tol is None: 
         tol = 1e-3
     if maxiter is None:
@@ -18,7 +16,7 @@ def EM_fit(model, data, tol = None, maxiter = None, parallel = True):
     log_likelihoods = np.zeros((maxiter, 1))
 
     for i in range(maxiter):
-        result = E_step.run(data, model, 1)
+        result = E_step.run(data, model, 1, int(parallel))
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):

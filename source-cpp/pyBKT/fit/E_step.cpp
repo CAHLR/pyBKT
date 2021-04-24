@@ -46,15 +46,18 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyObject *data_ptr = NULL, *model_ptr = NULL, *t_softcounts = NULL, *e_softcounts = NULL, *i_softcounts = NULL;
     PyArrayObject *t_softcounts_np = NULL, *e_softcounts_np = NULL, *i_softcounts_np = NULL,
                   *alldata = NULL, *allresources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL;   // Extended Numpy/C API
-    int num_outputs;
+    int num_outputs, parallel;
     double prior;
     // dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs
 
     // "O" format -> read argument as a PyObject type into argy (Python/C API)
-    if (!PyArg_ParseTuple(args, "OOi", &data_ptr, &model_ptr, &num_outputs)) {
+    if (!PyArg_ParseTuple(args, "OOii", &data_ptr, &model_ptr, &num_outputs, &parallel)) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
         return NULL;
     }
+
+    if (!parallel)
+        omp_set_num_threads(1);
 
     // Load all the numpy arrays in data & model
     char* DM_NAMES[] = {"data", "resources", "starts", "lengths", "learns", "forgets", "guesses", "slips"};
