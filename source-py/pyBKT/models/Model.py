@@ -11,6 +11,7 @@ import numbers
 import os
 import pandas as pd
 import random
+import pickle
 import urllib.request as urllib2
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
@@ -329,6 +330,29 @@ class Model:
         df = pd.DataFrame(formatted_coefs)
         df.columns = ['skill', 'param', 'class', 'value']
         return df.set_index(['skill', 'param', 'class'])
+
+    def save(self, loc):
+        """
+        Saves a model to disk. Uses Python pickles.
+
+        >>> model = Model(seed = 42)
+        >>> model.fit(data_path = 'as.csv', multilearn = True, forgets = True, skills = 'Box and Whisker')
+        >>> model.save('model.pkl')
+        """
+        with open(loc, 'wb') as handle:
+            pickle.dump(self, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, loc):
+        """
+        Loads model given by loc into the current model.
+
+        >>> model = Model(seed = 42)
+        >>> model.load('model.pkl')
+        """
+        with open(loc, 'rb') as handle:
+            orig_model = pickle.load(handle)
+        for attr in vars(orig_model):
+            setattr(self, attr, getattr(orig_model, attr))
 
 
     def fetch_dataset(self, link, loc):
