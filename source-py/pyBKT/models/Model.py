@@ -155,7 +155,7 @@ class Model:
                 correct_predictions = np.delete(correct_predictions, all_data[skill]['multiprior_index'])
                 state_predictions = np.delete(state_predictions, all_data[skill]['multiprior_index'])
             df.loc[all_data[skill]['index'], 'correct_predictions'] = correct_predictions
-            df.loc[all_data[skill]['index'], 'state_predictions'] = state_predictions[0]
+            df.loc[all_data[skill]['index'], 'state_predictions'] = state_predictions
         return df
 
     def evaluate(self, data = None, data_path = None, metric = metrics.rmse):
