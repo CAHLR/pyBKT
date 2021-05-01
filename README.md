@@ -9,7 +9,7 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 
 [LAK pyBKT Tutorial in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
 
-Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python boost adaptation by Cristian Garay (c.garay@berkeley.edu). All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
+Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. Python boost adaptation by Cristian Garay (c.garay@berkeley.edu). All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu), and data helpers and other utility functions written by Frederic Wang (fredwang@berkeley.edu). For formulas and technical implementation details, please refer to section 4.3 of Xu, Johnson, & Pardos (2015) ICML workshop [paper](http://ml4ed.cc/attachments/XuY.pdf). 
 
 pyBKT examples can be found in [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
 
