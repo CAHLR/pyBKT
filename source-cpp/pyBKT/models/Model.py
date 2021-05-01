@@ -150,6 +150,10 @@ class Model:
         df['state_predictions'] = 0.5
         for skill in all_data:
             correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
+            state_predictions = state_predictions[0]
+            if all_data[skill]['multiprior_index'] is not None:
+                correct_predictions = np.delete(correct_predictions, all_data[skill]['multiprior_index'])
+                state_predictions = np.delete(state_predictions, all_data[skill]['multiprior_index'])
             df.loc[all_data[skill]['index'], 'correct_predictions'] = correct_predictions
             df.loc[all_data[skill]['index'], 'state_predictions'] = state_predictions[0]
         return df

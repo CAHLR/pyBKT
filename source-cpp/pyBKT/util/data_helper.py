@@ -133,7 +133,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     if all_skills.empty:
         raise ValueError("no matching skills")
     for skill_ in all_skills:
-
+        
         if resource_refs is None or skill_ not in resource_refs:
             resource_ref = None
         else:
@@ -149,6 +149,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             raise ValueError("Incorrect Skill or Dataset Specified")
 
         stored_index = df3.index.copy()
+        multiprior_index = None
 
         # convert from 0=incorrect,1=correct to 1=incorrect,2=correct
         if set(df3.loc[:,defaults["correct"]].unique()) - set([-1, 0, 1]) != set():
@@ -206,9 +207,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             new_data = np.zeros(len(data)+len(starts), dtype=np.int32)
             # create new resources [2, #total + 1] based on how student initially responds
             all_priors = df3[defaults["multiprior"]].unique()
+            all_priors = np.sort(all_priors)
             if resource_ref is None:
-                resource_ref = dict(zip(all_priors,range(2, len(df3[defaults["multiprior"]].unique())+2)))
+                resource_ref = {}
                 resource_ref["Default"] = 1
+                resource_ref.update(dict(zip(all_priors,range(2, len(df3[defaults["multiprior"]].unique())+2))))
             else:
                 for i in all_priors:
                     if i not in resource_ref:
@@ -224,7 +227,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 starts[i] += i
                 lengths[i] += 1
             
-            indices = [i+starts[i]-1 for i in range(len(starts))]
+            multiprior_index = np.array([starts[i]-1 for i in range(len(starts))])
             data = new_data
         elif multilearn:
             if "multilearn" not in defaults:
@@ -286,6 +289,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         Data["resource_names"]=resource_ref
         Data["gs_names"]=gs_ref
         Data["index"]=stored_index
+        Data["multiprior_index"]=multiprior_index
         if folds:
             Data["folds"] = np.array(df3[defaults["folds"]])
 
