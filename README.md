@@ -18,7 +18,6 @@ Python >= 3.5
 
 Supported OS: All platforms! (Yes, Windows too)
 
-Libboost >= 1.58 (optional - will enable fast inference if installed)
 ## Supported model variants
 pyBKT can be used to define and fit many BKT variants, including these from the literature: 
 
@@ -42,7 +41,7 @@ This is intended as a quick overview of steps to install and setup and to run py
 
 We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. Note that pip, by default, will install the C++/Python version unless the required libraries are not found or there is an error during installation. In the case of such issues, it will revert to the pure Python implementation.
 
-The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). Note that the C++/Python extensions require the Boost libraries as specified below: most Linux machines should come preinstalled with them.
+The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). 
 
 |                 Test Description                | pyBKT (Python) | pyBKT (Cython) |
 |:-----------------------------------------------:|:--------------:|---------------:|
@@ -56,9 +55,7 @@ The former pure Python versions does not fit models or scale as quickly or effic
 
 ### Linux
 
-If you have Boost already installed, pip will install pyBKT with fast C++ inferencing. Boost is already installed on most recent Ubuntu distributions. If it is not installed on your machine, type `sudo apt install libboost-all-dev` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without Boost, pip will install pyBKT without C++ speed optimizations.
-
-You can check if libboost has been installed properly with `ldconfig -p | grep libboost_python`, which should yield an output on Linux machines. Note that the version on the dynamic library should match the Python installation version.
+If you have a C++ compiler already installed, pip will install pyBKT with fast C++ inferencing. C++ compilers are already installed on nearly all Linux distributions. If it is not installed on your machine, type `sudo apt install gcc g++` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without a compiler, pip will install pyBKT without C++ speed optimizations.
 
 In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
 
@@ -70,12 +67,8 @@ You may need to run the above as root.
 
 The latest version of Python is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
 ```
-    brew install boost
-    brew install boost-python3
     brew install libomp
 ```
-
-Note that if you see an error about a symbol not being found when you import pyBKT.models.Model, you likely have a mismatched Boost and Python version. Check if libboost_pythonXX.dylib and your Python version X.X are the same (i.e. libboost_python39 and Python 3.9).
 
 In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
 
@@ -301,4 +294,4 @@ The `fitmodel` also includes the following emission probabilities:
 
 ## TODOs ##
 * Support for parameter tieing and fixing 
-* Boostless Cython
+* Additional model variants
