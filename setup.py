@@ -76,7 +76,7 @@ try:
 
     setup(
         name="pyBKT",
-        version="1.2.2",
+        version="1.3",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
@@ -109,7 +109,7 @@ except:
 # LEGACY PURE PYTHON VERSION:
     setup(
         name="pyBKT",
-        version="1.2.2",
+        version="1.3",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
