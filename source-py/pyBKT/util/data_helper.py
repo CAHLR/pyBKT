@@ -213,14 +213,18 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 for i in all_priors:
                     if i not in resource_ref:
                         raise ValueError("Prior", i, "not fitted")
+                        
             all_resources = np.array(df3[defaults["multiprior"]].apply(lambda x: resource_ref[x]))
+            
             # create phantom timeslices with resource 2 or 3 in front of each new student based on their initial response
             for i in range(len(starts)):
                 new_data[i+starts[i]:i+starts[i]+lengths[i]] = data[starts[i]-1:starts[i]+lengths[i]-1]
-                resources[i+starts[i]-1] = 1
-                resources[i+starts[i]:i+starts[i]+lengths[i]] = all_resources[starts[i]-1:starts[i]+lengths[i]-1]
+                resources[i+starts[i]-1] = all_resources[starts[i]-1]
+                resources[i+starts[i]:i+starts[i]+lengths[i]] = np.ones(lengths[i])
                 starts[i] += i
                 lengths[i] += 1
+            
+            indices = [i+starts[i]-1 for i in range(len(starts))]
             data = new_data
         elif multilearn:
             if "multilearn" not in defaults:
