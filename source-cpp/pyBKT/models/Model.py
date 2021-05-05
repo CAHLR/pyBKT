@@ -95,14 +95,15 @@ class Model:
         0.6579800168987382
 
         """
-        self.manual_param_init = True
         self._check_data(data_path, data)
         self._check_args(Model.FIT_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
                             'parallel', 'forgets'], kwargs)
         if self.fit_model is None or self.fit_model == {}:
             self.fit_model = {}
+        if self.fit_model == {} or (self.manual_param_init and self.fit_model):
             self._update_param('model_type', self._update_defaults(kwargs))
+        self.manual_param_init = True
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
@@ -401,6 +402,8 @@ class Model:
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
             if forgets:
                 fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
+            if self.model_type[Model.MODELS_BKT.index('multiprior')]:
+                fitmodel["prior"] = 0
             if self.manual_param_init and skill in self.fit_model:
                 for var in self.fit_model[skill]:
                     if var in fitmodel:
