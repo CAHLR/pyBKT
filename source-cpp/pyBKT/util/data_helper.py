@@ -7,7 +7,6 @@
 #########################################
 
 import sys
-sys.path.append('../')
 import os
 import pandas as pd
 import numpy as np
@@ -38,7 +37,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 df = pd.read_csv(url, low_memory=False, encoding="latin", delimiter='\t')
         
         # otherwise, fetch it from web using requests
-        elif url[:4] == "http":
+        elif len(url) > 4 and url[:4] == "http":
             s = requests.get(url).content
             try:
                 df = pd.read_csv(s, low_memory=False, encoding="latin")
