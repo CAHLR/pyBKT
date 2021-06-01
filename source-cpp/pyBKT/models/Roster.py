@@ -3,7 +3,7 @@ from enum import Enum
 import numpy as np
 
 class Roster:
-    def __init__(self, students, mastery_state = 0.95, track_progress = False, model = None):
+    def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
         self.model = model if model is not None else Model()
         self.students = {}
         if isinstance(students, int):
@@ -12,6 +12,7 @@ class Roster:
             self.add_students(students)
         self.mastery_state = mastery_state
         self.track_progress = track_progress
+        self.skill = skill
 
     # STATE BASED METHODS
 
@@ -40,9 +41,11 @@ class Roster:
     def add_student(self, student_name, initial_state = StateType.DEFAULT_STATE):
         self.students[student_name] = State(initial_state, self)
 
-    def add_students(self, student_names, initial_state = StateType.DEFAULT_STATE):
-        for s in student_names:
-            self.add_student(s, initial_state)
+    def add_students(self, student_names, initial_states = StateType.DEFAULT_STATE):
+        if not isinstance(initial_states, list):
+            initial_states = [initial_states] * len(student_names)
+        for i, s in enumerate(student_names):
+            self.add_student(s, initial_states[i])
 
     def remove_student(self, student_name):
         del self.students[student_name]
@@ -76,14 +79,26 @@ class State:
 
     def update(self, correct, kwargs):
         if isinstance(correct, int):
-            pass # update self.state based on one response using kwargs as model type and roster.model
+            data = self.process_data([correct], kwargs)
         elif isinstance(correct, list):
-            pass # update self.state based on multiple responses using kwargs as model type and roster.model
+            data = self.process_data(correct, kwargs)
+        correct_predictions, state_predictions = self.predict(model, skill, data, self.current_state)
+        self.current_state['correct_prediction'] = correct_predictions[-1]
+        self.current_state['state_predictions'] = state_predictions[-1]
         
         if self.roster.track_progress:
-            pass # update self.tracked_states with correct and state predictions for each response
-
+            self.tracked_states.append(dict(self.current_state))
         self.refresh()
+
+    def process_data(self, corrects, kwargs):
+        model_type = [kwargs.get(t, default = False) for t in ('multilearn', 'multiprior', 'multipair', 'multigs')]
+        pass # process into native model format
+
+    def predict(self, model, data, state):
+        model.fit_model[roster.skill]['pi_0'] = np.array([[1 - state['state_prediction']], [state['state_prediction']]])
+        model.fit_model[roster.skill]['prior'] = truemodel['pi_0'][1][0]
+        correct_predictions, state_predictions = model._predict(model.fit_model[roster.skill], data)
+        return correct_predictions, state_predictions[1]
 
     def refresh(self):
         if self.current_state['state_prediction'] == -1:
