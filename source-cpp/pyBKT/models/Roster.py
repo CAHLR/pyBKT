@@ -8,6 +8,89 @@ class StateType(Enum):
     MASTERED = 3
 
 class Roster:
+    def __init__(self, students, skills, mastery_state = 0.95, track_progress = False, model = None):
+        self.skill_rosters = {}
+        if isinstance(skills, str):
+            skills = [skills]
+        for s in skills:
+            self.skill_rosters[s] = SkillRoster(students, s, mastery_state = mastery_state, 
+                                                track_progress = track_progress, model = model)
+        self.model = model
+        self.mastery_state = mastery_state
+        self.track_progress = track_progress
+
+    # STATE BASED METHODS
+
+    def reset_state(self, skill_name, student_name):
+        self.skill_rosters[skill_name].reset_state(student_name)
+
+    def reset_states(self, skill_name):
+        self.skill_rosters[skill_name].reset_states()
+
+    def get_mastery_prob(self, skill_name, student_name):
+        return self.skill_rosters[skill_name].get_mastery_prob(student_name)
+
+    def get_mastery_probs(self, skill_name):
+        return self.skill_rosters[skill_name].get_mastery_probs()
+
+    def get_correct_prob(self, skill_name, student_name):
+        return self.skill_rosters[skill_name].get_correct_prob(student_name)
+
+    def get_correct_probs(self, skill_name):
+        return self.skill_rosters[skill_name].get_correct_probs()
+
+    def get_state(self, skill_name, student_name):
+        return self.skill_rosters[skill_name].get_state(student_name)
+
+    def get_states(self, skill_name):
+        return self.skill_rosters[skill_name].get_states()
+
+    def get_state_type(self, skill_name, student_name):
+        return self.skill_rosters[skill_name].get_state_type(student_name)
+
+    def get_state_types(self, skill_name):
+        return self.skill_rosters[skill_name].get_state_types()
+        
+    def update_state(self, skill_name, student_name, correct, **kwargs):
+        return self.skill_rosters[skill_name].update_state(student_name, correct, **kwargs)
+
+    def update_states(self, skill_name, corrects, **kwargs):
+        return self.skill_rosters[skill_name].update_states(correct, **kwargs)
+
+    # STUDENT BASED METHODS
+
+    def add_student(self, skill_name, student_name, initial_state = StateType.DEFAULT_STATE):
+        self.skill_rosters[skill_name].add_student(student_name, initial_state)
+
+    def add_students(self, skill_name, student_names, initial_states = StateType.DEFAULT_STATE):
+        self.skill_rosters[skill_name].add_students(student_names, initial_states)
+
+    def remove_student(self, skill_name, student_name):
+        self.skill_rosters[skill_name].remove_student(student_name)
+
+    def remove_students(self, skill_name, student_names):
+        self.skill_rosters[skill_name].remove_students(student_names)
+
+    # MISCELLANEOUS FUNCTIONS
+
+    def get_model(self):
+        return self.model
+
+    def set_model(self, model):
+        self.model = model
+        for s in self.skill_rosters:
+            self.skill_rosters[s].set_model(model)
+
+    def get_mastery_state(self):
+        return self.mastery_state
+
+    def set_mastery_state(self, mastery_state):
+        self.mastery_state = mastery_state
+        for s in self.skill_rosters:
+            self.skill_rosters[s].set_mastery_state(model)
+
+
+class SkillRoster:
     def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
         self.model = model if model is not None else Model()
         self.students = {}
