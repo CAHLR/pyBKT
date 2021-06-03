@@ -89,6 +89,11 @@ class Roster:
         for s in self.skill_rosters:
             self.skill_rosters[s].set_mastery_state(model)
 
+    # NATIVE PYTHON FUNCTIONS
+    def __repr__(self):
+        return 'Roster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skills), 
+                                               repr(self.mastery_state), repr(self.track_progress), 
+                                               repr(self.model))
 
 class SkillRoster:
     def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
@@ -182,9 +187,9 @@ class SkillRoster:
 
     # NATIVE PYTHON FUNCTIONS
     def __repr__(self):
-        return 'Roster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skill), 
-                                               repr(self.mastery_state), repr(self.track_progress), 
-                                               repr(self.model))
+        return 'SkillRoster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skill), 
+                                                    repr(self.mastery_state), repr(self.track_progress), 
+                                                    repr(self.model))
 
 class State:
     def __init__(self, state_type, state = None, roster = None):
@@ -276,4 +281,4 @@ class State:
     def __repr__(self):
         stype = repr(self.state_type)
         stype = stype[stype.index('<') + 1: stype.index(':')]
-        return 'Roster(%s, %s, %s)' % (stype, repr(self.current_state), 'Roster(...)')
+        return 'State(%s, %s, %s)' % (stype, repr(self.current_state), 'Roster(...)')
