@@ -46,7 +46,7 @@ class Roster:
     # STUDENT BASED METHODS
 
     def add_student(self, student_name, initial_state = StateType.DEFAULT_STATE):
-        self.students[student_name] = State(initial_state, self)
+        self.students[student_name] = State(initial_state, roster = self)
 
     def add_students(self, student_names, initial_states = StateType.DEFAULT_STATE):
         if not isinstance(initial_states, list):
@@ -84,10 +84,12 @@ class Roster:
                                                repr(self.model))
 
 class State:
-    def __init__(self, initial_state, roster):
-        self.state_type = initial_state
+    def __init__(self, state_type, state = None, roster = None):
+        self.state_type = state_type
         self.roster = roster
-        if self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
+        if state is not None:
+            self.current_state = state
+        elif self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
             self.current_state = {'correct_prediction': -1, 'state_prediction': self.roster.model.fit_model[self.roster.skill]['prior']}
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
@@ -118,16 +120,24 @@ class State:
         starts = np.array([1], dtype=np.int64)
         
         if multilearn:
-            resources = np.array(kwargs['multilearn'].apply(lambda x: resource_ref[x]))
+            if isinstance(kwargs['multilearn'], list):
+                resargs = kwargs['multilearn']
+            else:
+                resargs = [kwargs['multilearn']]
+            resources = np.array(list(map(lambda x: resource_ref[x], resargs)))
         else:
             resources = np.ones(len(data), dtype=np.int64)
 
         if multigs:
-            data_ref = np.array(kwargs['multigs']).apply(lambda x: gs_ref[x])
+            if isinstance(kwargs['multigs'], list):
+                gsargs = kwargs['multigs']
+            else:
+                gsargs = [kwargs['multigs']]
+            data_ref = np.array(list(map(lambda x: gs_ref[x], gsargs)))
             data_temp = np.zeros((len(gs_ref), len(corrects)))
-            for i in range(len(data_temp[0])):
+            for i in range(len(data_temp[0]) - 1):
                 data_temp[data_ref[i]][i] = data[i]
-            data = np.asarray(data_temp,dtype='int32')
+            data = np.asarray(data_temp, dtype='int32')
         else:
             data = np.asarray([data], dtype='int32')
 
@@ -155,5 +165,4 @@ class State:
     def __repr__(self):
         stype = repr(self.state_type)
         stype = stype[stype.index('<') + 1: stype.index(':')]
-        return '%s with mastery probability: %f and correctness probability: %f' % (stype, 
-                self.current_state['state_prediction'], self.current_state['correct_prediction'])
+        return 'Roster(%s, %s, %s)' % (stype, repr(self.current_state), 'Roster(...)')
