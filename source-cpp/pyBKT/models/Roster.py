@@ -68,6 +68,8 @@ class Roster:
 
     def set_model(self, model):
         self.model = model
+        for s in self.students:
+            self.students[s].update(-1, {'multigs': self.model.model_type[-1], 'multilearn': self.model.model_type[0]}, append = False)
 
     def get_mastery_state(self):
         return self.mastery_state
@@ -91,30 +93,32 @@ class State:
             self.current_state = state
         elif self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
             self.current_state = {'correct_prediction': -1, 'state_prediction': self.roster.model.fit_model[self.roster.skill]['prior']}
+            self.update(-1, {'multigs': self.roster.model.model_type[-1], 'multilearn': self.roster.model.model_type[0]}, append = False)
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
         self.tracked_states = []
 
-    def update(self, correct, kwargs):
+    def update(self, correct, kwargs, append = True):
         if isinstance(correct, int):
-            data = self.process_data(np.array([correct]), kwargs)
+            data = self.process_data(np.array([correct]), kwargs, append = append)
         elif isinstance(correct, np.ndarray):
-            data = self.process_data(correct, kwargs)
+            data = self.process_data(correct, kwargs, append = append)
         else:
             raise ValueError("need to pass int or np.ndarray")
         correct_predictions, state_predictions = self.predict(self.roster.model, self.roster.skill, data, self.current_state)
-        self.current_state['correct_prediction'] = correct_predictions[-2]
+        self.current_state['correct_prediction'] = correct_predictions[-1]
         self.current_state['state_prediction'] = state_predictions[-1]
         
         if self.roster.track_progress:
             self.tracked_states.append(dict(self.current_state))
         self.refresh()
 
-    def process_data(self, corrects, kwargs):
+    def process_data(self, corrects, kwargs, append = True):
         multilearn, multigs = [kwargs.get(t, False) for t in ('multilearn', 'multigs')]
         gs_ref = self.roster.model.fit_model[self.roster.skill]['gs_names']
         resource_ref = self.roster.model.fit_model[self.roster.skill]['resource_names']
-        corrects = np.append(corrects, [-1])
+        if append:
+            corrects = np.append(corrects, [-1])
         data = corrects + 1
         lengths = np.array([len(corrects)], dtype=np.int64)
         starts = np.array([1], dtype=np.int64)
