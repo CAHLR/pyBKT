@@ -22,17 +22,35 @@ class Roster:
     # STATE BASED METHODS
 
     def reset_state(self, student_name):
-        self.students[student_name] = State.DEFAULT_STATE
+        self.students[student_name] = State(initial_state, roster = self)
 
     def reset_states(self):
         for s in self.students:
             self.reset_state(s)
+
+    def get_mastery_prob(self, student_name):
+        return self.students[student_name].get_mastery_prob()
+
+    def get_mastery_probs(self):
+        return {s: self.students[s].get_mastery_prob() for s in self.students}
+
+    def get_correct_prob(self, student_name):
+        return self.students[student_name].get_correct_prob()
+
+    def get_correct_probs(self):
+        return {s: self.students[s].get_correct_prob() for s in self.students}
 
     def get_state(self, student_name):
         return self.students[student_name]
 
     def get_states(self):
         return self.students
+
+    def get_state_type(self, student_name):
+        return self.students[student_name].state_type
+
+    def get_state_types(self):
+        return {s: self.get_state(s) for s in self.students}
         
     def update_state(self, student_name, correct, **kwargs):
         self.students[student_name].update(correct, kwargs) 
@@ -97,6 +115,12 @@ class State:
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
         self.tracked_states = []
+
+    def get_mastery_prob(self):
+        return self.current_state['state_prediction']
+
+    def get_correct_prob(self):
+        return self.current_state['correct_prediction']
 
     def update(self, correct, kwargs, append = True):
         if isinstance(correct, int):
