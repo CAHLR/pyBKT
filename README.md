@@ -7,7 +7,7 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 ```
 [pyBKT Quick Start Tutorial](https://colab.research.google.com/drive/13abu919edUXbvPV3qeGPpvwnFBExU7Vd "pyBKT quick start in Colab")
 
-[LAK pyBKT Tutorial in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
+[pyBKT Tutorial from LAK Workshop in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
 
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). Data helpers and other utility functions written by Frederic Wang (fredwang@berkeley.edu). Original Python and boost adaptation of xBKT by Cristian Garay (c.garay@berkeley.edu). For implementation details, analysis of runtime and data requirements, and model variant replication testing, refer to [pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models](https://arxiv.org/abs/2105.00385).
 
@@ -43,7 +43,7 @@ We offer both a pure Python port and a Python/C++ extension version of pyBKT for
 
 The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). 
 
-|                 Test Description                | pyBKT (Python) | pyBKT (Cython) |
+|                 Test Description                | pyBKT (Python) | pyBKT (C++) |
 |:-----------------------------------------------:|:--------------:|---------------:|
 | synthetic data, model fit (500 students)        |     ~1m55s     |      ~1.5s     |
 | synthetic data, model fit (5000 students)       |     ~1h30m     |      ~45s      |
