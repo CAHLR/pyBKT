@@ -18,16 +18,22 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
     #model['As'] = trans_softcounts / np.sum(trans_softcounts, axis=1)
     #model['As'] = np.divide(trans_softcounts, np.sum(trans_softcounts, axis=1))
 
-
-    if 'learn' in fixed and 'forget' in fixed:
-        model['As'] = np.empty((len(fixed['learn']), 2, 2))
-        for i in range(len(fixed['learn'])):
-            model['As'][i] = np.array([[1 - fixed['learn'][i], fixed['forget'][i]], [fixed['learn'][i], 1 - fixed['forget'][i]]])
+    model['As'][:model['As'].shape[0]] = (trans_softcounts / np.sum(trans_softcounts, axis=1)[:model['As'].shape[0], None])
+    
+    if 'learn' in fixed:
         model['learns'] = fixed['learn']
-        model['forgets'] = fixed['forget']
+        for i in range(len(model['As'])):
+            model['As'][i, 1, 0] =  fixed['learn'][i]
+            model['As'][i, 0, 0] =  1 - fixed['learn'][i]
     else:
-        model['As'][:model['As'].shape[0]] = (trans_softcounts / np.sum(trans_softcounts, axis=1)[:model['As'].shape[0], None])
         model['learns'] = model['As'][:, 1, 0]
+    
+    if 'forget' in fixed:
+        model['forgets'] = fixed['forget']
+        for i in range(len(model['As'])):
+            model['As'][i, 0, 1] =  fixed['forget'][i]
+            model['As'][i, 1, 1] =  1 - fixed['forget'][i]
+    else:
         model['forgets'] = model['As'][:, 0, 1]
 
     temp = np.sum(emission_softcounts, axis=2)
@@ -38,11 +44,14 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
     #model['guesses'] = np.expand_dims(model['emissions'][:, 0, 1].squeeze(), axis=0)
     #model['slips'] = np.expand_dims(model['emissions'][:, 1, 0].squeeze(), axis=0)
     
-    if 'guess' in fixed and 'slip' in fixed:
+    if 'guess' in fixed:
         model['guesses'] = fixed['guess']
-        model['slips'] = fixed['slip']
     else:
         model['guesses'] = model['emissions'][:, 0, 1]
+        
+    if 'slip' in fixed:
+        model['slips'] = fixed['slip']
+    else:
         model['slips'] = model['emissions'][:, 1, 0]
 
     if 'prior' in fixed:

@@ -96,38 +96,41 @@ static PyObject* run(PyObject * module, PyObject * args) {
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2,2*num_resources);
-    if (fixed_learn && fixed_forget) {
-        for (int n=0; n<num_resources; n++) {
-            double learn = extract_double((PyArrayObject*)fixed_learn, n);
-            double forget = extract_double((PyArrayObject*)fixed_forget, n);
-            As.col(2*n) << 1-learn, learn;
-            As.col(2*n+1) << forget, 1-forget;
+    double learn, forget;
+    
+    for (int n=0; n<num_resources; n++) {
+        if (fixed_learn) {
+            learn = extract_double((PyArrayObject*)fixed_learn, n);
+        } else {
+            learn = extract_double(learns, n);
         }
-    } else {
-        for (int n=0; n<num_resources; n++) {
-        double learn = extract_double(learns, n);
-        double forget = extract_double(forgets, n);
+        if (fixed_forget) {
+            forget = extract_double((PyArrayObject*)fixed_forget, n);
+        } else {
+            forget = extract_double(forgets, n);
+        }
         As.col(2*n) << 1-learn, learn;
         As.col(2*n+1) << forget, 1-forget;
-        }
     }
+    
         
     Array2Xd Bn(2,2*num_subparts);
-    if (fixed_guess && fixed_slip) {
-        for (int n=0; n<num_subparts; n++) {
-            double guess = extract_double((PyArrayObject*)fixed_guess, n);
-            double slip = extract_double((PyArrayObject*)fixed_slip, n);
-            Bn.col(2*n) << 1-guess, slip; // incorrect
-            Bn.col(2*n+1) << guess, 1-slip; // correct
+    double guess, slip;
+    for (int n=0; n<num_subparts; n++) {
+        if (fixed_guess) {
+            guess = extract_double((PyArrayObject*)fixed_guess, n);
+        } else {
+            guess = extract_double(guesses, n);
         }
-    } else {
-        for (int n=0; n<num_subparts; n++) {
-            double guess = extract_double(guesses, n);
-            double slip = extract_double(slips, n);
-            Bn.col(2*n) << 1-guess, slip; // incorrect
-            Bn.col(2*n+1) << guess, 1-slip; // correct
+        if (fixed_slip) {
+            slip = extract_double((PyArrayObject*)fixed_slip, n);
+        } else {
+            slip = extract_double(slips, n);
         }
+        Bn.col(2*n) << 1-guess, slip; // incorrect
+        Bn.col(2*n+1) << guess, 1-slip; // correct
     }
+
 
     //// outputs
 

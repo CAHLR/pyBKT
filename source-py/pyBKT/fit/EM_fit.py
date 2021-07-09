@@ -64,17 +64,17 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
     initial_distn[0] = 1 - prior
     initial_distn[1] = prior
     
-    if 'learn' in fixed and 'forget' in fixed:
-        assert len(fixed['learn']) == len(fixed['forget'])
+    if 'learn' in fixed:
         learns = fixed['learn']
+    if 'forget' in fixed:
         forgets = fixed['forget']
     As = np.empty((2, 2 * num_resources))
     interleave(As[0], 1 - learns, forgets.copy())
     interleave(As[1], learns.copy(), 1 - forgets)
 
-    if 'guess' in fixed and 'slip' in fixed:
-        assert len(fixed['guess']) == len(fixed['slip'])
+    if 'guess' in fixed
         guesses = fixed['guess']
+    if 'slip' in fixed:
         slips = fixed['slip']
     Bn = np.empty((2, 2 * num_subparts))
     interleave(Bn[0], 1 - guesses, guesses.copy())
