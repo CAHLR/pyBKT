@@ -72,7 +72,7 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
     interleave(As[0], 1 - learns, forgets.copy())
     interleave(As[1], learns.copy(), 1 - forgets)
 
-    if 'guess' in fixed
+    if 'guess' in fixed:
         guesses = fixed['guess']
     if 'slip' in fixed:
         slips = fixed['slip']
