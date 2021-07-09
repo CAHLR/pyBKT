@@ -43,7 +43,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Eigen::initParallel();    
     import_array();
 
-    PyObject *data_ptr = NULL, *model_ptr = NULL, *t_softcounts = NULL, *e_softcounts = NULL, *i_softcounts = NULL;
+    PyObject *data_ptr = NULL, *model_ptr = NULL, *t_softcounts = NULL, *e_softcounts = NULL, *i_softcounts = NULL, *fixed = NULL;
     PyArrayObject *t_softcounts_np = NULL, *e_softcounts_np = NULL, *i_softcounts_np = NULL,
                   *alldata = NULL, *allresources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL;   // Extended Numpy/C API
     int num_outputs, parallel;
@@ -51,7 +51,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     // dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs
 
     // "O" format -> read argument as a PyObject type into argy (Python/C API)
-    if (!PyArg_ParseTuple(args, "OOii", &data_ptr, &model_ptr, &num_outputs, &parallel)) {
+    if (!PyArg_ParseTuple(args, "OOiiO", &data_ptr, &model_ptr, &num_outputs, &parallel, &fixed)) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
         return NULL;
     }
@@ -83,23 +83,50 @@ static PyObject* run(PyObject * module, PyObject * args) {
     bool normalizeLengths = false;
     //then the original code goes to find the optional parameters.
 
+    PyObject* fixed_prior = PyDict_GetItemString(fixed, "prior");
+    PyObject* fixed_learn = (PyObject*)PyDict_GetItemString(fixed, "learn");
+    PyObject* fixed_forget = (PyObject*)PyDict_GetItemString(fixed, "forget");
+    PyObject* fixed_guess = (PyObject*)PyDict_GetItemString(fixed, "guess");
+    PyObject* fixed_slip = (PyObject*)PyDict_GetItemString(fixed, "slip");
+
+    if (fixed_prior) {
+        prior = PyFloat_AsDouble(fixed_prior);
+    }
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
-
+    
     MatrixXd As(2,2*num_resources);
-    for (int n=0; n<num_resources; n++) {
+    if (fixed_learn && fixed_forget) {
+        for (int n=0; n<num_resources; n++) {
+            double learn = extract_double((PyArrayObject*)fixed_learn, n);
+            double forget = extract_double((PyArrayObject*)fixed_forget, n);
+            As.col(2*n) << 1-learn, learn;
+            As.col(2*n+1) << forget, 1-forget;
+        }
+    } else {
+        for (int n=0; n<num_resources; n++) {
         double learn = extract_double(learns, n);
         double forget = extract_double(forgets, n);
         As.col(2*n) << 1-learn, learn;
         As.col(2*n+1) << forget, 1-forget;
+        }
     }
-
+        
     Array2Xd Bn(2,2*num_subparts);
-    for (int n=0; n<num_subparts; n++) {
-        double guess = extract_double(guesses, n);
-        double slip = extract_double(slips, n);
-        Bn.col(2*n) << 1-guess, slip; // incorrect
-        Bn.col(2*n+1) << guess, 1-slip; // correct
+    if (fixed_guess && fixed_slip) {
+        for (int n=0; n<num_subparts; n++) {
+            double guess = extract_double((PyArrayObject*)fixed_guess, n);
+            double slip = extract_double((PyArrayObject*)fixed_slip, n);
+            Bn.col(2*n) << 1-guess, slip; // incorrect
+            Bn.col(2*n+1) << guess, 1-slip; // correct
+        }
+    } else {
+        for (int n=0; n<num_subparts; n++) {
+            double guess = extract_double(guesses, n);
+            double slip = extract_double(slips, n);
+            Bn.col(2*n) << 1-guess, slip; // incorrect
+            Bn.col(2*n+1) << guess, 1-slip; // correct
+        }
     }
 
     //// outputs

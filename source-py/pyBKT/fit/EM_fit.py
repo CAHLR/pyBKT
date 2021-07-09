@@ -15,7 +15,7 @@ from multiprocessing import Pool, cpu_count
 
 gs = globals()
 
-def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True):
+def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {'prior': 0.1}):
 
     check_data.check_data(data)
 
@@ -33,7 +33,7 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True):
     result['all_initial_softcounts'] = init_softcounts
 
     for i in range(maxiter):
-        result = run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel)
+        result = run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel, fixed = fixed)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):
@@ -43,11 +43,12 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True):
         if(i > 1 and abs(log_likelihoods[i][0] - log_likelihoods[i-1][0]) <= tol):
             break
 
-        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'])
+        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], fixed = fixed)
 
     return(model, log_likelihoods[:i+1])
 
-def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True):
+def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True, fixed = {}):
+
     # Processed Parameters
     alldata = data["data"]
     bigT, num_subparts = len(alldata[0]), len(alldata)
@@ -56,15 +57,25 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
 
     prior, num_sequences, num_resources = model["prior"], len(starts), len(learns)
     normalizeLengths = False
-
+    
+    if 'prior' in fixed:
+        prior = fixed['prior']
     initial_distn = np.empty((2, ), dtype = 'float')
     initial_distn[0] = 1 - prior
     initial_distn[1] = prior
-
+    
+    if 'learn' in fixed and 'forget' in fixed:
+        assert len(fixed['learn']) == len(fixed['forget'])
+        learns = fixed['learn']
+        forgets = fixed['forget']
     As = np.empty((2, 2 * num_resources))
     interleave(As[0], 1 - learns, forgets.copy())
     interleave(As[1], learns.copy(), 1 - forgets)
 
+    if 'guess' in fixed and 'slip' in fixed:
+        assert len(fixed['guess']) == len(fixed['slip'])
+        guesses = fixed['guess']
+        slips = fixed['slip']
     Bn = np.empty((2, 2 * num_subparts))
     interleave(Bn[0], 1 - guesses, guesses.copy())
     interleave(Bn[1], slips.copy(), 1 - slips)
@@ -80,7 +91,7 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
     total_loglike.fill(0)
 
     input = {"As": As, "Bn": Bn, "initial_distn": initial_distn, 'allresources': allresources, \
-             'starts': starts, 
+             'starts': starts,
              'lengths': lengths, \
              'num_resources': num_resources, 'num_subparts': num_subparts, \
              'alldata': alldata, 'normalizeLengths': normalizeLengths, 'alpha_out': alpha_out}
@@ -129,7 +140,7 @@ def inner(x):
     init_softcounts_temp = np.zeros((2, 1))
     loglike = 0
 
-    alphas = [] 
+    alphas = []
     dot, sum, log = np.dot, np.sum, np.log
 
     for sequence_index in range(sequence_idx_start, sequence_idx_end):
@@ -184,14 +195,14 @@ def inner(x):
         gamma[:, (T - 1)] = alpha[:, (T - 1)].copy()
 
         # copy it to begin with for efficiency
-        As_temp = As.copy() 
+        As_temp = As.copy()
         # only one pass of the previous update, which is now merged into this loop
         f = True
         for t in range(T - 2, -1, -1):
             resources_temp = allresources[sequence_start + t]
             k = 2 * (resources_temp - 1)
             A = As_temp[0: 2, k: k + 2]
-            pair = A.copy() # don't want to modify original A 
+            pair = A.copy() # don't want to modify original A
             pair[0] *= alpha[:, t]
             pair[1] *= alpha[:, t]
             dotted, gamma_t = dot(A, alpha[:, t]), gamma[:, (t + 1)]
@@ -203,12 +214,12 @@ def inner(x):
             for n in range(num_subparts):
                 data_temp = alldata[n][sequence_start+t]
                 if data_temp:
-                    emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, t] 
+                    emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, t]
                 if f:
                     data_temp_p = alldata[n][sequence_start + (T-1)]
                     if data_temp_p:
                         emission_softcounts_temp[:, (2 * n + int(data_temp_p == 2))] += gamma[:, (T - 1)]
             f = False
-        init_softcounts_temp += gamma[:, 0].reshape((2, 1)) 
+        init_softcounts_temp += gamma[:, 0].reshape((2, 1))
         alphas.append((sequence_start, T, alpha))
     return [trans_softcounts_temp, emission_softcounts_temp, init_softcounts_temp, loglike, alphas]
