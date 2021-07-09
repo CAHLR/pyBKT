@@ -9,7 +9,7 @@ def run(model, data, parallel = True):
     num_subparts = data["data"].shape[0]  # mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
 
-    result = E_step.run(data, model, 1, int(parallel))
+    result = E_step.run(data, model, 1, int(parallel), fixed={})
     for j in range(num_resources):
         result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
     for j in range(num_subparts):
