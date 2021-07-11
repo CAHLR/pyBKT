@@ -273,7 +273,7 @@ class Model:
                 for skill in self.fit_model}
 
     @coef_.setter
-    def coef_(self, values):
+    def coef_(self, values, fixed = None):
         """
         Sets or initializes parameters in the BKT model. Values must be organized
         by skill and the BKT parameters as follows: {skill_name: {'learns': ..., 'guesses': ...}.
@@ -296,6 +296,7 @@ class Model:
                 raise ValueError("error in length, type or non-existent parameter")
             for param in values[skill]:
                 self.fit_model[skill][param] = values[skill][param]
+        self.fixed = fixed
         self.manual_param_init = True
 
     def params(self):
@@ -400,16 +401,18 @@ class Model:
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
+            optional_args = {}
             if forgets:
                 fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
                 fitmodel["prior"] = 0
             if self.manual_param_init and skill in self.fit_model:
+                optional_args['fixed'] = self.fixed if self.fixed is not None else {}
                 for var in self.fit_model[skill]:
                     if var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
             if not preload:
-                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel)
+                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, **optional_args)
                 if log_likelihoods[-1] > best_likelihood:
                     best_likelihood = log_likelihoods[-1]
                     best_model = fitmodel
