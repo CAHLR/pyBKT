@@ -27,11 +27,19 @@ class Roster:
         self.skill_rosters = {}
         if isinstance(skills, str):
             skills = [skills]
+        elif not isinstance(skills, list):
+            raise ValueError("skills must be a list or string")
         for s in skills:
             self.skill_rosters[s] = SkillRoster(students, s, mastery_state = mastery_state, 
                                                 track_progress = track_progress, model = model)
+        if model is not None and not isinstance(model, Model):
+            raise ValueError("invalid model, must be of type pyBKT.models.Model")
         self.model = model
+        if not isinstance(mastery_state, float) or not (0 <= mastery_state <= 1):
+            raise ValueError("invalid mastery state, must be between 0 and 1")
         self.mastery_state = mastery_state
+        if not isinstance(self.track_progress, bool):
+            raise ValueError("track progress must be a boolean")
         self.track_progress = track_progress
 
     # STATE BASED METHODS
@@ -49,6 +57,8 @@ class Roster:
         >>> roster.reset_state('Calculate unit rate', 'Morgan')
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].reset_state(student_name)
 
     def reset_states(self, skill_name):
@@ -64,6 +74,8 @@ class Roster:
         >>> roster.reset_states('Calculate unit rate')
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].reset_states()
 
     def get_mastery_prob(self, skill_name, student_name):
@@ -80,6 +92,8 @@ class Roster:
         0.08836967920678879
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_mastery_prob(student_name)
 
     def get_mastery_probs(self, skill_name):
@@ -96,6 +110,8 @@ class Roster:
         {'Morgan': 0.08836967920678879, 'Bob': 0.0076413143121398285}
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_mastery_probs()
 
     def get_correct_prob(self, skill_name, student_name):
@@ -112,6 +128,8 @@ class Roster:
         0.5242746611208322
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_correct_prob(student_name)
 
     def get_correct_probs(self, skill_name):
@@ -128,6 +146,8 @@ class Roster:
         {'Morgan': 0.5242746611208322, 'Bob': 0.4942939431522598}
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_correct_probs()
 
     def get_state(self, skill_name, student_name):
@@ -142,6 +162,8 @@ class Roster:
         State(StateType.UNMASTERED, {'correct_prediction': 0.4942939431522598, 'state_prediction': 0.0076413143121398285}, Roster(...))
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state(student_name)
 
     def get_states(self, skill_name):
@@ -158,6 +180,8 @@ class Roster:
         {'Morgan': State(StateType.UNMASTERED, {'correct_prediction': 0.5242746611208322, 'state_prediction': 0.08836967920678879}, Roster(...)), 'Bob': State(StateType.UNMASTERED, {'correct_prediction': 0.4942939431522598, 'state_prediction': 0.0076413143121398285}, Roster(...))}
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_states()
 
     def get_state_type(self, skill_name, student_name):
@@ -174,6 +198,8 @@ class Roster:
         <StateType.UNMASTERED: 2>
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state_type(student_name)
 
     def get_state_types(self, skill_name):
@@ -190,6 +216,8 @@ class Roster:
         {'Morgan': <StateType.UNMASTERED: 2>, 'Bob': <StateType.UNMASTERED: 2>}
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state_types()
         
     def update_state(self, skill_name, student_name, correct, **kwargs):
@@ -204,6 +232,8 @@ class Roster:
         State(StateType.UNMASTERED, {'correct_prediction': 0.5242746611208322, 'state_prediction': 0.08836967920678879}, Roster(...))
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].update_state(student_name, correct, **kwargs)
 
     def update_states(self, skill_name, corrects, **kwargs):
@@ -216,6 +246,8 @@ class Roster:
         >>> roster.set_model(model)
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].update_states(correct, **kwargs)
 
     # STUDENT BASED METHODS
@@ -230,6 +262,8 @@ class Roster:
         dict_keys(['Morgan', 'Bob', 'Anthony'])
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].add_student(student_name, initial_state)
 
     def add_students(self, skill_name, student_names, initial_states = StateType.DEFAULT_STATE):
@@ -242,6 +276,8 @@ class Roster:
         dict_keys(['Morgan', 'Bob', 'Anthony', 'Jessie'])
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].add_students(student_names, initial_states)
 
     def remove_student(self, skill_name, student_name):
@@ -254,6 +290,8 @@ class Roster:
         dict_keys(['Bob'])
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].remove_student(student_name)
 
     def remove_students(self, skill_name, student_names):
@@ -266,6 +304,8 @@ class Roster:
         dict_keys(['Bob'])
 
         """
+        if skill_name not in self.skill_rosters:
+            raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].remove_students(student_names)
 
     # MISCELLANEOUS FUNCTIONS
@@ -353,6 +393,8 @@ class SkillRoster:
     # STATE BASED METHODS
 
     def reset_state(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         self.students[student_name] = State(StateType.DEFAULT_STATE, roster = self)
 
     def reset_states(self):
@@ -360,34 +402,50 @@ class SkillRoster:
             self.reset_state(s)
 
     def get_mastery_prob(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].get_mastery_prob()
 
     def get_mastery_probs(self):
         return {s: self.students[s].get_mastery_prob() for s in self.students}
 
     def get_correct_prob(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].get_correct_prob()
 
     def get_correct_probs(self):
         return {s: self.students[s].get_correct_prob() for s in self.students}
 
     def get_state(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         return self.students[student_name]
 
     def get_states(self):
         return self.students
 
     def get_state_type(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].state_type
 
     def get_state_types(self):
         return {s: self.get_state_type(s) for s in self.students}
         
     def update_state(self, student_name, correct, **kwargs):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
+        elif any(correct not in [0, 1]):
+            raise ValueError("correctness is binary")
         self.students[student_name].update(correct, kwargs) 
         return self.get_state(student_name)
 
     def update_states(self, corrects, **kwargs):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
+        elif any([i not in [0, 1] for i in corrects.values()]):
+            raise ValueError("correctness is binary")
         for s in corrects:
             self.update_state(s, corrects[s], **kwargs)
         return self.get_states()
@@ -398,12 +456,16 @@ class SkillRoster:
         self.students[student_name] = State(initial_state, roster = self)
 
     def add_students(self, student_names, initial_states = StateType.DEFAULT_STATE):
+        if not isinstance(student_names, list):
+            raise ValueError("student names must be a list")
         if not isinstance(initial_states, list):
             initial_states = [initial_states] * len(student_names)
         for i, s in enumerate(student_names):
             self.add_student(s, initial_states[i])
 
     def remove_student(self, student_name):
+        if student_name not in self.students:
+            raise ValueError("student name not found in roster for this skill")
         del self.students[student_name]
 
     def remove_students(self, student_names):
