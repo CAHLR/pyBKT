@@ -22,7 +22,7 @@ pd.options.display.float_format = '{:,.5f}'.format
 class Model:
     MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
-    FIT_ARGS = ['skills', 'num_fits', 'defaults',
+    FIT_ARGS = ['skills', 'num_fits', 'defaults', 'fixed',
                             'parallel', 'forgets', 'preload'] + MODELS_BKT
     CV_ARGS = FIT_ARGS + ['folds', 'seed']
     DEFAULTS = {'num_fits': 5,
@@ -32,6 +32,7 @@ class Model:
                 'seed': random.randint(0, 1e8),
                 'folds': 5,
                 'forgets': False,
+                'fixed': None,
                 'model_type': [False] * len(MODELS_BKT)}
     DEFAULTS_BKT = {'order_id': 'order_id',
                     'skill_name': 'skill_name',
@@ -97,7 +98,7 @@ class Model:
         """
         self._check_data(data_path, data)
         self._check_args(Model.FIT_ARGS, kwargs)
-        self._update_param(['skills', 'num_fits', 'defaults', 
+        self._update_param(['skills', 'num_fits', 'defaults', 'fixed',
                             'parallel', 'forgets'], kwargs)
         if self.fit_model is None or self.fit_model == {}:
             self.fit_model = {}
@@ -248,6 +249,7 @@ class Model:
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
+        self.fit_model = {}
         df = pd.DataFrame(metric_vals.items())
         df.columns = ['skill', 'dummy']
         df[metric_names] = pd.DataFrame(df['dummy'].tolist(), index = df.index)
@@ -296,7 +298,6 @@ class Model:
                 raise ValueError("error in length, type or non-existent parameter")
             for param in values[skill]:
                 self.fit_model[skill][param] = values[skill][param]
-        self.fixed = fixed
         self.manual_param_init = True
 
     def params(self):
@@ -401,16 +402,24 @@ class Model:
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
-            optional_args = {}
+            optional_args = {'fixed': {}}
             if forgets:
                 fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
                 fitmodel["prior"] = 0
             if self.manual_param_init and skill in self.fit_model:
-                optional_args['fixed'] = self.fixed if self.fixed is not None else {}
                 for var in self.fit_model[skill]:
-                    if var in fitmodel:
+                    if self.fixed is not None and skill in self.fixed and var in self.fixed[skill] and \
+                            isinstance(self.fixed[skill][var], bool):
+                        optional_args['fixed'][var] = self.fit_model[skill][var] 
+                    elif var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
+            if self.fixed is not None and skill in self.fixed:
+                if not self._check_params(self.fixed[skill]):
+                    raise ValueError("error in length, type or non-existent fixed parameter")
+                for var in self.fixed[skill]:
+                    if not isinstance(self.fixed[skill][var], bool):
+                        optional_args['fixed'][var] = self.fixed[skill][var]
             if not preload:
                 fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, **optional_args)
                 if log_likelihoods[-1] > best_likelihood:
