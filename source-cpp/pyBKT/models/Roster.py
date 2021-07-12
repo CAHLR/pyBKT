@@ -38,7 +38,7 @@ class Roster:
         if not isinstance(mastery_state, float) or not (0 <= mastery_state <= 1):
             raise ValueError("invalid mastery state, must be between 0 and 1")
         self.mastery_state = mastery_state
-        if not isinstance(self.track_progress, bool):
+        if not isinstance(track_progress, bool):
             raise ValueError("track progress must be a boolean")
         self.track_progress = track_progress
 
@@ -244,11 +244,13 @@ class Roster:
         >>> model = Model()
         >>> model.fit(data_path = 'ct.csv', skills = 'Calculate unit rate')
         >>> roster.set_model(model)
+        >>> roster.update_states('Calculate unit rate', {'Morgan': 1, 'Bob': 1})
+        {'Morgan': State(StateType.UNMASTERED, {'correct_prediction': 0.5275795972712107, 'state_prediction': 0.10003241541105552}, Roster(...)), 'Bob': State(StateType.UNMASTERED, {'correct_prediction': 0.5275795972712107, 'state_prediction': 0.10003241541105552}, Roster(...))}
 
         """
         if skill_name not in self.skill_rosters:
             raise ValueError("skill not found in roster")
-        return self.skill_rosters[skill_name].update_states(correct, **kwargs)
+        return self.skill_rosters[skill_name].update_states(corrects, **kwargs)
 
     # STUDENT BASED METHODS
 
@@ -335,6 +337,8 @@ class Roster:
 
         """
         self.model = model
+        if not isinstance(model, Model):
+            raise ValueError("invalid model, must be of type pyBKT.models.Model")
         for s in self.skill_rosters:
             self.skill_rosters[s].set_model(model)
 
@@ -361,7 +365,7 @@ class Roster:
         """
         self.mastery_state = mastery_state
         for s in self.skill_rosters:
-            self.skill_rosters[s].set_mastery_state(model)
+            self.skill_rosters[s].set_mastery_state(mastery_state)
 
     # NATIVE PYTHON FUNCTIONS
     def __repr__(self):
@@ -380,7 +384,7 @@ class Roster:
 
 class SkillRoster:
     def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
-        self.model = model if model is not None else Model()
+        self.model = model
         self.students = {}
         self.mastery_state = mastery_state
         self.track_progress = track_progress
@@ -436,16 +440,12 @@ class SkillRoster:
     def update_state(self, student_name, correct, **kwargs):
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
-        elif any(correct not in [0, 1]):
-            raise ValueError("correctness is binary")
         self.students[student_name].update(correct, kwargs) 
         return self.get_state(student_name)
 
     def update_states(self, corrects, **kwargs):
-        if student_name not in self.students:
+        if any([i not in self.students for i in corrects]):
             raise ValueError("student name not found in roster for this skill")
-        elif any([i not in [0, 1] for i in corrects.values()]):
-            raise ValueError("correctness is binary")
         for s in corrects:
             self.update_state(s, corrects[s], **kwargs)
         return self.get_states()
@@ -488,7 +488,7 @@ class SkillRoster:
     def set_mastery_state(self, mastery_state):
         self.mastery_state = mastery_state
         for s in self.students:
-            self.students[student_name].refresh()
+            self.students[s].refresh()
 
     # NATIVE PYTHON FUNCTIONS
     def __repr__(self):
@@ -502,7 +502,7 @@ class State:
         self.roster = roster
         if state is not None:
             self.current_state = state
-        elif self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
+        elif self.roster.model is not None and self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
             self.current_state = {'correct_prediction': -1, 'state_prediction': self.roster.model.fit_model[self.roster.skill]['prior']}
             self.update(-1, {'multigs': self.roster.model.model_type[-1], 'multilearn': self.roster.model.model_type[0]}, append = False)
         else:
@@ -538,6 +538,8 @@ class State:
         resource_ref = self.roster.model.fit_model[self.roster.skill]['resource_names']
         if append:
             corrects = np.append(corrects, [-1])
+        if set(corrects) - set([-1, 0, 1]) != set():
+            raise ValueError("data must be binary")
         data = corrects + 1
         lengths = np.array([len(corrects)], dtype=np.int64)
         starts = np.array([1], dtype=np.int64)
