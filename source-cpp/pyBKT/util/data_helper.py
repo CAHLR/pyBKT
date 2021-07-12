@@ -235,6 +235,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 raise KeyError("specified multilearn default column not in data")
                 
             all_learns = df3[defaults["multilearn"]].unique()
+            all_learns = np.sort(all_learns)
             if resource_ref is None:
                 # map each new resource found to a number [1, # total]
                 resource_ref=dict(zip(all_learns,range(1,len(df[defaults["multilearn"]].unique())+1)))
@@ -256,6 +257,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 raise KeyError("specified multigs default column not in data")
                 
             all_guess = df3[defaults["multigs"]].unique()
+            all_guess = np.sort(all_guess)
             # map each new guess/slip case to a row [0, # total]
             if gs_ref is None:
                 gs_ref=dict(zip(all_guess,range(len(df[defaults["multigs"]].unique()))))
