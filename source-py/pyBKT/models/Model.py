@@ -414,7 +414,7 @@ class Model:
                         optional_args['fixed'][var] = self.fit_model[skill][var] 
                     elif var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
-            if self.fixed is not None and skill in self.fixed:
+            if hasattr(self, "fixed") and self.fixed is not None and skill in self.fixed:
                 if not self._check_params(self.fixed[skill]):
                     raise ValueError("error in length, type or non-existent fixed parameter")
                 for var in self.fixed[skill]:
