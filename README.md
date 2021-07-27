@@ -9,9 +9,11 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 
 [pyBKT Tutorial from LAK Workshop in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
 
-Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). Data helpers and other utility functions written by Frederic Wang (fredwang@berkeley.edu). Original Python and boost adaptation of xBKT by Cristian Garay (c.garay@berkeley.edu). For implementation details, analysis of runtime and data requirements, and model variant replication testing, refer to [pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models](https://arxiv.org/abs/2105.00385).
+Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). Data helpers and other utility functions written by Frederic Wang (fredwang@berkeley.edu). Original Python and boost adaptation of xBKT by Cristian Garay (c.garay@berkeley.edu). For implementation details, analysis of runtime and data requirements, and model variant replication testing, refer to:
 
-pyBKT examples can be found in [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
+Badrinath, A., Wang, F., Pardos, Z.A. (2021) [pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models](https://educationaldatamining.org/EDM2021/virtual/static/pdf/EDM21_paper_237.pdf). In S. Hsiao, & S. Sahebi  (Eds.) *Proceedings of the 14th International Conference on Educational Data Mining* (EDM). Pages 468-474.
+
+Examples from the paper can be found in [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
 
 ## Requirements
 Python >= 3.5
@@ -291,6 +293,20 @@ The output of the model can will be stored in a `fitmodel` object, containing th
 The `fitmodel` also includes the following emission probabilities:
 * `guesses`: the probability of guessing correctly, given "not knowing" state.
 * `slips`: the probability of picking incorrect answer, given "knowing" state.
+
+## Citation
+To credit this library, please cite our paper published in the Educaitonal Data Mining Conference:
+
+Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In S. Hsiao, & S. Sahebi  (Eds.) *Proceedings of the 14th International Conference on Educational Data Mining* (EDM). Pages 468-474.
+```
+@inproceedings{badrinath2021pybkt,
+  title={pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models},
+  author={Badrinath, Anirudhan and Wang, Frederic and Pardos, Zachary},
+  booktitle={Proceedings of the 9th International Conference on Learning Analytics \& Knowledge},
+  pages={468--474},
+  year={2021}
+}
+```
 
 ## TODOs ##
 * Support for parameter tieing and fixing 
