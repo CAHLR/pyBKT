@@ -1,3 +1,3 @@
 import pyBKT as _pyBKT
-_pyBKT.version = 'Python/C++'
+_pyBKT.version = '1.4 (Python/C++)'
 del _pyBKT
