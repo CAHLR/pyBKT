@@ -309,5 +309,5 @@ Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library
 ```
 
 ## TODOs ##
-* Support for parameter tieing and fixing 
+* Exporting compiled binaries on PyPi
 * Additional model variants
