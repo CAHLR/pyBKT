@@ -96,17 +96,20 @@ static PyObject* run(PyObject * module, PyObject * args) {
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2,2*num_resources);
-    double learn, forget;
+    double learn = -1;
+    double forget = -1;
     
     for (int n=0; n<num_resources; n++) {
         if (fixed_learn) {
             learn = extract_double((PyArrayObject*)fixed_learn, n);
-        } else {
+        }
+        if (learn < 0) {
             learn = extract_double(learns, n);
         }
         if (fixed_forget) {
             forget = extract_double((PyArrayObject*)fixed_forget, n);
-        } else {
+        }
+        if (forget < 0) {
             forget = extract_double(forgets, n);
         }
         As.col(2*n) << 1-learn, learn;
@@ -115,16 +118,19 @@ static PyObject* run(PyObject * module, PyObject * args) {
     
         
     Array2Xd Bn(2,2*num_subparts);
-    double guess, slip;
+    double guess = -1;
+    double slip = -1;
     for (int n=0; n<num_subparts; n++) {
         if (fixed_guess) {
             guess = extract_double((PyArrayObject*)fixed_guess, n);
-        } else {
+        }
+        if (guess < 0) {
             guess = extract_double(guesses, n);
         }
         if (fixed_slip) {
             slip = extract_double((PyArrayObject*)fixed_slip, n);
-        } else {
+        }
+        if (slip < 0) {
             slip = extract_double(slips, n);
         }
         Bn.col(2*n) << 1-guess, slip; // incorrect

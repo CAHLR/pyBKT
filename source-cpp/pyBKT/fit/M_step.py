@@ -20,21 +20,21 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
 
     model['As'][:model['As'].shape[0]] = (trans_softcounts / np.sum(trans_softcounts, axis=1)[:model['As'].shape[0], None])
     
+    model['learns'] = model['As'][:, 1, 0]
     if 'learns' in fixed:
-        model['learns'] = fixed['learns']
+        model['learns'] = model['As'][:, 1, 0] * (fixed['learns'] < 0) + fixed['learns'] * (fixed['learns'] >= 0)
         for i in range(len(model['As'])):
-            model['As'][i, 1, 0] =  fixed['learns'][i]
-            model['As'][i, 0, 0] =  1 - fixed['learns'][i]
-    else:
-        model['learns'] = model['As'][:, 1, 0]
+            if fixed['learns'][i] >= 0:
+                model['As'][i, 1, 0] =  fixed['learns'][i]
+                model['As'][i, 0, 0] =  1 - fixed['learns'][i]
     
+    model['forgets'] = model['As'][:, 0, 1]
     if 'forgets' in fixed:
-        model['forgets'] = fixed['forgets']
+        model['forgets'] = model['As'][:, 0, 1] * (fixed['forgets'] < 0) + fixed['forgets'] * (fixed['forgets'] >= 0)
         for i in range(len(model['As'])):
-            model['As'][i, 0, 1] =  fixed['forgets'][i]
-            model['As'][i, 1, 1] =  1 - fixed['forgets'][i]
-    else:
-        model['forgets'] = model['As'][:, 0, 1]
+            if fixed['forgets'][i] >= 0:
+                model['As'][i, 0, 1] =  fixed['forgets'][i]
+                model['As'][i, 1, 1] =  1 - fixed['forgets'][i]
 
     temp = np.sum(emission_softcounts, axis=2)
 
@@ -44,15 +44,14 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
     #model['guesses'] = np.expand_dims(model['emissions'][:, 0, 1].squeeze(), axis=0)
     #model['slips'] = np.expand_dims(model['emissions'][:, 1, 0].squeeze(), axis=0)
     
+    model['guesses'] = model['emissions'][:, 0, 1]
     if 'guesses' in fixed:
-        model['guesses'] = fixed['guesses']
-    else:
-        model['guesses'] = model['emissions'][:, 0, 1]
+        model['guesses'] = model['guesses'] * (fixed['guesses'] < 0) + fixed['guesses'] * (fixed['guesses'] >= 0)
         
+    model['slips'] = model['emissions'][:, 1, 0]
     if 'slips' in fixed:
-        model['slips'] = fixed['slips']
-    else:
-        model['slips'] = model['emissions'][:, 1, 0]
+        model['slips'] = model['slips'] * (fixed['slips'] < 0) + fixed['slips'] * (fixed['slips'] >= 0)
+        
 
     if 'prior' in fixed:
         model['pi_0'] = np.array([[1 - fixed['prior']], [fixed['prior']]])
