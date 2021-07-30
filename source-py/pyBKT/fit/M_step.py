@@ -20,19 +20,19 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
 
     model['As'][:model['As'].shape[0]] = (trans_softcounts / np.sum(trans_softcounts, axis=1)[:model['As'].shape[0], None])
     
-    if 'learn' in fixed:
-        model['learns'] = fixed['learn']
+    if 'learns' in fixed:
+        model['learns'] = fixed['learns']
         for i in range(len(model['As'])):
-            model['As'][i, 1, 0] =  fixed['learn'][i]
-            model['As'][i, 0, 0] =  1 - fixed['learn'][i]
+            model['As'][i, 1, 0] =  fixed['learns'][i]
+            model['As'][i, 0, 0] =  1 - fixed['learns'][i]
     else:
         model['learns'] = model['As'][:, 1, 0]
     
-    if 'forget' in fixed:
-        model['forgets'] = fixed['forget']
+    if 'forgets' in fixed:
+        model['forgets'] = fixed['forgets']
         for i in range(len(model['As'])):
-            model['As'][i, 0, 1] =  fixed['forget'][i]
-            model['As'][i, 1, 1] =  1 - fixed['forget'][i]
+            model['As'][i, 0, 1] =  fixed['forgets'][i]
+            model['As'][i, 1, 1] =  1 - fixed['forgets'][i]
     else:
         model['forgets'] = model['As'][:, 0, 1]
 
@@ -44,13 +44,13 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {
     #model['guesses'] = np.expand_dims(model['emissions'][:, 0, 1].squeeze(), axis=0)
     #model['slips'] = np.expand_dims(model['emissions'][:, 1, 0].squeeze(), axis=0)
     
-    if 'guess' in fixed:
-        model['guesses'] = fixed['guess']
+    if 'guesses' in fixed:
+        model['guesses'] = fixed['guesses']
     else:
         model['guesses'] = model['emissions'][:, 0, 1]
         
-    if 'slip' in fixed:
-        model['slips'] = fixed['slip']
+    if 'slips' in fixed:
+        model['slips'] = fixed['slips']
     else:
         model['slips'] = model['emissions'][:, 1, 0]
 
