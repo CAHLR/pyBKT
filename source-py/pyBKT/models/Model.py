@@ -396,6 +396,8 @@ class Model:
         num_learns = len(data["resource_names"])
         num_gs = len(data["gs_names"])
         self._check_manual_param_init(num_learns, num_gs, skill)
+        if hasattr(self, "fixed"):
+            self._check_fixed(self)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
         best_model = None
@@ -415,8 +417,6 @@ class Model:
                     elif var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
             if hasattr(self, "fixed") and self.fixed is not None and skill in self.fixed:
-                if not self._check_params(self.fixed[skill]):
-                    raise ValueError("error in length, type or non-existent fixed parameter")
                 for var in self.fixed[skill]:
                     if not isinstance(self.fixed[skill][var], bool):
                         optional_args['fixed'][var] = self.fixed[skill][var]
@@ -471,6 +471,18 @@ class Model:
             return dict(sorted(zip(names, value)))
         else:
             return {'default': value}
+
+    def _check_fixed(self, fixed):
+        """ Checks fixed parameter. """
+        if self.fixed is None:
+            return
+        elif isinstance(self.fixed, bool):
+            self.fixed = self.fit_model
+        elif isinstance(self.fixed, dict):
+            return
+        else:
+            raise ValueError("fixed parameter incorrectly specified")
+
 
     def _update_param(self, params, args, keep = False):
         """ Updates parameters given kwargs. """

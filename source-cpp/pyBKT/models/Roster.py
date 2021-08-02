@@ -3,9 +3,9 @@ from enum import Enum
 import numpy as np
 
 class StateType(Enum):
-    DEFAULT_STATE = 1
-    UNMASTERED = 2
-    MASTERED = 3
+    DEFAULT_STATE = "default"
+    UNMASTERED = "unmastered"
+    MASTERED = "mastered"
 
 class Roster:
     def __init__(self, students, skills, mastery_state = 0.95, track_progress = False, model = None):
