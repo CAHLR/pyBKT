@@ -412,7 +412,7 @@ class Model:
             if self.manual_param_init and skill in self.fit_model:
                 for var in self.fit_model[skill]:
                     if self.fixed is not None and skill in self.fixed and var in self.fixed[skill] and \
-                            isinstance(self.fixed[skill][var], bool):
+                            isinstance(self.fixed[skill][var], bool) and self.fixed[skill][var]:
                         optional_args['fixed'][var] = self.fit_model[skill][var] 
                     elif var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
@@ -476,7 +476,7 @@ class Model:
         """ Checks fixed parameter. """
         if self.fixed is None:
             return
-        elif isinstance(self.fixed, bool):
+        elif isinstance(self.fixed, bool) and self.fixed:
             self.fixed = self.fit_model
         elif isinstance(self.fixed, dict):
             return
