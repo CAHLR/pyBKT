@@ -5,15 +5,15 @@ Python implementation of the Bayesian Knowledge Tracing algorithm and variants, 
 ```
     pip install pyBKT
 ```
-[pyBKT Quick Start Tutorial](https://colab.research.google.com/drive/13abu919edUXbvPV3qeGPpvwnFBExU7Vd "pyBKT quick start in Colab")
-
-[pyBKT Tutorial from LAK Workshop in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
-
 Based on the work of Zachary A. Pardos (zp@berkeley.edu) and Matthew J. Johnson (mattjj@csail.mit.edu) @ https://github.com/CAHLR/xBKT. All-platform python adaptation and optimizations by Anirudhan Badrinath (abadrinath@berkeley.edu). Data helpers and other utility functions written by Frederic Wang (fredwang@berkeley.edu). Original Python and boost adaptation of xBKT by Cristian Garay (c.garay@berkeley.edu). For implementation details, analysis of runtime and data requirements, and model variant replication testing, refer to:
 
 Badrinath, A., Wang, F., Pardos, Z.A. (2021) [pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models](https://educationaldatamining.org/EDM2021/virtual/static/pdf/EDM21_paper_237.pdf). In S. Hsiao, & S. Sahebi  (Eds.) *Proceedings of the 14th International Conference on Educational Data Mining* (EDM). Pages 468-474.
 
 Examples from the paper can be found in [pyBKT-examples](https://github.com/CAHLR/pyBKT-examples/ "pyBKT examples") repo.
+
+[pyBKT Quick Start Tutorial](https://colab.research.google.com/drive/13abu919edUXbvPV3qeGPpvwnFBExU7Vd "pyBKT quick start in Colab")
+
+[pyBKT Tutorial from LAK Workshop in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
 
 ## Requirements
 Python >= 3.5
