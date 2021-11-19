@@ -248,7 +248,7 @@ crossvalidated_multigsf = model.crossvalidate(data_path = 'ct.csv', multigs = Tr
 
 The model has been extended into the Roster to accomodate and simulate the learning environment for a cohort of students learning any combination of individual skills. The Roster feature has the efficient ability to track individuals' progress through the mastery and correctness probabilities outputted by BKT by storing only the current latent and observable state of the student. The following shows an example of Roster being used in practise:
 
-```
+```python
 from pyBKT.models import *
 import numpy as np
 
