@@ -320,7 +320,7 @@ print("Jeff's probability of mastery (t' = 0):", roster.get_mastery_prob('Calcul
 
 ## Parameter Fixing ##
 
-Another advanced feature supported by pyBKT is parameter fixing, where we can fix one or more parameters and train the model conditioned on those fixed parameters. To specify which parameters and values we want fixed for any skill, we can pass in a dictionary to model.coef_, and then specify fixed=True in the model.fit call:
+Another advanced feature supported by pyBKT is parameter fixing, where we can fix one or more parameters and train the model conditioned on those fixed parameters. This can be useful if you already know the ground truth value of some parameters beforehand, or to avoid degenerate model creation by fixing parameters at reasonable values. To specify which parameters and values we want fixed for any skill, we can pass in a dictionary to model.coef_, and then specify fixed=True in the model.fit call:
 
 ```python
 from pyBKT.models import *
