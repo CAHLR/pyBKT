@@ -327,15 +327,15 @@ from pyBKT.models import *
 import numpy as np
 model = Model()
 
-# Fixes the prior rate and learn rate to 0.1 for the Plot imperfect radical skill.
+# Fixes the prior rate and learn rate to 0.1 for the Plot imperfect radical skill, and trains the model given those fixed parameters.
 model.coef_ = {'Plot imperfect radical': {'prior': 0.1, 'learns': np.array([0.1])}}
 model.fit(data_path = 'ct.csv', skills='Plot imperfect radical', fixed=True)
 model.params()
 ```
 Within the model.coef_ dictionary, the 'prior' parameter takes a scalar, while 'learns', 'forgets', 'guesses', and 'slips' takes an np.array, in order to provide support for parameter fixing in model extensions with multiple learn or guess classes. An example of such is shown below. 
 
-```
-# The Plot pi skill has 10 different guess/slip classes. This is how you would fix each slip class to 0, 0.1, ..., 0.9 and train the model conditioned on those slip values.
+```python
+# The Plot pi skill has 10 different guess/slip classes. This is how you would fix those slip classes to 0, 0.1, ..., 0.9 and train the model conditioned on those slip values.
 model.coef_ = {'Plot pi': {'slips': np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])}}
 model.fit(data_path = 'ct.csv', skills='Plot pi', multigs=True, fixed=True)
 model.params()
