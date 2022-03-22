@@ -504,7 +504,7 @@ class State:
             self.current_state = state
         elif self.roster.model is not None and self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
             self.current_state = {'correct_prediction': -1, 'state_prediction': self.roster.model.fit_model[self.roster.skill]['prior']}
-            self.update(-1, {'multigs': self.roster.model.model_type[-1], 'multilearn': self.roster.model.model_type[0]}, append = False)
+            self.update(-1, {}, append = False)
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
         self.tracked_states = []
@@ -550,6 +550,8 @@ class State:
             else:
                 resargs = [kwargs['multilearn']]
             resources = np.array(list(map(lambda x: resource_ref[x], resargs)))
+            if any(k not in resource_ref for k in resargs):
+                raise ValueError("specified learn class must be one of:", resource_ref.keys())
         else:
             resources = np.ones(len(data), dtype=np.int64)
 
@@ -558,6 +560,8 @@ class State:
                 gsargs = kwargs['multigs']
             else:
                 gsargs = [kwargs['multigs']]
+            if any(k not in gs_ref for k in gsargs):
+                raise ValueError("specified guess/slip class must be one of:", gs_ref.keys())
             data_ref = np.array(list(map(lambda x: gs_ref[x], gsargs)))
             data_temp = np.zeros((len(gs_ref), len(corrects)))
             for i in range(len(data_temp[0]) - 1):
