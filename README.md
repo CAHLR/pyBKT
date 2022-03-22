@@ -244,6 +244,103 @@ crossvalidated_mae_errs = model.crossvalidate(data_path = 'ct.csv', skills = ".*
 crossvalidated_multigsf = model.crossvalidate(data_path = 'ct.csv', multigs = True, forgets = True)
 ```
 
+## Roster ##
+
+The model has been extended into the Roster to accomodate and simulate the learning environment for a cohort of students learning any combination of individual skills. The Roster feature has the efficient ability to track individuals' progress through the mastery and correctness probabilities outputted by BKT by storing only the current latent and observable state of the student. The following shows an example of Roster being used in practise:
+
+```python
+from pyBKT.models import *
+import numpy as np
+
+# Create a backend pyBKT model and fit it on the CT data
+model = Model()
+model.fit(data_path = 'ct.csv')
+
+# Create a Roster with two students, Jeff and Bob, who are participating in the roster
+# for one skill (Calculate Unit Rate) using the pyBKT model above.
+roster = Roster(students = ['Jeff', 'Bob'], skills = 'Calculate unit rate', model = model)
+
+# Initial mastery state (prior) for Jeff, should be unmastered with low probability of mastery
+# get_state_type returns whether a student has mastered the skill or not
+# get_mastery_prob returns the probability a student has mastered the skill
+print("Jeff's mastery (t = 0):", roster.get_state_type('Calculate unit rate', 'Jeff'))
+print("Jeff's probability of mastery (t = 0):", roster.get_mastery_prob('Calculate unit rate', 'Jeff'))
+
+# We can update Jeff's state by adding one or more responses to a particular skill. In this case,
+# we observed a correct response for the one skill in the roster.
+jeff_new_state = roster.update_state('Calculate unit rate', 'Jeff', 1)
+
+# Check the updated mastery state and probability.
+print("Jeff's mastery (t = 1):", roster.get_state_type('Calculate unit rate', 'Jeff'))
+print("Jeff's probability of mastery (t = 1):", roster.get_mastery_prob('Calculate unit rate', 'Jeff'))
+
+# We can update his state with multiple correct responses (ten of them).
+roster.update_state('Calculate unit rate', 'Jeff', np.ones(10))
+
+# After 10 consecutive correct responses, he should have mastered the skill.
+print("Jeff's mastery (t = 11):", roster.get_state_type('Calculate unit rate', 'Jeff'))
+print("Jeff's probability of mastery (t = 11):", roster.get_mastery_prob('Calculate unit rate', 'Jeff'))
+
+# Programmatically check whether he has mastered the skill
+if roster.get_state_type('Calculate unit rate', 'Jeff') == StateType.MASTERED:
+    print("Jeff has mastered the skill!")
+    
+# We can update Bob's state with two correct responses.
+roster.update_state('Calculate unit rate', 'Bob', np.ones(2))
+
+# He should remain unmastered.
+print("Bob's mastery (t = 2):", roster.get_state_type('Calculate unit rate', 'Bob'))
+print("Bob's probability of mastery (t = 2):", roster.get_mastery_prob('Calculate unit rate', 'Bob'))
+
+# We can print aggregate statistics for mastery and correctness.
+print("Both students' probabilites of correctness:", roster.get_correct_probs('Calculate unit rate'))
+print("Both students' probabilites of mastery:", roster.get_mastery_probs('Calculate unit rate'))
+
+# Add a new student, Sarah.
+roster.add_student('Calculate unit rate', 'Sarah')
+
+# Update Sarah's state with a sequence of correct and incorrect responses.
+sarah_new_state = roster.update_state('Calculate unit rate', 'Sarah', np.array([1, 0, 1, 0, 1, 1, 1]))
+
+# Print Sarah's correctness and mastery probability.
+print("Sarah's correctness probability:", sarah_new_state.get_correct_prob()
+print("Sarah's mastery probability:", sarah_new_state.get_mastery_prob())
+
+# Delete Bob from the roster.
+roster.remove_student('Calculate unit rate', 'Bob')
+
+# Reset student's state (i.e. latent and observable).
+roster.reset_state('Calculate unit rate', 'Jeff')
+
+# Jeff should be back to the initial prior as the mastery probability and should be unmastered.
+print("Jeff's mastery (t' = 0):", roster.get_state_type('Calculate unit rate', 'Jeff'))
+print("Jeff's probability of mastery (t' = 0):", roster.get_mastery_prob('Calculate unit rate', 'Jeff'))
+
+```
+
+## Parameter Fixing ##
+
+Another advanced feature supported by pyBKT is parameter fixing, where we can fix one or more parameters and train the model conditioned on those fixed parameters. This can be useful if you already know the ground truth value of some parameters beforehand, or to avoid degenerate model creation by fixing parameters at reasonable values. To specify which parameters and values we want fixed for any skill, we can pass in a dictionary to model.coef_, and then specify fixed=True in the model.fit call:
+
+```python
+from pyBKT.models import *
+import numpy as np
+model = Model()
+
+# Fixes the prior rate and learn rate to 0.1 for the Plot imperfect radical skill, and trains the model given those fixed parameters.
+model.coef_ = {'Plot imperfect radical': {'prior': 0.1, 'learns': np.array([0.1])}}
+model.fit(data_path = 'ct.csv', skills='Plot imperfect radical', fixed=True)
+model.params()
+```
+Within the model.coef_ dictionary, the 'prior' parameter takes a scalar, while 'learns', 'forgets', 'guesses', and 'slips' takes an np.array, in order to provide support for parameter fixing in model extensions with multiple learn or guess classes. An example of such is shown below. 
+
+```python
+# The Plot pi skill has 10 different guess/slip classes. This is how you would fix those slip classes to 0, 0.1, ..., 0.9 and train the model conditioned on those slip values.
+model.coef_ = {'Plot pi': {'slips': np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])}}
+model.fit(data_path = 'ct.csv', skills='Plot pi', multigs=True, fixed=True)
+model.params()
+```
+
 ## Extended Features ##
 
 Extended features include model parameter initialization by setting model.coef_, providing a configuration dictionary, setting model default columns, and more. For more information about these features, take a look at the Colab notebook provided at the top of the README.
