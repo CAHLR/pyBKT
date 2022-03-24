@@ -399,7 +399,7 @@ Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library
 @inproceedings{badrinath2021pybkt,
   title={pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models},
   author={Badrinath, Anirudhan and Wang, Frederic and Pardos, Zachary},
-  booktitle={Proceedings of the 9th International Conference on Learning Analytics \& Knowledge},
+  booktitle={Proceedings of the 14th International Conference on Educational Data Mining},
   pages={468--474},
   year={2021}
 }
