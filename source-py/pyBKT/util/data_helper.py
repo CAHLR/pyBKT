@@ -181,6 +181,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             if resource_ref is None:
                 new_resource_ref = {}
                 new_resource_ref["Default"] = 1 #no pair
+            else:
+                new_resource_ref = resource_ref
             for i in range(len(df3)):
                 # for the first entry of a new student, no pair
                 if i == 0 or df3[i:i+1][defaults["user_id"]].values != df3[i-1:i][defaults["user_id"]].values:
