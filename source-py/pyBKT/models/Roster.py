@@ -25,6 +25,7 @@ class Roster:
 
         """
         self.skill_rosters = {}
+        self.students = students
         if isinstance(skills, str):
             skills = [skills]
         elif not isinstance(skills, list):
@@ -378,7 +379,7 @@ class Roster:
         >>> roster.set_model(model)
 
         """
-        return 'Roster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skills), 
+        return 'Roster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skill_rosters.keys()), 
                                                repr(self.mastery_state), repr(self.track_progress), 
                                                repr(self.model))
 
