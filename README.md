@@ -59,24 +59,12 @@ The former pure Python versions does not fit models or scale as quickly or effic
 
 If you have a C++ compiler already installed, pip will install pyBKT with fast C++ inferencing. C++ compilers are already installed on nearly all Linux distributions. If it is not installed on your machine, type `sudo apt install gcc g++` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without a compiler, pip will install pyBKT without C++ speed optimizations.
 
-In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
-
-``` source setup_conda.sh ```
-
-You may need to run the above as root.
-
 ### Mac
 
 The latest version of Python is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
 ```
     brew install libomp
 ```
-
-In case this is a hassle, we provide a Conda environment that works very easily. Simply execute inside your base conda environment:
-
-``` source setup_conda.sh ```
-
-You may need to run the above as root.
 
 ## Installing pyBKT ##
 
