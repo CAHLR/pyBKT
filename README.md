@@ -53,7 +53,9 @@ The former pure Python versions does not fit models or scale as quickly or effic
 | synthetic data, predict onestep (500 students)  |       ~2s      |      ~0.8s     |
 | synthetic data, predict onestep (5000 students) |     ~2m15s     |      ~35s      |
 
-## Installing Dependencies for Fast C++ Inferencing (Optional - for OS X and Linux before Xenial) ##
+## Installing Dependencies for Fast C++ Inferencing (Optional - for OS X and Linux) ##
+
+Note: this section is not applicable for Windows as running the Python/C++ version is cumbersome and untested. For Windows, we only offer the slower, pure Python version of pyBKT (it will be installed automatically).
 
 ### Linux
 
