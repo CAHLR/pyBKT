@@ -11,6 +11,7 @@ import numbers
 import os
 import pandas as pd
 import random
+import warnings
 import pickle
 import urllib.request as urllib2
 from pyBKT.generate import synthetic_data, random_model_uni
@@ -449,6 +450,9 @@ class Model:
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
         true = true - 1
+        if pred.min() < 0 or pred.max() > (1 + 1e-6) or np.isnan(pred).any():
+            warnings.warn('invalid predictions detected (nan, inf, <0, >1)')
+            pred = np.nan_to_num(np.clip(pred, 0, 1), nan = 0.5)
         try:
             res = [m(true, pred) for m in metric]
         except ValueError:
