@@ -241,12 +241,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             if resource_ref is None:
                 # map each new resource found to a number [1, # total]
                 resource_ref=dict(zip(all_learns,range(1,len(df[defaults["multilearn"]].unique())+1)))
-            else:
-                for i in all_learns:
-                    if i not in resource_ref:
-                        raise ValueError("Learn rate", i, "not fitted")
-                
-            resources = np.array(df3[defaults["multilearn"]].apply(lambda x: resource_ref[x]))
+            resources = np.array(df3[defaults["multilearn"]].apply(lambda x: resource_ref.get(x, 1)))
         else:
             resources=np.array([1]*len(data))
 
@@ -262,15 +257,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             all_guess = np.sort(all_guess)
             # map each new guess/slip case to a row [0, # total]
             if gs_ref is None:
-                gs_ref=dict(zip(all_guess,range(len(df[defaults["multigs"]].unique()))))
-            else:
-                for i in all_guess:
-                    if i not in gs_ref:
-                        raise ValueError("Guess rate", i, "not previously fitted")
-            data_ref = np.array(df3[defaults["multigs"]].apply(lambda x: gs_ref[x]))
+                gs_ref=dict(zip(all_guess,range(len(df3[defaults["multigs"]].unique()))))
+            data_ref = np.array(df3[defaults["multigs"]].apply(lambda x: gs_ref.get(x, 1)))
         
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
-            data_temp = np.zeros((len(df3[defaults["multigs"]].unique()), len(df3)))
+            data_temp = np.zeros((len(gs_ref), len(df3)))
             for i in range(len(data_temp[0])):
                 data_temp[data_ref[i]][i] = data[i]
             Data["data"]=np.asarray(data_temp,dtype='int32')
