@@ -100,7 +100,7 @@ try:
                         'pyBKT.fit': npath('source-cpp/pyBKT/fit'),
                         'pyBKT.util': npath('source-cpp/pyBKT/util'),
                         'pyBKT.models': npath('source-cpp/pyBKT/models')},
-        install_requires = ["numpy", "sklearn", "pandas", "requests"],
+        install_requires = ["numpy", "scikit-learn", "pandas", "requests"],
         setup_requires = ["numpy"],
         cmdclass = {'build_ext': CustomBuildExtCommand},
         ext_modules = [module1, module2, module3]
@@ -133,5 +133,5 @@ except:
                         'pyBKT.fit': npath('source-py/pyBKT/fit'),
                         'pyBKT.util': npath('source-py/pyBKT/util'),
                         'pyBKT.models': npath('source-py/pyBKT/models')},
-        install_requires = ["numpy", "sklearn", "pandas", "requests"],
+        install_requires = ["numpy", "scikit-learn", "pandas", "requests"],
     )
