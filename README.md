@@ -381,16 +381,18 @@ The `fitmodel` also includes the following emission probabilities:
 * `guesses`: the probability of guessing correctly, given "not knowing" state.
 * `slips`: the probability of picking incorrect answer, given "knowing" state.
 
+
 ## Citation
 To credit this library, please cite our paper published in the Educaitonal Data Mining Conference:
 
-Pardos, Z.A., Tang, M., Anastasopoulos, I., Sheel, S.K., Zhang, E. (In press). OATutor: An Open-source Adaptive Tutoring System and Curated Content Library for Learning Sciences Research. In *Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems*. ACM. Hamberg, Germany.
+Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In S. Hsiao, & S. Sahebi  (Eds.) *Proceedings of the 14th International Conference on Educational Data Mining* (EDM). Pages 468-474.
 ```
-@inproceedings{pardos2023oat,
-  title={OATutor: An Open-source Adaptive Tutoring System and Curated Content Library for Learning Sciences Research},
-  author={Pardos, Z.A., Tang, M., Anastasopoulos, I., Sheel, S.K., Zhang, E},
-  booktitle={Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems},
-  year={In press}
+@inproceedings{badrinath2021pybkt,
+  title={pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models},
+  author={Badrinath, Anirudhan and Wang, Frederic and Pardos, Zachary},
+  booktitle={Proceedings of the 14th International Conference on Educational Data Mining},
+  pages={468--474},
+  year={2021}
 }
 ```
 
