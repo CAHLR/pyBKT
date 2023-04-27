@@ -29,7 +29,7 @@ class Model:
                 'defaults': None,
                 'parallel': True,
                 'skills': '.*',
-                'seed': random.randint(0, 1e8),
+                'seed': lambda: random.randint(0, 1e8),
                 'folds': 5,
                 'forgets': False,
                 'fixed': None,
@@ -489,7 +489,8 @@ class Model:
         if isinstance(args, dict):
             for param in params:
                 if param not in args and (param not in self.keep or not self.keep[param]):
-                    setattr(self, param, Model.DEFAULTS[param])
+                    arg = Model.DEFAULTS[param]
+                    setattr(self, param, arg() if callable(arg) else arg) # Allow random seed to differ between models
                 elif param in args:
                     setattr(self, param, args[param])
                 self.keep[param] = keep

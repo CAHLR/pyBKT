@@ -2,3 +2,6 @@ __pycache__/
 *.py[cod]
 *.o
 *.so
+.eggs
+build
+*.egg-info
