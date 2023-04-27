@@ -103,13 +103,15 @@ def fix_data_specified(data, label, count):
     
     return training_data, testing_data
 
+# TODO: Rename seed to 'rand' in next major version
 def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
 
     num_learns = len(data["resource_names"]) if "resource_names" in data else 1
     num_gs = len(data["gs_names"]) if "gs_names" in data else num_gs
 
     # create random permutation to act as indices for folds for crossvalidation
-    shuffle = np.random.RandomState(seed=seed).permutation(len(data["starts"]))
+    # TODO: Remove interoperability between int and RandomState in next major version
+    shuffle = (np.random.RandomState(seed=seed) if isinstance(seed, int) else seed).permutation(len(data["starts"]))
     all_true, all_pred = [], []
     metrics = np.zeros((len(metric), ))
 

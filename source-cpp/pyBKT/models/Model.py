@@ -403,10 +403,10 @@ class Model:
         best_model = None
 
         for i in range(num_fit_initializations):
-            fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
+            fitmodel = random_model_uni.random_model_uni(num_learns, num_gs, rand=self.rand)
             optional_args = {'fixed': {}}
             if forgets:
-                fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
+                fitmodel["forgets"] = self.rand.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
                 fitmodel["prior"] = 0
             if self.manual_param_init and skill in self.fit_model:
@@ -496,6 +496,10 @@ class Model:
         else:
             setattr(self, params, args)
             self.keep[params] = keep
+        
+        # Update RandomState if seed is one of the parameters to update
+        if 'seed' in params:
+            setattr(self, 'rand', np.random.RandomState(self.seed))
 
     def _update_defaults(self, defaults):
         """ Update the default column names. """
