@@ -29,7 +29,7 @@ class Model:
                 'defaults': None,
                 'parallel': True,
                 'skills': '.*',
-                'seed': random.randint(0, 1e8),
+                'seed': lambda: random.randint(0, 1e8),
                 'folds': 5,
                 'forgets': False,
                 'fixed': None,
@@ -403,10 +403,10 @@ class Model:
         best_model = None
 
         for i in range(num_fit_initializations):
-            fitmodel = random_model_uni.random_model_uni(num_learns, num_gs)
+            fitmodel = random_model_uni.random_model_uni(num_learns, num_gs, rand=self.rand)
             optional_args = {'fixed': {}}
             if forgets:
-                fitmodel["forgets"] = np.random.uniform(size = fitmodel["forgets"].shape)
+                fitmodel["forgets"] = self.rand.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
                 fitmodel["prior"] = 0
             if self.manual_param_init and skill in self.fit_model:
@@ -489,13 +489,18 @@ class Model:
         if isinstance(args, dict):
             for param in params:
                 if param not in args and (param not in self.keep or not self.keep[param]):
-                    setattr(self, param, Model.DEFAULTS[param])
+                    arg = Model.DEFAULTS[param]
+                    setattr(self, param, arg() if callable(arg) else arg) # Allow random seed to differ between models
                 elif param in args:
                     setattr(self, param, args[param])
                 self.keep[param] = keep
         else:
             setattr(self, params, args)
             self.keep[params] = keep
+        
+        # Update RandomState if seed is one of the parameters to update
+        if 'seed' in params:
+            setattr(self, 'rand', np.random.RandomState(self.seed))
 
     def _update_defaults(self, defaults):
         """ Update the default column names. """
