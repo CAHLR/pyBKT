@@ -567,9 +567,9 @@ class State:
             data_temp = np.zeros((len(gs_ref), len(corrects)))
             for i in range(len(data_temp[0]) - 1):
                 data_temp[data_ref[i]][i] = data[i]
-            data = np.asarray(data_temp, dtype='int32')
+            data = np.asarray(data_temp, dtype='int')
         else:
-            data = np.asarray([data], dtype='int32')
+            data = np.asarray([data], dtype='int')
 
         Data = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data}
         return Data
