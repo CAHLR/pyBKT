@@ -501,6 +501,7 @@ class State:
     def __init__(self, state_type, state = None, roster = None):
         self.state_type = state_type
         self.roster = roster
+        self.tracked_states = []
         if state is not None:
             self.current_state = state
         elif self.roster.model is not None and self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
@@ -508,7 +509,6 @@ class State:
             self.update(-1, {}, append = False)
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
-        self.tracked_states = []
 
     def get_mastery_prob(self):
         return self.current_state['state_prediction']
