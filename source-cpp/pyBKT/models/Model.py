@@ -29,7 +29,7 @@ class Model:
                 'defaults': None,
                 'parallel': True,
                 'skills': '.*',
-                'seed': lambda: random.randint(0, 1e8),
+                'seed': lambda: random.randint(0, int(1e8)),
                 'folds': 5,
                 'forgets': False,
                 'fixed': None,
