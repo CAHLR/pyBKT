@@ -105,9 +105,11 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
         thread_counts[thread_num] = {'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end}
         thread_counts[thread_num].update(input)
 
-    p = Pool(len(thread_counts))
-    x = p.map(inner, thread_counts)
-    p.close()
+    x = []
+    if __name__ == "__main__":  # Ensure this block runs only when executed as a script, not when imported
+        with Pool(len(thread_counts)) as p:
+            x = p.map(inner, thread_counts)
+            p.close()
 
     for i in x:
         total_loglike += i[3]
