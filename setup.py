@@ -76,7 +76,7 @@ try:
 
     setup(
         name="pyBKT",
-        version="1.4.1",
+        version="1.4.2",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
