@@ -1,0 +1,43 @@
+name: Ship to PyPI and GitHub
+
+on:
+  push:
+    tags:
+      - "v*" # Triggers on any tag starting with 'v'
+
+jobs:
+  build-and-publish:
+    name: Build, Publish, and Release
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for Trusted Publishing (PyPI)
+      id-token: write
+      # Required to upload assets to GitHub Releases
+      contents: write 
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build Distributions
+        # This creates your .whl and .tar.gz in the /dist folder
+        run: uv build
+
+      - name: Publish to PyPI
+        # Uses OIDC (Trusted Publishing) - no secrets required!
+        run: uv publish --trusted-publishing always
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # This tells GitHub to take everything in 'dist/' 
+          # and attach it as a binary to the release.
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          generate_release_notes: true
