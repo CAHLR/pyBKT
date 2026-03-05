@@ -82,7 +82,7 @@ try:
         license = 'MIT',
         description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
         url="https://github.com/CAHLR/pyBKT",
-        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+        download_url = 'https://github.com/CAHLR/pyBKT/archive/refs/tags/1.4.2.tar.gz',
         keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
         classifiers=[
             'Programming Language :: Python :: 3.5',
@@ -109,13 +109,13 @@ except:
 # LEGACY PURE PYTHON VERSION:
     setup(
         name="pyBKT",
-        version="1.4.1",
+        version="1.4.2",
         author="Zachary Pardos, Anirudhan Badrinath, Matthew Jade Johnson, Christian Garay",
         author_email="zp@berkeley.edu, abadrinath@berkeley.edu, mattjj@csail.mit.edu, c.garay@berkeley.edu",
         license = 'MIT',
         description="PyBKT - Python Implentation of Bayesian Knowledge Tracing",
         url="https://github.com/CAHLR/pyBKT",
-        download_url = 'https://github.com/CAHLR/pyBKT/archive/1.0.tar.gz',
+        download_url = 'https://github.com/CAHLR/pyBKT/archive/refs/tags/1.4.2.tar.gz',
         keywords = ['BKT', 'Bayesian Knowledge Tracing', 'Bayesian Network', 'Hidden Markov Model', 'Intelligent Tutoring Systems', 'Adaptive Learning'],
         classifiers=[
             'Programming Language :: Python :: 3.5',
