@@ -8,10 +8,11 @@
 #########################################
 
 import numpy as np
+import warnings
 from time import time
 from pyBKT.util import check_data
 from pyBKT.fit import M_step
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, current_process
 
 gs = globals()
 
@@ -106,10 +107,25 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
         thread_counts[thread_num].update(input)
 
     x = []
-    if __name__ == "__main__":  # Ensure this block runs only when executed as a script, not when imported
-        with Pool(len(thread_counts)) as p:
-            x = p.map(inner, thread_counts)
-            p.close()
+    if parallel and not current_process().daemon:
+        # Daemonic processes (e.g. pool workers of an outer Pool) cannot have
+        # children, so only attempt the pool from non-daemonic processes.
+        pool = None
+        try:
+            pool = Pool(len(thread_counts))
+        except (RuntimeError, OSError):
+            # Pool creation fails where spawning processes is unavailable, e.g.
+            # the bootstrap re-import of an unguarded __main__ on Windows/macOS
+            # raises RuntimeError. Warn and fall back to the serial E-step.
+            warnings.warn("could not create a multiprocessing pool; computing the "
+                          "E-step serially. If fitting from a script, protect the "
+                          "entry point with an if __name__ == '__main__': guard.",
+                          RuntimeWarning)
+        if pool is not None:
+            with pool:
+                x = pool.map(inner, thread_counts)
+    if not x:
+        x = [inner(tc) for tc in thread_counts]
 
     for i in x:
         total_loglike += i[3]
