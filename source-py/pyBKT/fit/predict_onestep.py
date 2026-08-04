@@ -12,7 +12,7 @@ from pyBKT.fit.EM_fit import run as E_step_run
 
 # correct_emission_predictions is a  num_subparts x T array, where element
 # (i,t) is predicted probability that answer to subpart i at time t+1 is correct
-def run(model, data):
+def run(model, data, parallel = True):
 
     num_subparts = data["data"].shape[0]  # mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
@@ -26,7 +26,7 @@ def run(model, data):
     result['all_emission_softcounts'] = emission_softcounts
     result['all_initial_softcounts'] = init_softcounts
 
-    result = E_step_run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1)
+    result = E_step_run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel)
     for j in range(num_resources):
         result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
     for j in range(num_subparts):

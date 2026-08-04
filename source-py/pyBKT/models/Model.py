@@ -437,7 +437,7 @@ class Model:
     
     def _predict(self, model, data):
         """ Helper function for predicting. """
-        return predict_onestep.run(model, data)
+        return predict_onestep.run(model, data, parallel = self.parallel)
 
     def _evaluate(self, all_data, metric):
         """ Helper function for evaluating. """
