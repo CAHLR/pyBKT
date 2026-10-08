@@ -11,37 +11,91 @@ name: Upload Python Package
 on:
   release:
     types: [published]
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  release-build:
-    runs-on: ubuntu-latest
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
+          # Homebrew's libomp targets the runner's macOS version.
+          - os: macos-14
+            macos-deployment-target: "14.0"
+          - os: macos-15-intel
+            macos-deployment-target: "15.0"
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+        env:
+          # setup.py installs pure Python when the C++ build fails, so build
+          # with NumPy already present and check that the extension imports.
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_BEFORE_BUILD: pip install numpy setuptools
+          # The import check needs only NumPy. Skipping the other dependencies
+          # avoids compiling scikit-learn, which has no musllinux wheel.
+          CIBW_TEST_REQUIRES: numpy
+          CIBW_TEST_ENVIRONMENT: PIP_NO_DEPS=1
+          CIBW_TEST_COMMAND: python -c "import pyBKT.fit.E_step"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_BEFORE_ALL_MACOS: brew install libomp
+          CIBW_ENVIRONMENT_MACOS: >-
+            MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos-deployment-target }}
+            CPPFLAGS="-I$(brew --prefix libomp)/include"
+            LDFLAGS="-L$(brew --prefix libomp)/lib"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dists-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  build-sdist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: Build release distributions
+      - name: Build source distribution
         run: |
-          # NOTE: put your own distribution build steps here.
           python -m pip install build
-          python -m build
+          python -m build --sdist
 
-      - name: Upload distributions
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: release-dists
-          path: dist/
+          name: release-dists-sdist
+          path: dist/*.tar.gz
 
   pypi-publish:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs:
-      - release-build
+      - build-wheels
+      - build-sdist
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
@@ -61,7 +115,8 @@ jobs:
       - name: Retrieve release distributions
         uses: actions/download-artifact@v4
         with:
-          name: release-dists
+          pattern: release-dists-*
+          merge-multiple: true
           path: dist/
 
       - name: Publish release distributions to PyPI
