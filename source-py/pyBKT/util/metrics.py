@@ -59,7 +59,7 @@ def fetch_supported_metrics():
             try:
                 potential_metrics[metric](dummy_x, dummy_y)
                 supported_metrics[metric] = potential_metrics[metric]
-            except TypeError:
+            except Exception:
                 pass
     return supported_metrics
 
