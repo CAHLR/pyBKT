@@ -1,6 +1,5 @@
 import numpy as np
 import re
-import sklearn.metrics as sk
 
 def error_check(flat_true_values, pred_values):
     if len(flat_true_values) != len(pred_values):
@@ -33,8 +32,16 @@ def auc(flat_true_values, pred_values):
     if len(set(flat_true_values)) == 1:
         return np.nan
 
-    auc = sk.roc_auc_score(flat_true_values, pred_values)
-    return auc
+    if np.isnan(pred_values).any():
+        raise ValueError("Input contains NaN.")
+    # Mann-Whitney U with average ranks for ties, equal to sklearn's roc_auc_score.
+    flat_true_values = np.asarray(flat_true_values)
+    _, inverse, counts = np.unique(pred_values, return_inverse=True, return_counts=True)
+    ranks = (np.cumsum(counts) - (counts - 1) / 2)[inverse]
+    positives = flat_true_values == 1
+    num_positive, num_negative = positives.sum(), (~positives).sum()
+    rank_sum = ranks[positives].sum()
+    return float((rank_sum - num_positive * (num_positive + 1) / 2) / (num_positive * num_negative))
 
 def rmse(flat_true_values, pred_values):
     # represent correct as 1, incorrect as 0 for RMSE calculation
@@ -52,6 +59,10 @@ def rmse(flat_true_values, pred_values):
 
 def fetch_supported_metrics():
     supported_metrics = {}
+    try:
+        import sklearn.metrics as sk
+    except ModuleNotFoundError:
+        return supported_metrics
     dummy_x, dummy_y = [0, 1] * 5, [1, 0] * 5
     for metric_locs in sk._regression, sk._classification:
         potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs) if re.search('_loss$|_score$|_error$', i)}

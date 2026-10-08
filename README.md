@@ -198,6 +198,8 @@ training_rmse = model.evaluate(data = ct_df)
 # Evaluate the AUC of the model on the training data. The supported
 # metrics are AUC, RMSE and accuracy (they should be lowercased in
 # the argument!).
+# With scikit-learn installed (pip install "pyBKT[sklearn]"), its metric
+# names such as 'log_loss' work as well.
 training_auc = model.evaluate(data_path = 'ct.csv', metric = 'auc')
 
 # We can define a custom metric as well.
