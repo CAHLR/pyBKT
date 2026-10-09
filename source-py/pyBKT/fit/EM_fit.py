@@ -211,11 +211,13 @@ def inner(x):
         # backward messages and statistic counting
         gamma = np.empty((2, T))
         gamma[:, (T - 1)] = alpha[:, (T - 1)].copy()
+        for n in range(num_subparts):
+            data_temp = alldata[n][sequence_start + (T - 1)]
+            if data_temp:
+                emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, (T - 1)]
 
         # copy it to begin with for efficiency
         As_temp = As.copy()
-        # only one pass of the previous update, which is now merged into this loop
-        f = True
         for t in range(T - 2, -1, -1):
             resources_temp = allresources[sequence_start + t]
             k = 2 * (resources_temp - 1)
@@ -233,11 +235,6 @@ def inner(x):
                 data_temp = alldata[n][sequence_start+t]
                 if data_temp:
                     emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, t]
-                if f:
-                    data_temp_p = alldata[n][sequence_start + (T-1)]
-                    if data_temp_p:
-                        emission_softcounts_temp[:, (2 * n + int(data_temp_p == 2))] += gamma[:, (T - 1)]
-            f = False
         init_softcounts_temp += gamma[:, 0].reshape((2, 1))
         alphas.append((sequence_start, T, alpha))
     return [trans_softcounts_temp, emission_softcounts_temp, init_softcounts_temp, loglike, alphas]
