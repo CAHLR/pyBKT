@@ -96,10 +96,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2,2*num_resources);
-    double learn = -1;
-    double forget = -1;
-    
     for (int n=0; n<num_resources; n++) {
+        double learn = -1;
+        double forget = -1;
         if (fixed_learn) {
             learn = extract_double((PyArrayObject*)fixed_learn, n);
         }
@@ -118,9 +117,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     
         
     Array2Xd Bn(2,2*num_subparts);
-    double guess = -1;
-    double slip = -1;
     for (int n=0; n<num_subparts; n++) {
+        double guess = -1;
+        double slip = -1;
         if (fixed_guess) {
             guess = extract_double((PyArrayObject*)fixed_guess, n);
         }
