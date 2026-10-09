@@ -107,6 +107,10 @@ try:
         ext_modules = [module1, module2, module3]
     )
 except:
+    # Set PYBKT_REQUIRE_CPP=1 to fail the install instead of falling back.
+    # Re-raising also lets setuptools' setup_requires probe through.
+    if os.environ.get('PYBKT_REQUIRE_CPP') == '1':
+        raise
 # LEGACY PURE PYTHON VERSION:
     setup(
         name="pyBKT",

@@ -43,7 +43,7 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 # Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally. 
 
-We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. Note that pip, by default, will install the C++/Python version unless the required libraries are not found or there is an error during installation. In the case of such issues, it will revert to the pure Python implementation.
+We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. Note that pip, by default, will install the C++/Python version unless the required libraries are not found or there is an error during installation. In the case of such issues, it will revert to the pure Python implementation. To make the install fail instead, set `PYBKT_REQUIRE_CPP=1`.
 
 The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). 
 
