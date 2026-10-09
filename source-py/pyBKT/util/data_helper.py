@@ -96,7 +96,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     # sort by the order in which the problems were answered
     if "order_id" in defaults:
         df[defaults["order_id"]] = df[defaults["order_id"]].apply(lambda x: int(x))
-        df.sort_values(defaults["order_id"], inplace=True)
+        df.sort_values(defaults["order_id"], kind="mergesort", inplace=True)
     
     if "user_id" not in defaults:
         raise KeyError("user id default column not specified")
