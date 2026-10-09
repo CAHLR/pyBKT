@@ -25,8 +25,8 @@ jobs:
           enable-cache: true
 
       - name: Build Distributions
-        # This creates your .whl and .tar.gz in the /dist folder
-        run: uv build
+        # This creates your .tar.gz in the /dist folder
+        run: uv build --sdist
 
       - name: Publish to PyPI
         # Uses OIDC (Trusted Publishing) - no secrets required!
