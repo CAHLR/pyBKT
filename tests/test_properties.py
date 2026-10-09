@@ -1,21 +1,14 @@
 """Properties every BKT fit should have, checked on many simulated datasets."""
 import numpy as np
 import pandas as pd
-import pytest
 from hypothesis import Phase, assume, given, settings
 from hypothesis import strategies as st
 
-from helpers import IS_COMPILED, NUMPY_MAJOR, simulate_attempts
+from helpers import simulate_attempts
 from pyBKT.fit import EM_fit
 from pyBKT.generate import random_model_uni
 from pyBKT.models import Model
 from pyBKT.util import data_helper, metrics
-
-# The pure-Python fit fails on NumPy 2 (issue #65), and test_backend_parity.py
-# already reports that, so skip these slower tests there.
-pytestmark = pytest.mark.skipif(
-    not IS_COMPILED and NUMPY_MAJOR >= 2, reason="pure-Python fit fails on NumPy 2, see issue #65"
-)
 
 # Each example fits a model. derandomize=True makes every run use the same 20
 # examples, and skipping the shrink phase keeps a failing run short.

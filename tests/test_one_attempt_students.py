@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from helpers import FAILS_ON_NUMPY2, simulate_attempts
+from helpers import simulate_attempts
 from pyBKT.fit import EM_fit
 from pyBKT.generate import random_model_uni
 from pyBKT.util import data_helper
@@ -16,7 +16,6 @@ def guess_after_one_em_step(attempts):
     return float(fitted["guesses"][0])
 
 
-@FAILS_ON_NUMPY2
 def test_one_correct_answer_raises_the_guess_estimate():
     """After one EM step, adding a student with one correct answer raises the guess estimate."""
     attempts = simulate_attempts(seed=2, students=50, attempts=6, prior=0.3, learn=0.2, guess=0.2, slip=0.1)

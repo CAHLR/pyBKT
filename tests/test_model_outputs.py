@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from helpers import FAILS_ON_NUMPY2, IS_COMPILED, simulate_attempts
+from helpers import IS_COMPILED, simulate_attempts
 from pyBKT.models import Model
 
 BUILD = "compiled" if IS_COMPILED else "python"
@@ -36,7 +36,6 @@ def fit_and_predict(case):
     }
 
 
-@FAILS_ON_NUMPY2
 @pytest.mark.parametrize("case", CASES)
 def test_fit_and_predictions_match_reference(case):
     """The fitted parameters and the predictions match the stored values for this build."""

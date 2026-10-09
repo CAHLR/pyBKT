@@ -8,17 +8,8 @@ from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
-import pytest
 
 IS_COMPILED = find_spec("pyBKT.fit.E_step") is not None
-NUMPY_MAJOR = int(np.__version__.split(".")[0])
-
-FAILS_ON_NUMPY2 = pytest.mark.xfail(
-    not IS_COMPILED and NUMPY_MAJOR >= 2,
-    reason="pure-Python fit fails on NumPy 2, see issue #65",
-    raises=ValueError,
-    strict=True,
-)
 
 
 def simulate_attempts(

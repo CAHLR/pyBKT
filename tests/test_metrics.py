@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pytest
 
-from helpers import FAILS_ON_NUMPY2, simulate_attempts
+from helpers import simulate_attempts
 from pyBKT.models import Model
 from pyBKT.util import metrics
 
@@ -35,7 +35,6 @@ def test_accuracy_counts_a_prediction_of_one_half_as_correct():
     assert metrics.accuracy(LABELS, np.array([0.0, 0.4, 0.5, 1.0])) == pytest.approx(1.0)
 
 
-@FAILS_ON_NUMPY2
 def test_evaluate_rejects_an_unknown_metric_name():
     attempts = simulate_attempts(seed=5, students=20, attempts=4, prior=0.3, learn=0.2, guess=0.2, slip=0.1)
     model = Model(seed=0, num_fits=1, parallel=False)

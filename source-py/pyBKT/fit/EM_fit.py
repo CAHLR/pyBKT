@@ -88,8 +88,7 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
 
     alpha_out = np.zeros((2, bigT))
 
-    total_loglike = np.empty((1,1))
-    total_loglike.fill(0)
+    total_loglike = 0.0
 
     input = {"As": As, "Bn": Bn, "initial_distn": initial_distn, 'allresources': allresources, \
              'starts': starts,
