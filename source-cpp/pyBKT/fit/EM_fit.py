@@ -4,7 +4,7 @@ from pyBKT.fit import E_step
 from pyBKT.fit import M_step
 import os
 
-def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {}):
+def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {}, priors = None):
 
     if tol is None: 
         tol = 1e-3
@@ -27,6 +27,6 @@ def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {})
         if(i > 1 and abs(log_likelihoods[i][0] - log_likelihoods[i-1][0]) < tol):
             break
 
-        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], fixed)
+        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], fixed, priors)
 
     return(model, log_likelihoods[:i+1])
