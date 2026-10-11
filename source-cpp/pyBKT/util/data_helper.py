@@ -8,6 +8,7 @@
 
 import sys
 import os
+import re
 import pandas as pd
 import numpy as np
 import io
@@ -21,8 +22,10 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     pd.set_option('mode.chained_assignment', None)
     df = None
 
-    if not isinstance(skill_name, str):
-        skill_name = '|'.join(skill_name)
+    if isinstance(skill_name, str):
+        skill_pattern = skill_name
+    else:
+        skill_pattern = '|'.join(re.escape(str(name)) for name in skill_name)
     
     if isinstance(url, pd.DataFrame):
         df = url
@@ -126,7 +129,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         raise ValueError("Invalid Data In Specified Corrects Column")
     
     datas = {}
-    skill_name = '^(' + skill_name + ')$'
+    skill_name = '^(' + skill_pattern + ')$'
     all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna()
     all_skills = all_skills[all_skills.str.match(skill_name).astype(bool)]
     if all_skills.empty:
