@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
         env:
           # setup.py installs pure Python when the C++ build fails, so build
           # with NumPy already present and check that the extension imports.
@@ -54,7 +54,7 @@ jobs:
           CIBW_TEST_REQUIRES: numpy
           CIBW_TEST_ENVIRONMENT: PIP_NO_DEPS=1
           CIBW_TEST_COMMAND: python -c "import pyBKT.fit.E_step"
-          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-* cp315-*"
           CIBW_BEFORE_ALL_MACOS: brew install libomp
           CIBW_ENVIRONMENT_MACOS: >-
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos-deployment-target }}
