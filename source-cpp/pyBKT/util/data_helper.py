@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import io
 import requests
+import re
 
 def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, folds=False):
     if model_type:
@@ -22,7 +23,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     df = None
 
     if not isinstance(skill_name, str):
-        skill_name = '|'.join(skill_name)
+        skill_name = '|'.join(re.escape(skill) for skill in skill_name)
     
     if isinstance(url, pd.DataFrame):
         df = url
