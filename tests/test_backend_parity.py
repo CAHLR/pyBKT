@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from helpers import FAILS_ON_NUMPY2, simulate_attempts
+from helpers import simulate_attempts
 from pyBKT.fit import EM_fit
 from pyBKT.generate import random_model_uni
 from pyBKT.util import data_helper
@@ -64,7 +64,6 @@ def fit_em(case):
     }
 
 
-@FAILS_ON_NUMPY2
 @pytest.mark.parametrize("case", CASES)
 def test_em_matches_reference(case):
     """Both builds fit the same parameters from the same data and starting model."""
