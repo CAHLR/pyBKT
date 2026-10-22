@@ -45,6 +45,39 @@ jobs:
       - name: Run tests
         run: python -m pytest tests
 
+  # setup.py builds with -O3 on macOS and -O2 on Linux, so this checks the
+  # stored reference values against a second compiler and CPU.
+  compiled-macos:
+    name: C++ build, macOS arm, Python 3.12
+    runs-on: macos-14
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      # Apple clang needs Homebrew's libomp for the -fopenmp build.
+      - name: Install libomp
+        run: brew install libomp
+
+      - name: Install pyBKT with the C++ extension
+        env:
+          PYBKT_REQUIRE_CPP: "1"
+        run: |
+          libomp="$(brew --prefix libomp)"
+          export CPPFLAGS="-I$libomp/include" LDFLAGS="-L$libomp/lib"
+          python -m pip install .
+          python -m pip install -r tests/requirements.txt
+          python -c "import pyBKT.fit.E_step"
+
+      - name: Run tests
+        run: python -m pytest tests
+
   pure-python:
     name: Pure Python, NumPy ${{ matrix.numpy }}
     runs-on: ubuntu-latest
