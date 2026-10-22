@@ -13,6 +13,7 @@ import pandas as pd
 import random
 import pickle
 import urllib.request as urllib2
+import warnings
 from pyBKT.generate import synthetic_data, random_model_uni
 from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.util import crossvalidate, data_helper, check_data, metrics
@@ -23,7 +24,7 @@ class Model:
     MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
     MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
     FIT_ARGS = ['skills', 'num_fits', 'defaults', 'fixed',
-                            'parallel', 'forgets', 'preload'] + MODELS_BKT
+                            'parallel', 'forgets', 'preload', 'priors'] + MODELS_BKT
     CV_ARGS = FIT_ARGS + ['folds', 'seed']
     DEFAULTS = {'num_fits': 5,
                 'defaults': None,
@@ -33,6 +34,7 @@ class Model:
                 'folds': 5,
                 'forgets': False,
                 'fixed': None,
+                'priors': None,
                 'model_type': [False] * len(MODELS_BKT)}
     DEFAULTS_BKT = {'order_id': 'order_id',
                     'skill_name': 'skill_name',
@@ -68,6 +70,11 @@ class Model:
         Fits a BKT model given model and data information. Takes arguments skills,
         number of initialization fits, default column names (i.e. correct, skill_name),
         parallelization, and model types. Resets model state if uninitialized.
+        priors maps skill names to Beta (a, b) pseudo-counts for that skill's parameters, for example
+        priors = {'Box and Whisker': {'guesses': (2, 8), 'slips': (1, 9)}}. Skills without an
+        entry, and the default None, fit by maximum likelihood. Under multiprior, the prior
+        pseudo-counts apply to each template's prior and the learns pseudo-counts to the learn rate.
+        With num_fits above 1, pyBKT keeps the fit with the highest data log-likelihood.
 
         >>> model = Model(seed = 42)
         >>> model.fit(data_path = 'as.csv', forgets = True, skills = 'Box and Whisker')
@@ -99,7 +106,7 @@ class Model:
         self._check_data(data_path, data)
         self._check_args(Model.FIT_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 'fixed',
-                            'parallel', 'forgets'], kwargs)
+                            'parallel', 'forgets', 'priors'], kwargs)
         if self.fit_model is None or self.fit_model == {}:
             self.fit_model = {}
         if self.fit_model == {} or (self.manual_param_init and self.fit_model):
@@ -107,6 +114,7 @@ class Model:
         self.manual_param_init = True
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
         self._update_param(['skills'], {'skills': list(all_data.keys())})
+        self._check_priors_skills(all_data)
         for skill in all_data:
             self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets, 
                                               preload = kwargs['preload'] if 'preload' in kwargs else False)
@@ -237,7 +245,7 @@ class Model:
 
         self._check_args(Model.CV_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
-                            'parallel', 'forgets', 'seed', 'folds'], kwargs)
+                            'parallel', 'forgets', 'seed', 'folds', 'priors'], kwargs)
         self._update_param('model_type', self._update_defaults(kwargs))
         metric_vals = {}
         if not self.manual_param_init:
@@ -246,6 +254,7 @@ class Model:
             self._update_defaults({'folds': self.folds})
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type, folds = isinstance(self.folds, str))
         self._update_param(['skills'], {'skills': list(all_data.keys())})
+        self._check_priors_skills(all_data)
         for skill in all_data:
             metric_vals[skill] = self._crossvalidate(all_data[skill], skill, metric)
         self.manual_param_init = False
@@ -398,6 +407,7 @@ class Model:
         self._check_manual_param_init(num_learns, num_gs, skill)
         if hasattr(self, "fixed"):
             self._check_fixed(self)
+        priors = self._skill_priors(skill, num_learns, forgets)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
         best_model = None
@@ -421,7 +431,7 @@ class Model:
                     if not isinstance(self.fixed[skill][var], bool):
                         optional_args['fixed'][var] = self.fixed[skill][var]
             if not preload:
-                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, **optional_args)
+                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, priors = priors, **optional_args)
                 if log_likelihoods[-1] > best_likelihood:
                     best_likelihood = log_likelihoods[-1]
                     best_model = fitmodel
@@ -483,6 +493,45 @@ class Model:
         else:
             raise ValueError("fixed parameter incorrectly specified")
 
+
+    def _check_priors(self):
+        """ Checks the priors parameter. """
+        if self.priors is None:
+            return
+        message = "priors must map skill names to dicts from parameter names in " + \
+                  ", ".join(Model.INITIALIZABLE_PARAMS) + " to finite (a, b) pseudo-counts of at least 0"
+        if not isinstance(self.priors, dict):
+            raise ValueError(message)
+        for skill_priors in self.priors.values():
+            if not isinstance(skill_priors, dict) or not set(skill_priors) <= set(Model.INITIALIZABLE_PARAMS):
+                raise ValueError(message)
+            for ab in skill_priors.values():
+                if np.shape(ab) != (2,) or not np.all(np.isfinite(ab)) or np.any(np.asarray(ab) < 0):
+                    raise ValueError(message)
+
+    def _check_priors_skills(self, all_data):
+        """ Checks the priors parameter and warns about keys that name no skill in the data. """
+        self._check_priors()
+        if self.priors is not None:
+            for skill in self.priors:
+                if skill not in all_data:
+                    warnings.warn("ignoring priors for " + repr(skill) + ", which matches no skill in the data")
+
+    def _skill_priors(self, skill, num_learns, forgets):
+        """ Returns the M-step pseudo-counts for one skill, or None to fit by maximum likelihood. """
+        if self.priors is None or skill not in self.priors:
+            return None
+        priors = dict(self.priors[skill])
+        if 'forgets' in priors and not forgets:
+            warnings.warn("ignoring the forgets prior for skill " + str(skill) + " because forgets is False")
+            del priors['forgets']
+        if self.model_type[Model.MODELS_BKT.index('multiprior')] and ('prior' in priors or 'learns' in priors):
+            # multiprior fits each template's prior as the learn rate of resources 2 and up,
+            # out of a phantom first step, and keeps pi_0 at 0.
+            learns = np.tile(np.asarray(priors.pop('prior', (0, 0)), dtype = float), (num_learns, 1))
+            learns[0] = priors.get('learns', (0, 0))
+            priors['learns'] = learns
+        return priors
 
     def _update_param(self, params, args, keep = False):
         """ Updates parameters given kwargs. """
