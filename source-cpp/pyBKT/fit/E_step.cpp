@@ -338,7 +338,8 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr);
     PyDict_SetItemString(result, "all_initial_softcounts", all_initial_softcounts_arr);
     PyDict_SetItemString(result, "alpha", alpha_out_arr);
-    PyDict_SetItemString(result, "total_loglike", PyLong_FromLong(*total_loglike));
+    PyObject *total_loglike_obj = PyFloat_FromDouble(*total_loglike);
+    PyDict_SetItemString(result, "total_loglike", total_loglike_obj);
 
     for (int i = 0; i < 8; i++)
         Py_XDECREF(*DM_PTRS[i]);
@@ -346,6 +347,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Py_XDECREF(all_emission_softcounts_arr);
     Py_XDECREF(all_initial_softcounts_arr);
     Py_XDECREF(alpha_out_arr);
+    Py_XDECREF(total_loglike_obj);
 
     return(result);
 }
