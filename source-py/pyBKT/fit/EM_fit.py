@@ -7,16 +7,20 @@
 # Last edited: 20 March 2020            #
 #########################################
 
-import numpy as np
 import warnings
-from time import time
-from pyBKT.util import check_data
-from pyBKT.fit import M_step
 from multiprocessing import Pool, cpu_count, current_process
+from typing import Any
+
+import numpy as np
+
+from pyBKT.fit import M_step
+from pyBKT.util import check_data
 
 gs = globals()
 
-def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {}):
+def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = None):
+    if fixed is None:
+        fixed = {}
 
     check_data.check_data(data)
 
@@ -28,7 +32,7 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {})
     init_softcounts = np.zeros((2, 1))
     log_likelihoods = np.zeros((maxiter, 1))
 
-    result = {}
+    result: dict[str, Any] = {}
     result['all_trans_softcounts'] = trans_softcounts
     result['all_emission_softcounts'] = emission_softcounts
     result['all_initial_softcounts'] = init_softcounts
@@ -48,7 +52,9 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {})
 
     return(model, log_likelihoods[:i+1])
 
-def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True, fixed = {}):
+def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True, fixed = None):
+    if fixed is None:
+        fixed = {}
 
     # Processed Parameters
     alldata = data["data"]
@@ -97,13 +103,12 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
              'alldata': alldata, 'normalizeLengths': normalizeLengths, 'alpha_out': alpha_out}
 
     num_threads = cpu_count() if parallel else 1
-    thread_counts = [None for i in range(num_threads)]
+    thread_counts: list[dict[str, Any]] = []
     for thread_num in range(num_threads):
         blocklen = 1 + ((num_sequences - 1) // num_threads)
         sequence_idx_start = int(blocklen * thread_num)
         sequence_idx_end = min(sequence_idx_start+blocklen, num_sequences)
-        thread_counts[thread_num] = {'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end}
-        thread_counts[thread_num].update(input)
+        thread_counts.append({'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end, **input})
 
     x = []
     if parallel and not current_process().daemon:
@@ -133,12 +138,12 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
         all_initial_softcounts += i[2] #+ all_initial_softcounts
         for sequence_start, T, alpha in i[4]:
             alpha_out[:, sequence_start: sequence_start + T] += alpha
-    all_trans_softcounts = all_trans_softcounts.flatten(order = 'F')
-    all_emission_softcounts = all_emission_softcounts.flatten(order = 'F')
-    result = {}
+    flat_trans_softcounts = all_trans_softcounts.flatten(order = 'F')
+    flat_emission_softcounts = all_emission_softcounts.flatten(order = 'F')
+    result: dict[str, Any] = {}
     result["total_loglike"] = total_loglike;
-    result["all_trans_softcounts"] = np.reshape(all_trans_softcounts, (num_resources, 2, 2), order = 'C')
-    result["all_emission_softcounts"] = np.reshape(all_emission_softcounts, (num_subparts, 2, 2), order = 'C')
+    result["all_trans_softcounts"] = np.reshape(flat_trans_softcounts, (num_resources, 2, 2), order = 'C')
+    result["all_emission_softcounts"] = np.reshape(flat_emission_softcounts, (num_subparts, 2, 2), order = 'C')
     result["all_initial_softcounts"] = all_initial_softcounts
     result["alpha_out"] = alpha_out.flatten(order = 'F').reshape(alpha_out.shape, order = 'C')
 
@@ -148,7 +153,7 @@ def interleave(m, v1, v2):
     m[0::2], m[1::2] = v1, v2
 
 def inner(x):
-    As, Bn, initial_distn, allresources, starts, lengths, num_resources, num_subparts, alldata, normalizeLengths, alpha_out, sequence_idx_start, sequence_idx_end = \
+    As, Bn, initial_distn, allresources, starts, lengths, num_resources, num_subparts, alldata, normalizeLengths, _alpha_out, sequence_idx_start, sequence_idx_end = \
             x['As'], x['Bn'], x['initial_distn'], x['allresources'], x['starts'], x['lengths'], x['num_resources'], x['num_subparts'], x['alldata'], x['normalizeLengths'], \
             x['alpha_out'], x['sequence_idx_start'], x['sequence_idx_end']
     N_R, N_S = 2 * num_resources, 2 * num_subparts

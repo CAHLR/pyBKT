@@ -1,6 +1,9 @@
-from pyBKT.models import Model
 from enum import Enum
+
 import numpy as np
+
+from pyBKT.models.Model import Model
+
 
 class StateType(Enum):
     DEFAULT_STATE = "default"
@@ -379,9 +382,7 @@ class Roster:
         >>> roster.set_model(model)
 
         """
-        return 'Roster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skill_rosters.keys()), 
-                                               repr(self.mastery_state), repr(self.track_progress), 
-                                               repr(self.model))
+        return f'Roster({len(self.students)!r}, {self.skill_rosters.keys()!r}, {self.mastery_state!r}, {self.track_progress!r}, {self.model!r})'
 
 class SkillRoster:
     def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
@@ -445,7 +446,7 @@ class SkillRoster:
         return self.get_state(student_name)
 
     def update_states(self, corrects, **kwargs):
-        if any([i not in self.students for i in corrects]):
+        if any(i not in self.students for i in corrects):
             raise ValueError("student name not found in roster for this skill")
         for s in corrects:
             self.update_state(s, corrects[s], **kwargs)
@@ -493,9 +494,7 @@ class SkillRoster:
 
     # NATIVE PYTHON FUNCTIONS
     def __repr__(self):
-        return 'SkillRoster(%s, %s, %s, %s, %s)' % (repr(len(self.students)), repr(self.skill), 
-                                                    repr(self.mastery_state), repr(self.track_progress), 
-                                                    repr(self.model))
+        return f'SkillRoster({len(self.students)!r}, {self.skill!r}, {self.mastery_state!r}, {self.track_progress!r}, {self.model!r})'
 
 class State:
     def __init__(self, state_type, state = None, roster = None):
@@ -539,7 +538,7 @@ class State:
         resource_ref = self.roster.model.fit_model[self.roster.skill]['resource_names']
         if append:
             corrects = np.append(corrects, [-1])
-        if set(corrects) - set([-1, 0, 1]) != set():
+        if set(corrects) - {-1, 0, 1} != set():
             raise ValueError("data must be binary")
         data = corrects + 1
         lengths = np.array([len(corrects)], dtype=np.int64)
@@ -550,7 +549,7 @@ class State:
                 resargs = kwargs['multilearn']
             else:
                 resargs = [kwargs['multilearn']]
-            resources = np.array(list(map(lambda x: resource_ref[x], resargs)))
+            resources = np.array([resource_ref[x] for x in resargs])
             if any(k not in resource_ref for k in resargs):
                 raise ValueError("specified learn class must be one of:", resource_ref.keys())
         else:
@@ -563,7 +562,7 @@ class State:
                 gsargs = [kwargs['multigs']]
             if any(k not in gs_ref for k in gsargs):
                 raise ValueError("specified guess/slip class must be one of:", gs_ref.keys())
-            data_ref = np.array(list(map(lambda x: gs_ref[x], gsargs)))
+            data_ref = np.array([gs_ref[x] for x in gsargs])
             data_temp = np.zeros((len(gs_ref), len(corrects)))
             for i in range(len(data_temp[0]) - 1):
                 data_temp[data_ref[i]][i] = data[i]
@@ -595,4 +594,4 @@ class State:
     def __repr__(self):
         stype = repr(self.state_type)
         stype = stype[stype.index('<') + 1: stype.index(':')]
-        return 'State(%s, %s, %s)' % (stype, repr(self.current_state), 'Roster(...)')
+        return 'State({}, {}, {})'.format(stype, repr(self.current_state), 'Roster(...)')

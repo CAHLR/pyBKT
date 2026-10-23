@@ -1,10 +1,14 @@
+
 import numpy as np
-from pyBKT.fit import E_step
-from pyBKT.fit import predict_onestep_states
+
+from pyBKT.fit import E_step, predict_onestep_states
+
 
 # correct_emission_predictions is a  num_subparts x T array, where element
 # (i,t) is predicted probability that answer to subpart i at time t+1 is correct
-def run(model, data, parallel = True, fixed = {}):
+def run(model, data, parallel = True, fixed = None):
+    if fixed is None:
+        fixed = {}
 
     num_subparts = data["data"].shape[0]  # mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])

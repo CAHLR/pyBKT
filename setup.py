@@ -7,13 +7,14 @@
 #########################################
 
 import os
-from os.path import normpath as npath
-import sys
-from sysconfig import get_paths
-from setuptools import setup, Extension
-from setuptools.errors import BaseError, CCompilerError
 import platform
-from distutils.command.build_ext import build_ext
+import sys
+from os.path import normpath as npath
+from sysconfig import get_paths
+
+from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
+from setuptools.errors import BaseError, CCompilerError
 
 sys.tracebacklimit = 0
 

@@ -6,13 +6,15 @@
 # Last edited: 07 April 2021            #
 #########################################
 
-import sys
-import os
-import pandas as pd
-import numpy as np
 import io
-import requests
+import os
 import re
+from typing import Any
+
+import numpy as np
+import pandas as pd
+import requests
+
 
 def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, folds=False):
     if model_type:
@@ -87,12 +89,12 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
 
     if any(x in list(df.columns) for x in as_default.values()):
         for k,v in as_default.items():
-            if k not in defaults and as_default[k] in df.columns:
-                defaults[k] = as_default[k]
+            if k not in defaults and v in df.columns:
+                defaults[k] = v
     if any(x in list(df.columns) for x in ct_default.values()):
         for k,v in ct_default.items():
-            if k not in defaults and ct_default[k] in df.columns:
-                defaults[k] = ct_default[k]
+            if k not in defaults and v in df.columns:
+                defaults[k] = v
 
     # sort by the order in which the problems were answered
     if "order_id" in defaults:
@@ -152,14 +154,14 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         multiprior_index = None
 
         # convert from 0=incorrect,1=correct to 1=incorrect,2=correct
-        if set(df3.loc[:,defaults["correct"]].unique()) - set([-1, 0, 1]) != set():
+        if set(df3.loc[:,defaults["correct"]].unique()) - {-1, 0, 1} != set():
             raise ValueError("correctness must be -1 (no response), 0 (incorrect), or 1 (correct)")
         df3.loc[:,defaults["correct"]]+=1
         
         # array representing correctness of student answers
         data=np.array(df3[defaults["correct"]])
         
-        Data={}
+        Data: dict[str, Any] = {}
     
         # create starts and lengths arrays
         lengths = np.array(df3.groupby(defaults["user_id"])[defaults["user_id"]].count().values, dtype=np.int64)
@@ -219,7 +221,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                     if i not in resource_ref:
                         raise ValueError("Prior", i, "not fitted")
                         
-            all_resources = np.array(df3[defaults["multiprior"]].apply(lambda x: resource_ref[x]))
+            all_resources = np.array(df3[defaults["multiprior"]].apply(resource_ref.__getitem__))
             
             # create phantom timeslices with resource 2 or 3 in front of each new student based on their initial response
             for i in range(len(starts)):
@@ -247,7 +249,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                     if i not in resource_ref:
                         raise ValueError("Learn rate", i, "not fitted")
                 
-            resources = np.array(df3[defaults["multilearn"]].apply(lambda x: resource_ref[x]))
+            resources = np.array(df3[defaults["multilearn"]].apply(resource_ref.__getitem__))
         else:
             resources=np.array([1]*len(data))
 
@@ -268,7 +270,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 for i in all_guess:
                     if i not in gs_ref:
                         raise ValueError("Guess rate", i, "not previously fitted")
-            data_ref = np.array(df3[defaults["multigs"]].apply(lambda x: gs_ref[x]))
+            data_ref = np.array(df3[defaults["multigs"]].apply(gs_ref.__getitem__))
         
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
             data_temp = np.zeros((len(df3[defaults["multigs"]].unique()), len(df3)))
@@ -276,8 +278,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
                 data_temp[data_ref[i]][i] = data[i]
             Data["data"]=np.asarray(data_temp,dtype='int32')
         else:
-            data = [data]
-            Data["data"]=np.asarray(data,dtype='int32')
+            Data["data"]=np.asarray([data],dtype='int32')
 
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
