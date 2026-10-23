@@ -5,6 +5,7 @@ Arrays of parameters hold float64. Answer data holds integers of any width
 class. Starts, lengths and resources hold integers too, and starts and
 resources count from 1.
 """
+from collections.abc import Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -100,6 +101,66 @@ class FixedParams(TypedDict, total=False):
     forgets: FloatArray
     guesses: FloatArray
     slips: FloatArray
+
+
+class InitialParams(TypedDict, total=False):
+    """Starting values that Model.coef_ sets for one skill. The next fit replaces them."""
+
+    prior: float
+    learns: FloatArray
+    forgets: FloatArray
+    guesses: FloatArray
+    slips: FloatArray
+
+
+class FixedSpec(TypedDict, total=False):
+    """One skill's entry in Model's fixed option.
+
+    True holds the value coef_ set; a value holds that value. An array entry
+    below 0 leaves that class free.
+    """
+
+    prior: bool | float
+    learns: bool | FloatArray
+    forgets: bool | FloatArray
+    guesses: bool | FloatArray
+    slips: bool | FloatArray
+
+
+class ModelOptions(TypedDict, total=False):
+    """Keyword arguments to Model(). A model variant takes True, or the name of its data column."""
+
+    parallel: bool
+    num_fits: int
+    seed: int
+    defaults: dict[str, str] | None
+    multilearn: bool | str
+    multiprior: bool | str
+    multipair: bool | str
+    multigs: bool | str
+
+
+class FitOptions(TypedDict, total=False):
+    """Keyword arguments to Model.fit and Model.partial_fit."""
+
+    skills: str | Sequence[str]
+    num_fits: int
+    defaults: dict[str, str] | None
+    fixed: Literal[True] | dict[str, FixedSpec] | None
+    parallel: bool
+    forgets: bool
+    preload: bool
+    multilearn: bool | str
+    multiprior: bool | str
+    multipair: bool | str
+    multigs: bool | str
+
+
+class CrossvalidateOptions(FitOptions, total=False):
+    """Keyword arguments to Model.crossvalidate. folds is a number of folds, or the name of a folds column."""
+
+    folds: int | str
+    seed: int
 
 
 class SequenceData(TypedDict):

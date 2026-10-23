@@ -100,10 +100,13 @@ jobs:
         run: ruff check .
 
       # Both package copies are named pyBKT, so mypy checks them one at a time.
+      # tests/typing holds calls the type hints must accept or reject.
       - name: mypy
         run: |
           mypy source-py/pyBKT
           mypy source-cpp/pyBKT
+          MYPYPATH=source-py mypy tests/typing
+          MYPYPATH=source-cpp mypy tests/typing
 
   pure-python:
     name: Pure Python, NumPy ${{ matrix.numpy }}

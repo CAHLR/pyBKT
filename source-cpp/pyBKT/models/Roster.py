@@ -1,8 +1,30 @@
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 import numpy as np
 
 from pyBKT.models.Model import Model
+from pyBKT.util.structures import FloatArray, IntArray, SequenceData
+
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+StudentT = TypeVar("StudentT", bound=Hashable)
+
+
+class UpdateOptions(TypedDict, total=False):
+    """The learn class and guess/slip class of new answers, for multilearn and multigs models."""
+
+    multilearn: Hashable | list[Any]
+    multigs: Hashable | list[Any]
+
+
+class StatePredictions(TypedDict):
+    """A student's latest predictions; -1 means there is none yet."""
+
+    correct_prediction: float
+    state_prediction: float
 
 
 class StateType(Enum):
@@ -11,7 +33,8 @@ class StateType(Enum):
     MASTERED = "mastered"
 
 class Roster:
-    def __init__(self, students, skills, mastery_state = 0.95, track_progress = False, model = None):
+    def __init__(self, students: int | list[StudentT], skills: str | list[str], mastery_state: float = 0.95,
+                 track_progress: bool = False, model: Model | None = None) -> None:
         """
         Initializes a Roster with a set of students and skills. Students can be specified as the number of
         students in total or the names/identifiers of all the students. The mastery state threshold can be
@@ -33,8 +56,8 @@ class Roster:
             raise ValueError("invalid mastery state, must be between 0 and 1")
         if not isinstance(track_progress, bool):
             raise TypeError("track progress must be a boolean")
-        self.skill_rosters = {}
-        self.students = students
+        self.skill_rosters: dict[str, SkillRoster] = {}
+        self.students: int | Sequence[Hashable] = students
         if isinstance(skills, str):
             skills = [skills]
         elif not isinstance(skills, list):
@@ -48,7 +71,7 @@ class Roster:
 
     # STATE BASED METHODS
 
-    def reset_state(self, skill_name, student_name):
+    def reset_state(self, skill_name: str, student_name: Hashable) -> None:
         """
         Resets the state for a particular student for a skill.
 
@@ -65,7 +88,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].reset_state(student_name)
 
-    def reset_states(self, skill_name):
+    def reset_states(self, skill_name: str) -> None:
         """
         Resets the state for all students for a skill.
 
@@ -82,7 +105,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].reset_states()
 
-    def get_mastery_prob(self, skill_name, student_name):
+    def get_mastery_prob(self, skill_name: str, student_name: Hashable) -> float:
         """
         Fetches mastery probability for a particular student for a skill.
 
@@ -100,7 +123,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_mastery_prob(student_name)
 
-    def get_mastery_probs(self, skill_name):
+    def get_mastery_probs(self, skill_name: str) -> dict[Hashable, float]:
         """
         Fetches mastery probability for all students for a skill.
 
@@ -118,7 +141,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_mastery_probs()
 
-    def get_correct_prob(self, skill_name, student_name):
+    def get_correct_prob(self, skill_name: str, student_name: Hashable) -> float:
         """
         Fetches correctness probability for a particular student for a skill.
 
@@ -136,7 +159,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_correct_prob(student_name)
 
-    def get_correct_probs(self, skill_name):
+    def get_correct_probs(self, skill_name: str) -> dict[Hashable, float]:
         """
         Fetches correctness probability for all students for a skill.
 
@@ -154,7 +177,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_correct_probs()
 
-    def get_state(self, skill_name, student_name):
+    def get_state(self, skill_name: str, student_name: Hashable) -> "State":
         """
         Fetches state for a particular student for a skill.
 
@@ -170,7 +193,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state(student_name)
 
-    def get_states(self, skill_name):
+    def get_states(self, skill_name: str) -> dict[Hashable, "State"]:
         """
         Fetches states for all students for a skill.
 
@@ -188,7 +211,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_states()
 
-    def get_state_type(self, skill_name, student_name):
+    def get_state_type(self, skill_name: str, student_name: Hashable) -> StateType:
         """
         Fetches the state type (mastered, unmastered) of a particular student for a skill.
 
@@ -206,7 +229,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state_type(student_name)
 
-    def get_state_types(self, skill_name):
+    def get_state_types(self, skill_name: str) -> dict[Hashable, StateType]:
         """
         Fetches the state type (mastered, unmastered) of all students for a skill.
 
@@ -224,7 +247,8 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state_types()
         
-    def update_state(self, skill_name, student_name, correct, **kwargs):
+    def update_state(self, skill_name: str, student_name: Hashable, correct: int | IntArray,
+                     **kwargs: "Unpack[UpdateOptions]") -> "State":
         """
         Updates state of a particular student for a skill given one response.
 
@@ -240,7 +264,8 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].update_state(student_name, correct, **kwargs)
 
-    def update_states(self, skill_name, corrects, **kwargs):
+    def update_states(self, skill_name: str, corrects: Mapping[StudentT, int | IntArray],
+                      **kwargs: "Unpack[UpdateOptions]") -> dict[Hashable, "State"]:
         """
         Updates state of all students for a skill given one response each.
 
@@ -258,7 +283,8 @@ class Roster:
 
     # STUDENT BASED METHODS
 
-    def add_student(self, skill_name, student_name, initial_state = StateType.DEFAULT_STATE):
+    def add_student(self, skill_name: str, student_name: Hashable,
+                    initial_state: StateType = StateType.DEFAULT_STATE) -> None:
         """
         Adds student with given name for a skill with an optional initial state.
 
@@ -272,7 +298,8 @@ class Roster:
             raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].add_student(student_name, initial_state)
 
-    def add_students(self, skill_name, student_names, initial_states = StateType.DEFAULT_STATE):
+    def add_students(self, skill_name: str, student_names: list[StudentT],
+                     initial_states: StateType | list[StateType] = StateType.DEFAULT_STATE) -> None:
         """
         Adds students with given names for a skill with optional initial states.
 
@@ -286,7 +313,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].add_students(student_names, initial_states)
 
-    def remove_student(self, skill_name, student_name):
+    def remove_student(self, skill_name: str, student_name: Hashable) -> None:
         """
         Removes student with given name for a skill.
 
@@ -300,7 +327,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         self.skill_rosters[skill_name].remove_student(student_name)
 
-    def remove_students(self, skill_name, student_names):
+    def remove_students(self, skill_name: str, student_names: Iterable[Hashable]) -> None:
         """
         Removes students with given names for a skill.
 
@@ -316,7 +343,7 @@ class Roster:
 
     # MISCELLANEOUS FUNCTIONS
 
-    def get_model(self):
+    def get_model(self) -> Model | None:
         """
         Gets BKT model that the roster uses.
 
@@ -330,7 +357,7 @@ class Roster:
         """
         return self.model
 
-    def set_model(self, model):
+    def set_model(self, model: Model) -> None:
         """
         Sets BKT model that the roster uses.
 
@@ -346,7 +373,7 @@ class Roster:
         for s in self.skill_rosters:
             self.skill_rosters[s].set_model(model)
 
-    def get_mastery_state(self):
+    def get_mastery_state(self) -> float:
         """
         Gets the mastery probability threshold that the roster uses to denote mastery of a skill.
 
@@ -357,7 +384,7 @@ class Roster:
         """
         return self.mastery_state
 
-    def set_mastery_state(self, mastery_state):
+    def set_mastery_state(self, mastery_state: float) -> None:
         """
         Sets the mastery probability threshold that the roster uses to denote mastery of a skill.
 
@@ -372,7 +399,7 @@ class Roster:
             self.skill_rosters[s].set_mastery_state(mastery_state)
 
     # NATIVE PYTHON FUNCTIONS
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a Python representation of the Roster object.
 
@@ -382,12 +409,14 @@ class Roster:
         >>> roster.set_model(model)
 
         """
-        return f'Roster({len(self.students)!r}, {self.skill_rosters.keys()!r}, {self.mastery_state!r}, {self.track_progress!r}, {self.model!r})'
+        count = self.students if isinstance(self.students, int) else len(self.students)
+        return f'Roster({count!r}, {self.skill_rosters.keys()!r}, {self.mastery_state!r}, {self.track_progress!r}, {self.model!r})'
 
 class SkillRoster:
-    def __init__(self, students, skill, mastery_state = 0.95, track_progress = False, model = None):
+    def __init__(self, students: int | list[StudentT], skill: str, mastery_state: float = 0.95,
+                 track_progress: bool = False, model: Model | None = None) -> None:
         self.model = model
-        self.students = {}
+        self.students: dict[Hashable, State] = {}
         self.mastery_state = mastery_state
         self.track_progress = track_progress
         self.skill = skill
@@ -398,54 +427,56 @@ class SkillRoster:
 
     # STATE BASED METHODS
 
-    def reset_state(self, student_name):
+    def reset_state(self, student_name: Hashable) -> None:
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         self.students[student_name] = State(StateType.DEFAULT_STATE, roster = self)
 
-    def reset_states(self):
+    def reset_states(self) -> None:
         for s in self.students:
             self.reset_state(s)
 
-    def get_mastery_prob(self, student_name):
+    def get_mastery_prob(self, student_name: Hashable) -> float:
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].get_mastery_prob()
 
-    def get_mastery_probs(self):
+    def get_mastery_probs(self) -> dict[Hashable, float]:
         return {s: self.students[s].get_mastery_prob() for s in self.students}
 
-    def get_correct_prob(self, student_name):
+    def get_correct_prob(self, student_name: Hashable) -> float:
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].get_correct_prob()
 
-    def get_correct_probs(self):
+    def get_correct_probs(self) -> dict[Hashable, float]:
         return {s: self.students[s].get_correct_prob() for s in self.students}
 
-    def get_state(self, student_name):
+    def get_state(self, student_name: Hashable) -> "State":
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         return self.students[student_name]
 
-    def get_states(self):
+    def get_states(self) -> dict[Hashable, "State"]:
         return self.students
 
-    def get_state_type(self, student_name):
+    def get_state_type(self, student_name: Hashable) -> StateType:
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         return self.students[student_name].state_type
 
-    def get_state_types(self):
+    def get_state_types(self) -> dict[Hashable, StateType]:
         return {s: self.get_state_type(s) for s in self.students}
         
-    def update_state(self, student_name, correct, **kwargs):
+    def update_state(self, student_name: Hashable, correct: int | IntArray,
+                     **kwargs: "Unpack[UpdateOptions]") -> "State":
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         self.students[student_name].update(correct, kwargs) 
         return self.get_state(student_name)
 
-    def update_states(self, corrects, **kwargs):
+    def update_states(self, corrects: Mapping[StudentT, int | IntArray],
+                      **kwargs: "Unpack[UpdateOptions]") -> dict[Hashable, "State"]:
         if any(i not in self.students for i in corrects):
             raise ValueError("student name not found in roster for this skill")
         for s in corrects:
@@ -454,10 +485,11 @@ class SkillRoster:
 
     # STUDENT BASED METHODS
 
-    def add_student(self, student_name, initial_state = StateType.DEFAULT_STATE):
+    def add_student(self, student_name: Hashable, initial_state: StateType = StateType.DEFAULT_STATE) -> None:
         self.students[student_name] = State(initial_state, roster = self)
 
-    def add_students(self, student_names, initial_states = StateType.DEFAULT_STATE):
+    def add_students(self, student_names: list[StudentT],
+                     initial_states: StateType | list[StateType] = StateType.DEFAULT_STATE) -> None:
         if not isinstance(student_names, list):
             raise TypeError("student names must be a list")
         if not isinstance(initial_states, list):
@@ -465,77 +497,90 @@ class SkillRoster:
         for i, s in enumerate(student_names):
             self.add_student(s, initial_states[i])
 
-    def remove_student(self, student_name):
+    def remove_student(self, student_name: Hashable) -> None:
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         del self.students[student_name]
 
-    def remove_students(self, student_names):
+    def remove_students(self, student_names: Iterable[Hashable]) -> None:
         for s in student_names:
             self.remove_student(s)
 
     # MISCELLANEOUS FUNCTIONS
 
-    def get_model(self):
+    def get_model(self) -> Model | None:
         return self.model
 
-    def set_model(self, model):
+    def set_model(self, model: Model) -> None:
         self.model = model
         for s in self.students:
             self.students[s].update(-1, {'multigs': self.model.model_type[-1], 'multilearn': self.model.model_type[0]}, append = False)
 
-    def get_mastery_state(self):
+    def get_mastery_state(self) -> float:
         return self.mastery_state
 
-    def set_mastery_state(self, mastery_state):
+    def set_mastery_state(self, mastery_state: float) -> None:
         self.mastery_state = mastery_state
         for s in self.students:
             self.students[s].refresh()
 
     # NATIVE PYTHON FUNCTIONS
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'SkillRoster({len(self.students)!r}, {self.skill!r}, {self.mastery_state!r}, {self.track_progress!r}, {self.model!r})'
 
 class State:
-    def __init__(self, state_type, state = None, roster = None):
+    def __init__(self, state_type: StateType, state: StatePredictions | None = None,
+                 roster: "SkillRoster | None" = None) -> None:
         self.state_type = state_type
         self.roster = roster
-        self.tracked_states = []
+        self.tracked_states: list[StatePredictions] = []
+        self.current_state: StatePredictions
         if state is not None:
             self.current_state = state
-        elif self.roster.model is not None and self.roster.model.fit_model and self.roster.skill in self.roster.model.fit_model:
-            self.current_state = {'correct_prediction': -1, 'state_prediction': self.roster.model.fit_model[self.roster.skill]['prior']}
+            return
+        model = self._roster().model
+        if model is not None and model.fit_model and self._roster().skill in model.fit_model:
+            self.current_state = {'correct_prediction': -1, 'state_prediction': model._fitted_model(self._roster().skill)['prior']}
             self.update(-1, {}, append = False)
         else:
             self.current_state = {'correct_prediction': -1, 'state_prediction': -1}
 
-    def get_mastery_prob(self):
+    def _roster(self) -> "SkillRoster":
+        assert self.roster is not None, "a State needs its SkillRoster to make predictions"
+        return self.roster
+
+    def get_mastery_prob(self) -> float:
         return self.current_state['state_prediction']
 
-    def get_correct_prob(self):
+    def get_correct_prob(self) -> float:
         return self.current_state['correct_prediction']
 
-    def update(self, correct, kwargs, append = True):
+    def update(self, correct: int | IntArray, kwargs: UpdateOptions, append: bool = True) -> None:
         if isinstance(correct, int):
             data = self.process_data(np.array([correct]), kwargs, append = append)
         elif isinstance(correct, np.ndarray):
             data = self.process_data(correct, kwargs, append = append)
         else:
             raise TypeError("need to pass int or np.ndarray")
-        correct_predictions, state_predictions = self.predict(self.roster.model, self.roster.skill, data, self.current_state)
+        roster = self._roster()
+        # process_data has already raised ValueError if the roster has no model.
+        assert roster.model is not None
+        correct_predictions, state_predictions = self.predict(roster.model, roster.skill, data, self.current_state)
         self.current_state['correct_prediction'] = correct_predictions[-1]
         self.current_state['state_prediction'] = state_predictions[-1]
-        
-        if self.roster.track_progress:
-            self.tracked_states.append(dict(self.current_state))
+
+        if roster.track_progress:
+            self.tracked_states.append(self.current_state.copy())
         self.refresh()
 
-    def process_data(self, corrects, kwargs, append = True):
-        if self.roster.model is None:
+    def process_data(self, corrects: IntArray, kwargs: UpdateOptions, append: bool = True) -> SequenceData:
+        roster = self._roster()
+        if roster.model is None:
             raise ValueError("model not specified")
         multilearn, multigs = [kwargs.get(t, False) for t in ('multilearn', 'multigs')]
-        gs_ref = self.roster.model.fit_model[self.roster.skill]['gs_names']
-        resource_ref = self.roster.model.fit_model[self.roster.skill]['resource_names']
+        fitted = roster.model._fitted_model(roster.skill)
+        gs_ref = fitted['gs_names']
+        resource_ref = fitted['resource_names']
         if append:
             corrects = np.append(corrects, [-1])
         if set(corrects) - {-1, 0, 1} != set():
@@ -570,28 +615,30 @@ class State:
         else:
             data = np.asarray([data], dtype='int')
 
-        Data = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data}
+        Data: SequenceData = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data}
         return Data
 
-    def predict(self, model, skill, data, state):
+    def predict(self, model: Model, skill: str, data: SequenceData,
+                state: StatePredictions) -> tuple[FloatArray, FloatArray]:
+        fitted = model._fitted_model(self._roster().skill)
         if state['state_prediction'] > 0:
-            old_prior = model.fit_model[self.roster.skill]['pi_0']
-            model.fit_model[self.roster.skill]['pi_0'] = np.array([[1 - state['state_prediction']], [state['state_prediction']]])
-            model.fit_model[self.roster.skill]['prior'] = model.fit_model[self.roster.skill]['pi_0'][1][0]
-        correct_predictions, state_predictions = model._predict(model.fit_model[skill], data)
-        model.fit_model[self.roster.skill]['pi_0'] = old_prior if state['state_prediction'] > 0 else model.fit_model[self.roster.skill]['pi_0']
-        model.fit_model[self.roster.skill]['prior'] = model.fit_model[self.roster.skill]['pi_0'][1][0]
+            old_prior = fitted['pi_0']
+            fitted['pi_0'] = np.array([[1 - state['state_prediction']], [state['state_prediction']]])
+            fitted['prior'] = fitted['pi_0'][1][0]
+        correct_predictions, state_predictions = model._predict(model._fitted_model(skill), data)
+        fitted['pi_0'] = old_prior if state['state_prediction'] > 0 else fitted['pi_0']
+        fitted['prior'] = fitted['pi_0'][1][0]
         return correct_predictions, state_predictions[1]
 
-    def refresh(self):
+    def refresh(self) -> None:
         if self.current_state['state_prediction'] == -1:
             self.state_type = StateType.DEFAULT_STATE
-        elif self.current_state['state_prediction'] >= self.roster.mastery_state:
+        elif self.current_state['state_prediction'] >= self._roster().mastery_state:
             self.state_type = StateType.MASTERED
         else:
             self.state_type = StateType.UNMASTERED
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         stype = repr(self.state_type)
         stype = stype[stype.index('<') + 1: stype.index(':')]
         return 'State({}, {}, {})'.format(stype, repr(self.current_state), 'Roster(...)')
