@@ -1,0 +1,17 @@
+# clang-tidy checks for the C++ extensions in source-cpp/pyBKT/fit and
+# source-cpp/pyBKT/generate. Run them with: python tests/run_clang_tidy.py
+#
+# bugprone-easily-swappable-parameters is off: it flags any two adjacent
+# parameters of the same type, which every C API helper here has.
+Checks: >-
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  openmp-*,
+  performance-*,
+  portability-*,
+  readability-misleading-indentation
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'source-cpp/pyBKT/(fit|generate)/'

@@ -28,12 +28,13 @@ FILES = {'synthetic_data_helper.cpp': 'source-cpp/pyBKT/generate/',
          'predict_onestep_states.cpp': 'source-cpp/pyBKT/fit/', 
          'E_step.cpp': 'source-cpp/pyBKT/fit/'}
 
+# The extensions need C++11 or newer, which not every compiler uses by default.
 if platform.system() == 'Darwin':
-    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++', '-Xpreprocessor', '-fopenmp']
+    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-std=gnu++17', '-stdlib=libc++', '-Xpreprocessor', '-fopenmp']
     ALL_LINK_ARGS = ['-stdlib=libc++']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm', 'omp']
 else:
-    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
+    ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-std=gnu++17', '-fopenmp', '-O2']
     ALL_LINK_ARGS = ['-fopenmp']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm']
 INCLUDE_DIRS = sys.path + ['source-cpp/pyBKT/Eigen/', get_paths()['include']]
