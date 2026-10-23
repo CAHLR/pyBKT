@@ -10,15 +10,15 @@
 using namespace Eigen;
 using namespace std;
 
-static double extract_double(PyArrayObject *arr, int i) {
+static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
     return ((double*) PyArray_DATA(arr))[i];
 }
 
-static double extract_double_2d(PyArrayObject *arr, int i, int j) {
+static double extract_double_2d(PyArrayObject *arr, Py_ssize_t i, Py_ssize_t j) {
     return ((double*) PyArray_DATA(arr))[i * PyArray_DIM(arr, 1) + j];
 }
 
-static double extract_int64_t(PyArrayObject *arr, int i) {
+static int64_t extract_int64_t(PyArrayObject *arr, Py_ssize_t i) {
     return ((int64_t*) PyArray_DATA(arr))[i];
 }
 
@@ -133,17 +133,15 @@ static PyObject* run(PyObject * module, PyObject * args) {
     }
     prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    int bigT = (int) PyArray_DIM(alldata, 1), num_subparts = (int) PyArray_DIM(alldata, 0);
-    int len_allresources = (int) PyArray_DIM(allresources, 0);
+    Index bigT = PyArray_DIM(alldata, 1);
     int num_sequences = (int) PyArray_DIM(starts, 0);
-    int len_lengths = (int) PyArray_DIM(lengths, 0);
-    int num_resources = (int) PyArray_DIM(learns, 0);
+    Index num_resources = PyArray_DIM(learns, 0);
 
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
 
     MatrixXd As(2,2*num_resources);
-    for (int n=0; n<num_resources; n++) {
+    for (Index n=0; n<num_resources; n++) {
         double learn = extract_double(learns, n);
         double forget = extract_double(forgets, n);
         As.col(2*n) << 1-learn, learn;
@@ -154,7 +152,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     //numpy::ndarray all_forward_messages = extract<numpy::ndarray>(forward_messages);
     double * forward_messages_temp = new double[2*bigT];
     for (int i=0; i<2; i++) {
-        for (int j=0; j<bigT; j++){
+        for (Index j=0; j<bigT; j++){
             forward_messages_temp[i* bigT +j] = extract_double_2d(forward_messages, i, j);
         }
     }
@@ -166,7 +164,8 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     /* COMPUTATION */
 
-    #pragma omp parallel for if(parallel)
+    #pragma omp parallel for if(parallel) default(none) \
+        shared(num_sequences, starts, lengths, allresources, forward_messages_temp, all_predictions, initial_distn, As)
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
         // NOTE: -1 because Matlab indexing starts at 1
         int64_t sequence_start = extract_int64_t(starts, sequence_index) - 1;
