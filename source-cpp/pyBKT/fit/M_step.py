@@ -1,7 +1,10 @@
 import numpy as np
 
+from pyBKT.util.structures import FixedParams, FloatArray, Params
 
-def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = None):
+
+def run(model: Params, trans_softcounts: FloatArray, emission_softcounts: FloatArray, init_softcounts: FloatArray,
+        fixed: FixedParams | None = None) -> Params:
     if fixed is None:
         fixed = {}
 
@@ -60,7 +63,6 @@ def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = N
         model['pi_0'] = np.array([[1 - fixed['prior']], [fixed['prior']]])
         model['prior'] = model['pi_0'][1][0]
     else:
-        temp = np.sum(init_softcounts[:])
         model['pi_0'] = init_softcounts[:] / np.sum(init_softcounts[:])
         model['prior'] = model['pi_0'][1][0]
 

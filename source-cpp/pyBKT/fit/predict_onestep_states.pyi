@@ -1,5 +1,3 @@
-from typing import Any
+from pyBKT.util.structures import CoreParams, FloatArray, SequenceData
 
-import numpy as np
-
-def run(data: dict[str, Any], model: dict[str, Any], forward_messages: np.ndarray, parallel: int, /) -> np.ndarray: ...
+def run(data: SequenceData, model: CoreParams, forward_messages: FloatArray, parallel: int, /) -> FloatArray: ...

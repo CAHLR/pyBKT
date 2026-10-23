@@ -1,3 +1,8 @@
-from typing import Any
+from pyBKT.util.structures import (
+    CompiledEStepResult,
+    CoreParams,
+    FixedParams,
+    SequenceData,
+)
 
-def run(data: dict[str, Any], model: dict[str, Any], num_outputs: int, parallel: int, fixed: dict[str, Any], /) -> dict[str, Any]: ...
+def run(data: SequenceData, model: CoreParams, num_outputs: int, parallel: int, fixed: FixedParams, /) -> CompiledEStepResult: ...

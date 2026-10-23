@@ -19,6 +19,7 @@ import pandas as pd
 from pyBKT.fit import EM_fit, predict_onestep
 from pyBKT.generate import random_model_uni
 from pyBKT.util import check_data, crossvalidate, data_helper, metrics
+from pyBKT.util.structures import FixedParams, Params, is_fixed_name, is_param_name
 
 pd.options.display.float_format = '{:,.5f}'.format
 
@@ -416,11 +417,11 @@ class Model:
             self._check_fixed(self)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
-        best_model: dict[str, Any] | None = None
+        best_model: Params | None = None
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs, rand=self.rand)
-            optional_args: dict[str, dict[str, Any]] = {'fixed': {}}
+            fixed: FixedParams = {}
             if forgets:
                 fitmodel["forgets"] = self.rand.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
@@ -429,15 +430,16 @@ class Model:
                 for var in self.fit_model[skill]:
                     if self.fixed is not None and skill in self.fixed and var in self.fixed[skill] and \
                             isinstance(self.fixed[skill][var], bool) and self.fixed[skill][var]:
-                        optional_args['fixed'][var] = self.fit_model[skill][var] 
-                    elif var in fitmodel:
+                        if is_fixed_name(var):
+                            fixed[var] = self.fit_model[skill][var]
+                    elif is_param_name(var) and var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
             if hasattr(self, "fixed") and self.fixed is not None and skill in self.fixed:
                 for var in self.fixed[skill]:
-                    if not isinstance(self.fixed[skill][var], bool):
-                        optional_args['fixed'][var] = self.fixed[skill][var]
+                    if not isinstance(self.fixed[skill][var], bool) and is_fixed_name(var):
+                        fixed[var] = self.fixed[skill][var]
             if not preload:
-                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, **optional_args)
+                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, fixed = fixed)
                 if log_likelihoods[-1] > best_likelihood:
                     best_likelihood = log_likelihoods[-1]
                     best_model = fitmodel

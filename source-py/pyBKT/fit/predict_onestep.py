@@ -7,16 +7,16 @@
 # Last edited: 20 March 2020            #
 #########################################
 
-from typing import Any
 
 import numpy as np
 
 from pyBKT.fit.EM_fit import run as E_step_run
+from pyBKT.util.structures import CoreParams, FloatArray, SequenceData
 
 
 # correct_emission_predictions is a  num_subparts x T array, where element
 # (i,t) is predicted probability that answer to subpart i at time t+1 is correct
-def run(model, data, parallel = True):
+def run(model: CoreParams, data: SequenceData, parallel: bool = True) -> tuple[FloatArray, FloatArray]:
 
     num_subparts = data["data"].shape[0]  # mmm the first dimension of data represents each subpart?? interesting.
     num_resources = len(model["learns"])
@@ -25,12 +25,7 @@ def run(model, data, parallel = True):
     emission_softcounts = np.zeros((num_subparts, 2, 2))
     init_softcounts = np.zeros((2, 1))
 
-    result: dict[str, Any] = {}
-    result['all_trans_softcounts'] = trans_softcounts
-    result['all_emission_softcounts'] = emission_softcounts
-    result['all_initial_softcounts'] = init_softcounts
-
-    result = E_step_run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel)
+    result = E_step_run(data, model, trans_softcounts, emission_softcounts, init_softcounts, 1, parallel)
     for j in range(num_resources):
         result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
     for j in range(num_subparts):
@@ -42,7 +37,7 @@ def run(model, data, parallel = True):
     flattened_predictions = np.take_along_axis(correct_emission_predictions, (data['data'] != 0).argmax(axis = 0)[:, None].T, axis = 0)
     return (flattened_predictions.ravel(), state_predictions)
 
-def predict_onestep_states(data, model, forward_messages):
+def predict_onestep_states(data: SequenceData, model: CoreParams, forward_messages: FloatArray) -> FloatArray:
     alldata, allresources, starts, lengths, learns, forgets, _guesses, _slips, prior = \
             data["data"], data["resources"], data["starts"], data["lengths"], \
             model["learns"], model["forgets"], model["guesses"], model["slips"], \
@@ -77,5 +72,5 @@ def predict_onestep_states(data, model, forward_messages):
 
     return all_predictions.reshape((2, bigT), order = 'F')
 
-def interleave(m, v1, v2):
+def interleave(m: FloatArray, v1: FloatArray, v2: FloatArray) -> None:
         m[0::2], m[1::2] = v1, v2

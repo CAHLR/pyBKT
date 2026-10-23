@@ -9,14 +9,45 @@
 import io
 import os
 import re
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Literal, overload
 
 import numpy as np
 import pandas as pd
 import requests
 
+from pyBKT.util.structures import NameMap, NameRefs, SkillData
 
-def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, resource_refs=None, return_df = False, folds=False):
+
+@overload
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
+                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 resource_refs: Mapping[str, NameRefs] | None = ..., return_df: Literal[False] = ...,
+                 folds: bool = ...) -> dict[str, SkillData]: ...
+@overload
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None,
+                 model_type: Sequence[bool] | None, gs_refs: Mapping[str, NameRefs] | None,
+                 resource_refs: Mapping[str, NameRefs] | None, return_df: Literal[True],
+                 folds: bool = ...) -> tuple[dict[str, SkillData], pd.DataFrame]: ...
+@overload
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
+                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 resource_refs: Mapping[str, NameRefs] | None = ..., *, return_df: Literal[True],
+                 folds: bool = ...) -> tuple[dict[str, SkillData], pd.DataFrame]: ...
+@overload
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None,
+                 model_type: Sequence[bool] | None, gs_refs: Mapping[str, NameRefs] | None,
+                 resource_refs: Mapping[str, NameRefs] | None, return_df: bool,
+                 folds: bool = ...) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]: ...
+@overload
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
+                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 resource_refs: Mapping[str, NameRefs] | None = ..., *, return_df: bool,
+                 folds: bool = ...) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]: ...
+def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = None,
+                 model_type: Sequence[bool] | None = None, gs_refs: Mapping[str, NameRefs] | None = None,
+                 resource_refs: Mapping[str, NameRefs] | None = None, return_df: bool = False,
+                 folds: bool = False) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]:
     if model_type:
         multilearn, multiprior, multipair, multigs = model_type
     else:
@@ -128,7 +159,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     except (TypeError, ValueError, OverflowError) as error:
         raise ValueError("Invalid Data In Specified Corrects Column") from error
     
-    datas = {}
+    datas: dict[str, SkillData] = {}
     skill_name = '^(' + skill_name + ')$'
     all_skills = pd.Series(df[defaults["skill_name"]].unique()).dropna()
     all_skills = all_skills[all_skills.str.match(skill_name).astype(bool)]
@@ -136,6 +167,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         raise ValueError("no matching skills")
     for skill_ in all_skills:
         
+        resource_ref: NameMap | None
+        gs_ref: NameMap | None
         if resource_refs is None or skill_ not in resource_refs:
             resource_ref = None
         else:
@@ -161,8 +194,6 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         # array representing correctness of student answers
         data=np.array(df3[defaults["correct"]])
         
-        Data: dict[str, Any] = {}
-    
         # create starts and lengths arrays
         lengths = np.array(df3.groupby(defaults["user_id"])[defaults["user_id"]].count().values, dtype=np.int64)
         starts = np.zeros(len(lengths), dtype=np.int64)
@@ -276,9 +307,9 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             data_temp = np.zeros((len(df3[defaults["multigs"]].unique()), len(df3)))
             for i in range(len(data_temp[0])):
                 data_temp[data_ref[i]][i] = data[i]
-            Data["data"]=np.asarray(data_temp,dtype='int32')
+            answers = np.asarray(data_temp,dtype='int32')
         else:
-            Data["data"]=np.asarray([data],dtype='int32')
+            answers = np.asarray([data],dtype='int32')
 
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
@@ -288,13 +319,11 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             gs_ref = {}
             gs_ref["default"]=1
             
-        Data["starts"]=starts
-        Data["lengths"]=lengths
-        Data["resources"]=resources
-        Data["resource_names"]=resource_ref
-        Data["gs_names"]=gs_ref
-        Data["index"]=stored_index
-        Data["multiprior_index"]=multiprior_index
+        # Every branch above has set both name maps by now.
+        assert resource_ref is not None and gs_ref is not None
+        Data: SkillData = {"data": answers, "starts": starts, "lengths": lengths, "resources": resources,
+                           "resource_names": resource_ref, "gs_names": gs_ref, "index": stored_index,
+                           "multiprior_index": multiprior_index}
         if folds:
             Data["folds"] = np.array(df3[defaults["folds"]])
 

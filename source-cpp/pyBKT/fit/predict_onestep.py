@@ -2,11 +2,13 @@
 import numpy as np
 
 from pyBKT.fit import E_step, predict_onestep_states
+from pyBKT.util.structures import CoreParams, FixedParams, FloatArray, SequenceData
 
 
 # correct_emission_predictions is a  num_subparts x T array, where element
 # (i,t) is predicted probability that answer to subpart i at time t+1 is correct
-def run(model, data, parallel = True, fixed = None):
+def run(model: CoreParams, data: SequenceData, parallel: bool = True,
+        fixed: FixedParams | None = None) -> tuple[FloatArray, FloatArray]:
     if fixed is None:
         fixed = {}
 

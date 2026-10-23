@@ -1,5 +1,3 @@
-from typing import Any
+from pyBKT.util.structures import CoreParams, IntArray, SyntheticDraws
 
-import numpy as np
-
-def create_synthetic_data(model: dict[str, Any], starts: np.ndarray, lengths: np.ndarray, resources: np.ndarray, /) -> dict[str, np.ndarray]: ...
+def create_synthetic_data(model: CoreParams, starts: IntArray, lengths: IntArray, resources: IntArray, /) -> SyntheticDraws: ...

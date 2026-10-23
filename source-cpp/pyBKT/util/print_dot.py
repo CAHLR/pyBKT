@@ -1,7 +1,7 @@
 import sys
 
 
-def print_dot(num, tot, newline_every=None):
+def print_dot(num: float, tot: float, newline_every: int | None = None) -> None:
     if newline_every == None: newline_every = 25
     sys.stdout.write('.')
 
