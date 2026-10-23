@@ -76,3 +76,17 @@ def test_model_fit_is_consistent(response_frames, monkeypatch):
     np.testing.assert_allclose(
         parameters[0], parameters[1], rtol=1e-7, atol=1e-9
     )
+
+@pytest.mark.parametrize("source_dir", ["source-cpp", "source-py"])
+@pytest.mark.parametrize("missing_id", [None, np.nan])
+def test_convert_data_rejects_missing_user_ids(source_dir, missing_id):
+    helper = load_data_helper(source_dir)
+
+    attempts = pd.DataFrame({
+        "user_id": ["student1", missing_id, "student2"],
+        "skill_name": ["s", "s", "s"],
+        "correct": [1, 0, 1],
+    })
+
+    with pytest.raises(ValueError, match="user_id"):
+        helper.convert_data(attempts, "s")
