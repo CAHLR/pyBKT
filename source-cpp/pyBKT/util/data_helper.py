@@ -33,7 +33,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             try:
                 # assume comma delimiter
                 df = pd.read_csv(url, low_memory=False, encoding="latin")
-            except:
+            except pd.errors.ParserError:
                 # try tab delimiter if comma delimiter fails
                 df = pd.read_csv(url, low_memory=False, encoding="latin", delimiter='\t')
         
@@ -41,12 +41,12 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         elif len(url) > 4 and url[:4] == "http":
             s = requests.get(url).content
             try:
-                df = pd.read_csv(s, low_memory=False, encoding="latin")
-            except:
-                df = pd.read_csv(s, low_memory=False, encoding="latin", delimiter='\t')
-            f = open(url.split('/')[-1], 'w+')
+                df = pd.read_csv(io.BytesIO(s), low_memory=False, encoding="latin")
+            except pd.errors.ParserError:
+                df = pd.read_csv(io.BytesIO(s), low_memory=False, encoding="latin", delimiter='\t')
             # save csv to local file for quick lookup in the future
-            df.to_csv(f)
+            with open(url.split('/')[-1], 'w+') as f:
+                df.to_csv(f)
         else:
             raise ValueError("File path or dataframe input not found")
 
@@ -123,8 +123,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     df[defaults["skill_name"]] = df[defaults["skill_name"]].apply(str)
     try:
         df[defaults["correct"]] = df[defaults["correct"]].apply(int)
-    except:
-        raise ValueError("Invalid Data In Specified Corrects Column")
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ValueError("Invalid Data In Specified Corrects Column") from error
     
     datas = {}
     skill_name = '^(' + skill_name + ')$'
