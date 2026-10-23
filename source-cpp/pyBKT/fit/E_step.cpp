@@ -25,7 +25,7 @@ using namespace std;
 //a branch"
 //
 
-static double extract_double(PyArrayObject *arr, int i) {
+static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
     return ((double*) PyArray_DATA(arr))[i];
 }
 
@@ -164,11 +164,11 @@ static PyObject* run(PyObject * module, PyObject * args) {
     }
     prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    int bigT = (int) PyArray_DIM(alldata, 1), num_subparts = (int) PyArray_DIM(alldata, 0);
+    Index bigT = PyArray_DIM(alldata, 1), num_subparts = PyArray_DIM(alldata, 0);
     int len_allresources = (int) PyArray_DIM(allresources, 0);
     int num_sequences = (int) PyArray_DIM(starts, 0);
     int len_lengths = (int) PyArray_DIM(lengths, 0);
-    int num_resources = (int) PyArray_DIM(learns, 0);
+    Index num_resources = PyArray_DIM(learns, 0);
 
     Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_DATA(alldata)),num_subparts,bigT);
     Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(PyArray_DATA(allresources)),len_allresources,1);
@@ -208,7 +208,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2,2*num_resources);
-    for (int n=0; n<num_resources; n++) {
+    for (Index n=0; n<num_resources; n++) {
         double learn = -1;
         double forget = -1;
         if (fixed_learn) {
@@ -229,7 +229,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     
         
     Array2Xd Bn(2,2*num_subparts);
-    for (int n=0; n<num_subparts; n++) {
+    for (Index n=0; n<num_subparts; n++) {
         double guess = -1;
         double slip = -1;
         if (fixed_guess) {
@@ -266,9 +266,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     all_emission_softcounts.setZero();
     Array2d all_initial_softcounts(2, 1); //should i use these dimensions? the same as the original vector??
     all_initial_softcounts.setZero();*/
-    double* r_trans_softcounts = new double[2*2*num_resources];
-    double* r_emission_softcounts = new double[2*2*num_subparts];
-    double* r_init_softcounts = new double[2*1];
+    double* r_trans_softcounts = new double[2*(2*num_resources)];
+    double* r_emission_softcounts = new double[2*(2*num_subparts)];
+    double* r_init_softcounts = new double[2];
     Map<ArrayXXd,Aligned> all_trans_softcounts(r_trans_softcounts,2,2*num_resources);
     all_trans_softcounts.setZero();
     Map<Array2Xd,Aligned> all_emission_softcounts(r_emission_softcounts,2,2*num_subparts);
@@ -307,11 +307,14 @@ static PyObject* run(PyObject * module, PyObject * args) {
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
     /* COMPUTATION */
-    #pragma omp parallel if(parallel)
+    #pragma omp parallel if(parallel) default(none) \
+        shared(num_resources, num_subparts, num_sequences, starts_arr, lengths_arr, alldata_arr, allresources_arr, \
+               Bn, As, initial_distn, normalizeLengths, alpha_out, all_trans_softcounts, all_emission_softcounts, \
+               all_initial_softcounts, total_loglike)
     {
         // heap, not stack: long sequences or many resources overflow a thread's stack
-        vector<double> s_trans_softcounts(2*2*num_resources);
-        vector<double> s_emission_softcounts(2*2*num_subparts);
+        vector<double> s_trans_softcounts(2*(2*num_resources));
+        vector<double> s_emission_softcounts(2*(2*num_subparts));
         vector<double> s_likelihoods, s_alpha, s_gamma;
         Map<ArrayXXd,Unaligned> trans_softcounts_temp(s_trans_softcounts.data(),2,2*num_resources);
         Map<ArrayXXd,Unaligned> emission_softcounts_temp(s_emission_softcounts.data(),2,2*num_subparts);
@@ -363,7 +366,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
             alpha.col(0) = initial_distn * likelihoods.col(0);
             norm = alpha.col(0).sum();
             alpha.col(0) /= norm;
-            loglike += log(norm) / (normalizeLengths? T : 1);
+            loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
 
             for (int t=0; t<T-1; t++) {
                 int64_t resources_temp = allresources_arr(sequence_start+t, 0);
@@ -371,7 +374,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
                     * likelihoods.col(t+1);
                 norm = alpha.col(t+1).sum();
                 alpha.col(t+1) /= norm;
-                loglike += log(norm) / (normalizeLengths? T : 1);
+                loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
             }
 
             //// backward messages and statistic counting
@@ -385,7 +388,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
                 }
             }
 
-            for (int t=T-2; t>=0; t--) {
+            for (int64_t t=T-2; t>=0; t--) {
 
 				int64_t resources_temp = allresources_arr(sequence_start+t, 0);
                 Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
