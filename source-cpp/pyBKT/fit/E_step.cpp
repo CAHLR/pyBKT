@@ -8,8 +8,13 @@
 
 #define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
 
-#include <iostream>
-#include <stdint.h>
+#include <algorithm>
+#include <array>
+#include <climits>
+#include <cmath>
+#include <cstdint>
+#include <initializer_list>
+#include <string>
 #include <vector>
 #include <Eigen/Core>
 #include <omp.h>
@@ -17,7 +22,6 @@
 #include <numpy/ndarrayobject.h>
 
 using namespace Eigen;
-using namespace std;
 
 //original comment:
 //"TODO if we aren't outputting gamma, don't need to write it to memory (just
@@ -25,8 +29,48 @@ using namespace std;
 //a branch"
 //
 
-static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
-    return ((double*) PyArray_DATA(arr))[i];
+using Int64Vector = Map<const Matrix<int64_t, Dynamic, 1>>;
+using DoubleVector = Map<const VectorXd>;
+
+// NumPy's C API passes arrays as PyObject *, and every PyArrayObject begins with that header.
+static PyArrayObject *as_array(PyObject *object) {
+    return reinterpret_cast<PyArrayObject *>(object); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+}
+
+static Int64Vector int64_vector(PyArrayObject *arr) {
+    return {static_cast<const int64_t *>(PyArray_DATA(arr)), PyArray_SIZE(arr)};
+}
+
+static DoubleVector double_vector(PyArrayObject *arr) {
+    return {static_cast<const double *>(PyArray_DATA(arr)), PyArray_SIZE(arr)};
+}
+
+static void set_value_error(const std::string &message) {
+    PyErr_SetString(PyExc_ValueError, message.c_str());
+}
+
+// Owns one new reference and releases it on scope exit.
+template <typename T>
+struct OwnedReference {
+    T *pointer = nullptr;
+    OwnedReference() = default;
+    OwnedReference(const OwnedReference &) = delete;
+    OwnedReference &operator=(const OwnedReference &) = delete;
+    OwnedReference(OwnedReference &&) = delete;
+    OwnedReference &operator=(OwnedReference &&) = delete;
+    ~OwnedReference() { Py_XDECREF(pointer); }
+};
+
+// Reads an int argument the way PyArg_ParseTuple's "i" format does. Returns false with an exception set otherwise.
+static bool parse_int(PyObject *object, long &value) {
+    value = PyLong_AsLong(object);
+    if (value == -1 && PyErr_Occurred() != nullptr)
+        return false;
+    if (value < INT_MIN || value > INT_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "signed integer is out of range for a C int");
+        return false;
+    }
+    return true;
 }
 
 // Sets a ValueError and returns false when the shape or contents of an input would
@@ -36,42 +80,48 @@ static bool check_inputs(PyArrayObject *alldata, PyArrayObject *allresources, Py
                          PyArrayObject *guesses, PyArrayObject *slips) {
     if (PyArray_NDIM(alldata) != 2 || PyArray_NDIM(allresources) != 1 || PyArray_NDIM(starts) != 1 ||
         PyArray_NDIM(lengths) != 1 || PyArray_NDIM(learns) < 1) {
-        PyErr_SetString(PyExc_ValueError, "data must be 2-D, and resources, starts, lengths and learns 1-D");
+        set_value_error("data must be 2-D, and resources, starts, lengths and learns 1-D");
         return false;
     }
-    Py_ssize_t bigT = PyArray_DIM(alldata, 1), num_sequences = PyArray_DIM(starts, 0);
-    Py_ssize_t len_allresources = PyArray_DIM(allresources, 0), num_resources = PyArray_DIM(learns, 0);
-    Py_ssize_t num_subparts = PyArray_DIM(alldata, 0);
+    const Py_ssize_t bigT = PyArray_DIM(alldata, 1);
+    const Py_ssize_t num_sequences = PyArray_DIM(starts, 0);
+    const Py_ssize_t len_allresources = PyArray_DIM(allresources, 0);
+    const Py_ssize_t num_resources = PyArray_DIM(learns, 0);
+    const Py_ssize_t num_subparts = PyArray_DIM(alldata, 0);
     if (PyArray_SIZE(forgets) < num_resources || PyArray_SIZE(guesses) < num_subparts || PyArray_SIZE(slips) < num_subparts) {
-        PyErr_Format(PyExc_ValueError, "learns has %zd entries and data has %zd rows, but forgets, guesses and slips have %zd, %zd and %zd",
-                     num_resources, num_subparts, (Py_ssize_t) PyArray_SIZE(forgets), (Py_ssize_t) PyArray_SIZE(guesses),
-                     (Py_ssize_t) PyArray_SIZE(slips));
+        set_value_error("learns has " + std::to_string(num_resources) + " entries and data has " +
+                        std::to_string(num_subparts) + " rows, but forgets, guesses and slips have " +
+                        std::to_string(PyArray_SIZE(forgets)) + ", " + std::to_string(PyArray_SIZE(guesses)) +
+                        " and " + std::to_string(PyArray_SIZE(slips)));
         return false;
     }
     if (PyArray_DIM(lengths, 0) != num_sequences) {
-        PyErr_Format(PyExc_ValueError, "starts has %zd entries but lengths has %zd", num_sequences, (Py_ssize_t) PyArray_DIM(lengths, 0));
+        set_value_error("starts has " + std::to_string(num_sequences) + " entries but lengths has " +
+                        std::to_string(PyArray_DIM(lengths, 0)));
         return false;
     }
-    int64_t *start_values = (int64_t*) PyArray_DATA(starts), *length_values = (int64_t*) PyArray_DATA(lengths);
-    int64_t *resource_values = (int64_t*) PyArray_DATA(allresources);
+    const Int64Vector start_values = int64_vector(starts);
+    const Int64Vector length_values = int64_vector(lengths);
+    const Int64Vector resource_values = int64_vector(allresources);
     for (Py_ssize_t k = 0; k < num_sequences; k++) {
-        int64_t start = start_values[k], T = length_values[k];
+        const int64_t start = start_values(k);
+        const int64_t T = length_values(k);
         // T > bigT - (start - 1) means start - 1 + T > bigT, written so it cannot overflow.
         if (start < 1 || T < 1 || T > bigT - (start - 1)) {
-            PyErr_Format(PyExc_ValueError, "sequence %zd has start %lld and length %lld but data has %zd columns",
-                         k, (long long) start, (long long) T, bigT);
+            set_value_error("sequence " + std::to_string(k) + " has start " + std::to_string(start) + " and length " +
+                            std::to_string(T) + " but data has " + std::to_string(bigT) + " columns");
             return false;
         }
         // The forward and backward loops both read resources only at t < T - 1.
         if (T > 1 && start - 1 + T - 2 >= len_allresources) {
-            PyErr_Format(PyExc_ValueError, "sequence %zd needs %lld resources entries but resources has %zd",
-                         k, (long long) (start - 1 + T - 1), len_allresources);
+            set_value_error("sequence " + std::to_string(k) + " needs " + std::to_string(start - 1 + T - 1) +
+                            " resources entries but resources has " + std::to_string(len_allresources));
             return false;
         }
         for (int64_t t = start - 1; t < start - 1 + T - 1; t++) {
-            if (resource_values[t] < 1 || resource_values[t] > num_resources) {
-                PyErr_Format(PyExc_ValueError, "resources has value %lld but learns has %zd entries",
-                             (long long) resource_values[t], num_resources);
+            if (resource_values(t) < 1 || resource_values(t) > num_resources) {
+                set_value_error("resources has value " + std::to_string(resource_values(t)) + " but learns has " +
+                                std::to_string(num_resources) + " entries");
                 return false;
             }
         }
@@ -81,230 +131,185 @@ static bool check_inputs(PyArrayObject *alldata, PyArrayObject *allresources, Py
 
 // Converts an integer array to the width run() reads. Rejects any other dtype,
 // which a cast would truncate, for example 1.7 to 1.
-static PyArrayObject* to_integer_array(PyObject *obj, int dtype, const char *name) {
-    PyArrayObject *raw = (PyArrayObject *) PyArray_FROM_O(obj);
-    if (raw == NULL)
-        return NULL;
-    PyArrayObject *result = NULL;
-    if (PyArray_ISINTEGER(raw))
-        result = (PyArrayObject *) PyArray_FROM_OTF((PyObject *) raw, dtype, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST);
-    else
-        PyErr_Format(PyExc_ValueError, "%s must hold integers, not %s", name, PyArray_DESCR(raw)->typeobj->tp_name);
-    Py_DECREF(raw);
-    return result;
+static PyArrayObject *to_integer_array(PyObject *obj, int dtype, const char *name) {
+    OwnedReference<PyObject> raw;
+    raw.pointer = PyArray_FROM_O(obj);
+    if (raw.pointer == nullptr)
+        return nullptr;
+    if (!PyArray_ISINTEGER(as_array(raw.pointer))) {
+        set_value_error(std::string(name) + " must hold integers, not " + PyArray_DESCR(as_array(raw.pointer))->typeobj->tp_name);
+        return nullptr;
+    }
+    return as_array(PyArray_FROM_OTF(raw.pointer, dtype, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
+}
+
+static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
+    return as_array(PyArray_FROM_OTF(obj, PyArray_ObjectType(obj, minimum_type), NPY_ARRAY_IN_ARRAY));
 }
 
 // Looks up an optional fixed-parameter array under the key Model uses and converts it to
-// doubles. Leaves *out NULL when the key is absent. A single value is allowed where
+// doubles. Leaves out empty when the key is absent. A single value is allowed where
 // can_broadcast is set, as M_step broadcasts it. Sets a ValueError when the array has
 // fewer than count entries otherwise, so run() never reads past its end.
 static bool get_fixed_array(PyObject *fixed, const char *key, Py_ssize_t count, bool can_broadcast,
-                            PyArrayObject **out) {
-    *out = NULL;
+                            OwnedReference<PyArrayObject> &out) {
     PyObject *value = PyDict_GetItemString(fixed, key);
-    if (value == NULL)
+    if (value == nullptr)
         return true;
-    *out = (PyArrayObject *) PyArray_FROM_OTF(value, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST);
-    if (*out == NULL)
+    out.pointer = as_array(PyArray_FROM_OTF(value, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
+    if (out.pointer == nullptr)
         return false;
-    if (PyArray_SIZE(*out) < count && !(can_broadcast && PyArray_SIZE(*out) == 1)) {
-        PyErr_Format(PyExc_ValueError, "fixed %s has %zd entries but the model has %zd",
-                     key, (Py_ssize_t) PyArray_SIZE(*out), count);
-        Py_CLEAR(*out);
+    if (PyArray_SIZE(out.pointer) < count && !(can_broadcast && PyArray_SIZE(out.pointer) == 1)) {
+        set_value_error("fixed " + std::string(key) + " has " + std::to_string(PyArray_SIZE(out.pointer)) +
+                        " entries but the model has " + std::to_string(count));
         return false;
     }
     return true;
 }
 
-void capsule_cleanup(PyObject *capsule) {
-    double *memory = (double *) PyCapsule_GetPointer(capsule, NULL);
-    delete[] memory;
+// The fixed value for class n, or -1 when nothing is fixed. A single fixed value applies to every class.
+static double fixed_value(const OwnedReference<PyArrayObject> &fixed, Index n) {
+    if (fixed.pointer == nullptr)
+        return -1;
+    const DoubleVector values = double_vector(fixed.pointer);
+    return values(values.size() == 1 ? 0 : n);
 }
 
-static PyObject* run(PyObject * module, PyObject * args) {
-    //TODO: check if parameters are null.
+// A new uninitialized float64 array, so NumPy owns the memory the E-step writes into.
+static PyObject *new_double_array(std::initializer_list<npy_intp> shape) {
+    std::vector<npy_intp> dims(shape);
+    return PyArray_SimpleNew(static_cast<int>(dims.size()), dims.data(), NPY_DOUBLE);
+}
+
+static double *double_data(PyObject *array) {
+    return static_cast<double *>(PyArray_DATA(as_array(array)));
+}
+
+static PyObject* run(PyObject * /* module */, PyObject * args) {
     //TODO: check that dicts have the required members.
-    //TODO: check that all parameters have the right sizes.
-    //TODO: i'm not sending any error messages.
-    IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-    Eigen::initParallel();    
-    import_array();
+    Eigen::initParallel();
 
-    PyObject *data_ptr = NULL, *model_ptr = NULL, *t_softcounts = NULL, *e_softcounts = NULL, *i_softcounts = NULL, *fixed = NULL;
-    PyArrayObject *t_softcounts_np = NULL, *e_softcounts_np = NULL, *i_softcounts_np = NULL,
-                  *alldata = NULL, *allresources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL;   // Extended Numpy/C API
-    int num_outputs, parallel;
-    double prior;
-    // dict& data, dict& model, numpy::ndarray& trans_softcounts, numpy::ndarray& emission_softcounts, numpy::ndarray& init_softcounts, int num_outputs
-
-    // "O" format -> read argument as a PyObject type into argy (Python/C API)
-    if (!PyArg_ParseTuple(args, "OOiiO", &data_ptr, &model_ptr, &num_outputs, &parallel, &fixed)) {
-        PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
-        return NULL;
+    // data, model, num_outputs, parallel and fixed
+    constexpr Py_ssize_t num_arguments = 5;
+    long num_outputs = 0;
+    long parallel = 0;
+    if (PyTuple_GET_SIZE(args) != num_arguments || !parse_int(PyTuple_GET_ITEM(args, 2), num_outputs) ||
+        !parse_int(PyTuple_GET_ITEM(args, 3), parallel)) {
+        set_value_error("Error parsing arguments.");
+        return nullptr;
     }
+    PyObject *data_ptr = PyTuple_GET_ITEM(args, 0);
+    PyObject *model_ptr = PyTuple_GET_ITEM(args, 1);
+    PyObject *fixed = PyTuple_GET_ITEM(args, 4);
 
     // Load all the numpy arrays in data & model
-    char* DM_NAMES[] = {"data", "resources", "starts", "lengths", "learns", "forgets", "guesses", "slips"};
-    PyArrayObject** DM_PTRS[] = {&alldata, &allresources, &starts, &lengths, &learns, &forgets, &guesses, &slips};
-    bool is_valid = true;
-    for (int i = 0; is_valid && i < 8; i++) {
-        PyObject *dp = PyDict_GetItemString(i < 4 ? data_ptr : model_ptr, DM_NAMES[i]);
-        if (i < 4) {
-            *DM_PTRS[i] = to_integer_array(dp, i < 1 ? NPY_INT32 : NPY_INT64, DM_NAMES[i]);
-        } else {
-            int DTYPE = PyArray_ObjectType(dp, NPY_FLOAT); // hack to force correct type
-            *DM_PTRS[i] = (PyArrayObject *)PyArray_FROM_OTF(dp, DTYPE, NPY_ARRAY_IN_ARRAY);
-        }
-        is_valid = *DM_PTRS[i] != NULL;
+    OwnedReference<PyArrayObject> alldata, allresources, starts, lengths, learns, forgets, guesses, slips;
+    struct Input {
+        const char *name;
+        PyObject *source;
+        OwnedReference<PyArrayObject> *target;
+        int integer_type; // the width an integer input is converted to, or NPY_NOTYPE for a model array
+    };
+    const std::array<Input, 8> inputs = {{
+        {"data", data_ptr, &alldata, NPY_INT32},
+        {"resources", data_ptr, &allresources, NPY_INT64},
+        {"starts", data_ptr, &starts, NPY_INT64},
+        {"lengths", data_ptr, &lengths, NPY_INT64},
+        {"learns", model_ptr, &learns, NPY_NOTYPE},
+        {"forgets", model_ptr, &forgets, NPY_NOTYPE},
+        {"guesses", model_ptr, &guesses, NPY_NOTYPE},
+        {"slips", model_ptr, &slips, NPY_NOTYPE},
+    }};
+    for (const Input &input : inputs) {
+        PyObject *value = PyDict_GetItemString(input.source, input.name);
+        input.target->pointer = input.integer_type == NPY_NOTYPE ? to_array(value, NPY_FLOAT)
+                                                                 : to_integer_array(value, input.integer_type, input.name);
+        if (input.target->pointer == nullptr)
+            return nullptr;
     }
-    if (!is_valid || !check_inputs(alldata, allresources, starts, lengths, learns, forgets, guesses, slips)) {
-        for (int i = 0; i < 8; i++)
-            Py_XDECREF(*DM_PTRS[i]);
-        return NULL;
-    }
-    prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
+    if (!check_inputs(alldata.pointer, allresources.pointer, starts.pointer, lengths.pointer, learns.pointer,
+                      forgets.pointer, guesses.pointer, slips.pointer))
+        return nullptr;
+    double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    Index bigT = PyArray_DIM(alldata, 1), num_subparts = PyArray_DIM(alldata, 0);
-    int len_allresources = (int) PyArray_DIM(allresources, 0);
-    int num_sequences = (int) PyArray_DIM(starts, 0);
-    int len_lengths = (int) PyArray_DIM(lengths, 0);
-    Index num_resources = PyArray_DIM(learns, 0);
+    Index bigT = PyArray_DIM(alldata.pointer, 1), num_subparts = PyArray_DIM(alldata.pointer, 0);
+    int num_sequences = static_cast<int>(PyArray_DIM(starts.pointer, 0));
+    Index num_resources = PyArray_DIM(learns.pointer, 0);
 
-    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_DATA(alldata)),num_subparts,bigT);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(PyArray_DATA(allresources)),len_allresources,1);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> starts_arr(reinterpret_cast<int64_t*>(PyArray_DATA(starts)),num_sequences,1);
-    Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> lengths_arr(reinterpret_cast<int64_t*>(PyArray_DATA(lengths)),len_lengths,1);
+    Map<Array<int32_t,Dynamic,Dynamic,RowMajor>> alldata_arr(static_cast<int32_t *>(PyArray_DATA(alldata.pointer)),num_subparts,bigT);
+    Map<Array<int64_t, Eigen::Dynamic, 1>> allresources_arr(static_cast<int64_t *>(PyArray_DATA(allresources.pointer)),PyArray_DIM(allresources.pointer, 0),1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>> starts_arr(static_cast<int64_t *>(PyArray_DATA(starts.pointer)),num_sequences,1);
+    Map<Array<int64_t, Eigen::Dynamic, 1>> lengths_arr(static_cast<int64_t *>(PyArray_DATA(lengths.pointer)),PyArray_DIM(lengths.pointer, 0),1);
 
     bool normalizeLengths = false;
     //then the original code goes to find the optional parameters.
 
     PyObject* fixed_prior = PyDict_GetItemString(fixed, "prior");
-    PyArrayObject *fixed_learn = NULL, *fixed_forget = NULL, *fixed_guess = NULL, *fixed_slip = NULL;
-    if (!get_fixed_array(fixed, "learns", num_resources, false, &fixed_learn) ||
-        !get_fixed_array(fixed, "forgets", num_resources, false, &fixed_forget) ||
-        !get_fixed_array(fixed, "guesses", num_subparts, true, &fixed_guess) ||
-        !get_fixed_array(fixed, "slips", num_subparts, true, &fixed_slip)) {
-        Py_XDECREF(fixed_learn);
-        Py_XDECREF(fixed_forget);
-        Py_XDECREF(fixed_guess);
-        for (int i = 0; i < 8; i++)
-            Py_XDECREF(*DM_PTRS[i]);
-        return NULL;
-    }
+    OwnedReference<PyArrayObject> fixed_learn, fixed_forget, fixed_guess, fixed_slip;
+    if (!get_fixed_array(fixed, "learns", num_resources, false, fixed_learn) ||
+        !get_fixed_array(fixed, "forgets", num_resources, false, fixed_forget) ||
+        !get_fixed_array(fixed, "guesses", num_subparts, true, fixed_guess) ||
+        !get_fixed_array(fixed, "slips", num_subparts, true, fixed_slip))
+        return nullptr;
 
-    if (fixed_prior) {
+    if (fixed_prior != nullptr) {
         prior = PyFloat_AsDouble(fixed_prior);
-        if (prior == -1.0 && PyErr_Occurred()) {
-            Py_XDECREF(fixed_learn);
-            Py_XDECREF(fixed_forget);
-            Py_XDECREF(fixed_guess);
-            Py_XDECREF(fixed_slip);
-            for (int i = 0; i < 8; i++)
-                Py_XDECREF(*DM_PTRS[i]);
-            return NULL;
-        }
+        if (prior == -1.0 && PyErr_Occurred() != nullptr)
+            return nullptr;
     }
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
-    
+
+    const DoubleVector learn_values = double_vector(learns.pointer);
+    const DoubleVector forget_values = double_vector(forgets.pointer);
     MatrixXd As(2,2*num_resources);
     for (Index n=0; n<num_resources; n++) {
-        double learn = -1;
-        double forget = -1;
-        if (fixed_learn) {
-            learn = extract_double(fixed_learn, n);
-        }
+        double learn = fixed_value(fixed_learn, n);
         if (learn < 0) {
-            learn = extract_double(learns, n);
+            learn = learn_values(n);
         }
-        if (fixed_forget) {
-            forget = extract_double(fixed_forget, n);
-        }
+        double forget = fixed_value(fixed_forget, n);
         if (forget < 0) {
-            forget = extract_double(forgets, n);
+            forget = forget_values(n);
         }
         As.col(2*n) << 1-learn, learn;
         As.col(2*n+1) << forget, 1-forget;
     }
-    
-        
+
+    const DoubleVector guess_values = double_vector(guesses.pointer);
+    const DoubleVector slip_values = double_vector(slips.pointer);
     Array2Xd Bn(2,2*num_subparts);
     for (Index n=0; n<num_subparts; n++) {
-        double guess = -1;
-        double slip = -1;
-        if (fixed_guess) {
-            guess = extract_double(fixed_guess, PyArray_SIZE(fixed_guess) == 1 ? 0 : n);
-        }
+        double guess = fixed_value(fixed_guess, n);
         if (guess < 0) {
-            guess = extract_double(guesses, n);
+            guess = guess_values(n);
         }
-        if (fixed_slip) {
-            slip = extract_double(fixed_slip, PyArray_SIZE(fixed_slip) == 1 ? 0 : n);
-        }
+        double slip = fixed_value(fixed_slip, n);
         if (slip < 0) {
-            slip = extract_double(slips, n);
+            slip = slip_values(n);
         }
         Bn.col(2*n) << 1-guess, slip; // incorrect
         Bn.col(2*n+1) << guess, 1-slip; // correct
     }
 
-
     //// outputs
 
-    //TODO: NEED TO FIX THIS I'M CREATING NEW ARRAYS AND I NEED TO USE THE ARGUMENTS!!!
-    //TODO: FIX THIS!!!
-    /*Map<ArrayXXd,Aligned> all_trans_softcounts(trans_softcounts,2,2*num_resources);
+    OwnedReference<PyObject> all_trans_softcounts_arr, all_emission_softcounts_arr, all_initial_softcounts_arr, alpha_out_arr;
+    all_trans_softcounts_arr.pointer = new_double_array({num_resources, 2, 2});
+    all_emission_softcounts_arr.pointer = new_double_array({num_subparts, 2, 2});
+    all_initial_softcounts_arr.pointer = new_double_array({2, 1});
+    alpha_out_arr.pointer = new_double_array({2, bigT});
+    if (all_trans_softcounts_arr.pointer == nullptr || all_emission_softcounts_arr.pointer == nullptr ||
+        all_initial_softcounts_arr.pointer == nullptr || alpha_out_arr.pointer == nullptr)
+        return nullptr;
+    Map<ArrayXXd> all_trans_softcounts(double_data(all_trans_softcounts_arr.pointer),2,2*num_resources);
     all_trans_softcounts.setZero();
-    Map<Array2Xd,Aligned> all_emission_softcounts(emission_softcounts,2,2*num_subparts);
+    Map<Array2Xd> all_emission_softcounts(double_data(all_emission_softcounts_arr.pointer),2,2*num_subparts);
     all_emission_softcounts.setZero();
-    Map<Array2d,Aligned> all_initial_softcounts(init_softcounts);
-    all_initial_softcounts.setZero();*/
-    //TODO: I replaced the pointers to the arguments for new Eigen arrays.
-    /*ArrayXXd all_trans_softcounts(2,2*num_resources);
-    all_trans_softcounts.setZero(); //why is he setting all these to zero???
-    Array2Xd all_emission_softcounts(2,2*num_subparts);
-    all_emission_softcounts.setZero();
-    Array2d all_initial_softcounts(2, 1); //should i use these dimensions? the same as the original vector??
-    all_initial_softcounts.setZero();*/
-    double* r_trans_softcounts = new double[2*(2*num_resources)];
-    double* r_emission_softcounts = new double[2*(2*num_subparts)];
-    double* r_init_softcounts = new double[2];
-    Map<ArrayXXd,Aligned> all_trans_softcounts(r_trans_softcounts,2,2*num_resources);
-    all_trans_softcounts.setZero();
-    Map<Array2Xd,Aligned> all_emission_softcounts(r_emission_softcounts,2,2*num_subparts);
-    all_emission_softcounts.setZero();
-    Map<Array2d,Aligned> all_initial_softcounts(r_init_softcounts);
+    Map<Array2d> all_initial_softcounts(double_data(all_initial_softcounts_arr.pointer));
     all_initial_softcounts.setZero();
-
-    //TODO: FIX THIS!!! I'll replace all these weird arrays for zeroes ones.
-    //Array2Xd likelihoods_out(2,bigT);
-    //likelihoods_out.setZero();
-    //Array2Xd gamma_out(2,bigT);
-    //gamma_out.setZero();
-    //Array2Xd alpha_out(2,bigT);
-    //alpha_out.setZero();
-    Map<Array2Xd,Aligned> alpha_out(NULL,2,bigT);
-    double s_total_loglike = 0;
-    double *total_loglike = &s_total_loglike;
-
-    //TODO: FIX THIS!!! why is he doing this??
-    /* switch (num_outputs)
-    {
-        case 4:
-            plhs[3] = mxCreateDoubleMatrix(2,bigT,mxREAL);
-            new (&likelihoods_out) Map<Array2Xd,Aligned>(mxGetPr(plhs[3]),2,bigT);
-        case 3:
-            plhs[2] = mxCreateDoubleMatrix(2,bigT,mxREAL);
-            new (&gamma_out) Map<Array2Xd,Aligned>(mxGetPr(plhs[2]),2,bigT);
-        case 2:
-            plhs[1] = mxCreateDoubleMatrix(2,bigT,mxREAL);
-            new (&alpha_out) Map<Array2Xd,Aligned>(mxGetPr(plhs[1]),2,bigT);
-        case 1:
-            plhs[0] = mxCreateDoubleScalar(0.);
-            total_loglike = mxGetPr(plhs[0]);
-    }*/
-    double* r_alpha_out = new double[2 * bigT];
-    new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
+    Map<Array2Xd> alpha_out(double_data(alpha_out_arr.pointer),2,bigT);
+    double total_loglike = 0;
 
     /* COMPUTATION */
     #pragma omp parallel if(parallel) default(none) \
@@ -313,23 +318,21 @@ static PyObject* run(PyObject * module, PyObject * args) {
                all_initial_softcounts, total_loglike)
     {
         // heap, not stack: long sequences or many resources overflow a thread's stack
-        vector<double> s_trans_softcounts(2*(2*num_resources));
-        vector<double> s_emission_softcounts(2*(2*num_subparts));
-        vector<double> s_likelihoods, s_alpha, s_gamma;
+        std::vector<double> s_trans_softcounts(2*(2*num_resources));
+        std::vector<double> s_emission_softcounts(2*(2*num_subparts));
+        std::vector<double> s_likelihoods, s_alpha, s_gamma;
         Map<ArrayXXd,Unaligned> trans_softcounts_temp(s_trans_softcounts.data(),2,2*num_resources);
         Map<ArrayXXd,Unaligned> emission_softcounts_temp(s_emission_softcounts.data(),2,2*num_subparts);
         Array2d init_softcounts_temp;
-        double loglike;
+        double loglike = 0;
 
         trans_softcounts_temp.setZero();
         emission_softcounts_temp.setZero();
         init_softcounts_temp.setZero();
-        loglike = 0;
         int num_threads = omp_get_num_threads();
         int blocklen = 1 + ((num_sequences - 1) / num_threads);
         int sequence_idx_start = blocklen * omp_get_thread_num();
-        int sequence_idx_end = min(sequence_idx_start+blocklen,num_sequences);
-        //mexPrintf("start:%d   end:%d\n", sequence_idx_start, sequence_idx_end);
+        int sequence_idx_end = std::min(sequence_idx_start+blocklen,num_sequences);
 
         for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
@@ -337,7 +340,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
             int64_t sequence_start = starts_arr(sequence_index, 0) - 1;
 
             int64_t T = lengths_arr(sequence_index, 0);
-            if ((int64_t) s_alpha.size() < 2*T) {
+            if (static_cast<int64_t>(s_alpha.size()) < 2*T) {
                 s_likelihoods.resize(2*T);
                 s_alpha.resize(2*T);
                 s_gamma.resize(2*T);
@@ -360,13 +363,11 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
 
             //// forward messages
-            double norm;
-            double contribution;
             Map<MatrixXd,Unaligned> alpha(s_alpha.data(),2,T);
             alpha.col(0) = initial_distn * likelihoods.col(0);
-            norm = alpha.col(0).sum();
+            double norm = alpha.col(0).sum();
             alpha.col(0) /= norm;
-            loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
+            loglike += std::log(norm) / static_cast<double>(normalizeLengths? T : 1);
 
             for (int t=0; t<T-1; t++) {
                 int64_t resources_temp = allresources_arr(sequence_start+t, 0);
@@ -374,7 +375,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
                     * likelihoods.col(t+1);
                 norm = alpha.col(t+1).sum();
                 alpha.col(t+1) /= norm;
-                loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
+                loglike += std::log(norm) / static_cast<double>(normalizeLengths? T : 1);
             }
 
             //// backward messages and statistic counting
@@ -410,16 +411,6 @@ static PyObject* run(PyObject * module, PyObject * args) {
             }
             init_softcounts_temp += gamma.col(0);
 
-            //TODO: FIX THIS!!!
-            /* switch (nlhs)
-            {
-                case 4:
-                    likelihoods_out.block(0,sequence_start,2,T) = likelihoods;
-                case 3:
-                    gamma_out.block(0,sequence_start,2,T) = gamma;
-                case 2:
-                    alpha_out.block(0,sequence_start,2,T) = alpha;
-            } */
             alpha_out.block(0,sequence_start,2,T) = alpha;
         }
         #pragma omp critical
@@ -427,73 +418,30 @@ static PyObject* run(PyObject * module, PyObject * args) {
             all_trans_softcounts += trans_softcounts_temp;
             all_emission_softcounts += emission_softcounts_temp;
             all_initial_softcounts += init_softcounts_temp;
-            *total_loglike += loglike;
+            total_loglike += loglike;
         }
     }
 
     PyObject *result = PyDict_New();
-
-    npy_intp dims1[] = {num_resources, 2, 2};
-    PyObject *all_trans_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims1, NPY_DOUBLE, r_trans_softcounts);
-    PyObject *capsule1 = PyCapsule_New(r_trans_softcounts, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) all_trans_softcounts_arr, capsule1);
-
-    npy_intp dims2[] = {num_subparts, 2, 2};
-    PyObject *all_emission_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(3, dims2, NPY_DOUBLE, r_emission_softcounts);
-    PyObject *capsule2 = PyCapsule_New(r_emission_softcounts, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) all_emission_softcounts_arr, capsule2);
-
-    npy_intp dims3[] = {2, 1};
-    PyObject *all_initial_softcounts_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims3, NPY_DOUBLE, r_init_softcounts);
-    PyObject *capsule3 = PyCapsule_New(r_init_softcounts, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) all_initial_softcounts_arr, capsule3);
-
-    npy_intp dims4[] = {2, bigT};
-    PyObject *alpha_out_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims4, NPY_DOUBLE, r_alpha_out);
-    PyObject *capsule4 = PyCapsule_New(r_alpha_out, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) alpha_out_arr, capsule4);
-
-    PyDict_SetItemString(result, "all_trans_softcounts", all_trans_softcounts_arr);
-    PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr);
-    PyDict_SetItemString(result, "all_initial_softcounts", all_initial_softcounts_arr);
-    PyDict_SetItemString(result, "alpha", alpha_out_arr);
-    PyObject *total_loglike_obj = PyFloat_FromDouble(*total_loglike);
-    PyDict_SetItemString(result, "total_loglike", total_loglike_obj);
-
-    for (int i = 0; i < 8; i++)
-        Py_XDECREF(*DM_PTRS[i]);
-    Py_XDECREF(all_trans_softcounts_arr);
-    Py_XDECREF(all_emission_softcounts_arr);
-    Py_XDECREF(all_initial_softcounts_arr);
-    Py_XDECREF(alpha_out_arr);
-    Py_XDECREF(total_loglike_obj);
-    Py_XDECREF(fixed_learn);
-    Py_XDECREF(fixed_forget);
-    Py_XDECREF(fixed_guess);
-    Py_XDECREF(fixed_slip);
+    PyDict_SetItemString(result, "all_trans_softcounts", all_trans_softcounts_arr.pointer);
+    PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr.pointer);
+    PyDict_SetItemString(result, "all_initial_softcounts", all_initial_softcounts_arr.pointer);
+    PyDict_SetItemString(result, "alpha", alpha_out_arr.pointer);
+    OwnedReference<PyObject> total_loglike_obj;
+    total_loglike_obj.pointer = PyFloat_FromDouble(total_loglike);
+    PyDict_SetItemString(result, "total_loglike", total_loglike_obj.pointer);
 
     return(result);
 }
 
-
-
-static PyMethodDef E_step_Methods[] = {
-    {"run",  run, METH_VARARGS,
-     "Runs E-step of Expectation Maximization in C++ module"},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
-};
-
-
-static struct PyModuleDef E_step_module = {
-   PyModuleDef_HEAD_INIT,
-   "E_step",   /* name of module */
-   NULL, /* module documentation, may be NULL */
-   -1,       /* size of per-interpreter state of the module,
-                or -1 if the module keeps state in global variables. */
-   E_step_Methods
-};
-
 PyMODINIT_FUNC PyInit_E_step() {
-    return PyModule_Create(&E_step_module);
+    import_array();
+    static std::array<PyMethodDef, 2> methods = {{
+        {"run", run, METH_VARARGS, "Runs E-step of Expectation Maximization in C++ module"},
+        {nullptr, nullptr, 0, nullptr},
+    }};
+    static PyModuleDef module = {
+        PyModuleDef_HEAD_INIT, "E_step", nullptr, -1, methods.data(), nullptr, nullptr, nullptr, nullptr,
+    };
+    return PyModule_Create(&module);
 }
-

@@ -8,152 +8,151 @@
 
 #define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
 
-#include <iostream>
-#include <stdint.h>
+#include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <vector>
 #include <Eigen/Core>
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
 
 using namespace Eigen;
-using namespace std;
 
-static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
-    return ((double*) PyArray_DATA(arr))[i];
+using Int64Vector = Map<const Matrix<int64_t, Dynamic, 1>>;
+using DoubleVector = Map<const VectorXd>;
+
+// NumPy's C API passes arrays as PyObject *, and every PyArrayObject begins with that header.
+static PyArrayObject *as_array(PyObject *object) {
+    return reinterpret_cast<PyArrayObject *>(object); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
-static double extract_double_2d(PyArrayObject *arr, Py_ssize_t i, Py_ssize_t j) {
-    return ((double*) PyArray_DATA(arr))[i * PyArray_DIM(arr, 1) + j];
+static Int64Vector int64_vector(PyArrayObject *arr) {
+    return {static_cast<const int64_t *>(PyArray_DATA(arr)), PyArray_SIZE(arr)};
 }
 
-static int64_t extract_int64_t(PyArrayObject *arr, Py_ssize_t i) {
-    return ((int64_t*) PyArray_DATA(arr))[i];
+static DoubleVector double_vector(PyArrayObject *arr) {
+    return {static_cast<const double *>(PyArray_DATA(arr)), PyArray_SIZE(arr)};
 }
 
-void capsule_cleanup(PyObject *capsule) {
-    int *memory = (int *) PyCapsule_GetPointer(capsule, NULL);
-    delete[] memory;
+// Owns one new reference and releases it on scope exit.
+template <typename T>
+struct OwnedReference {
+    T *pointer = nullptr;
+    OwnedReference() = default;
+    OwnedReference(const OwnedReference &) = delete;
+    OwnedReference &operator=(const OwnedReference &) = delete;
+    OwnedReference(OwnedReference &&) = delete;
+    OwnedReference &operator=(OwnedReference &&) = delete;
+    ~OwnedReference() { Py_XDECREF(pointer); }
+};
+
+static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
+    return as_array(PyArray_FROM_OTF(obj, PyArray_ObjectType(obj, minimum_type), NPY_ARRAY_IN_ARRAY));
 }
 
+// A uniform draw in [0, 1] from the C library generator.
+static double uniform_draw() {
+    return static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
+}
 
-static PyObject* run(PyObject * module, PyObject * args) {
-    //TODO: check if parameters are null.
+static PyObject* run(PyObject * /* module */, PyObject * args) {
     //TODO: check that dicts have the required members.
-    //TODO: check that all parameters have the right sizes.
-    //TODO: i'm not sending any error messages.
-    import_array();
-
-    PyObject *model_ptr = NULL, *starts_obj = NULL, *lengths_obj = NULL, *resources_obj = NULL;
-    PyArrayObject *resources = NULL, *starts = NULL, *lengths = NULL, *learns = NULL, *forgets = NULL, *guesses = NULL, *slips = NULL;
-    double prior;
-
-    if (!PyArg_ParseTuple(args, "OOOO", &model_ptr, &starts_obj, &lengths_obj, &resources_obj)) {
+    if (PyTuple_GET_SIZE(args) != 4) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
-        return NULL;
+        return nullptr;
     }
+    PyObject *model_ptr = PyTuple_GET_ITEM(args, 0);
 
-    int DTYPE = PyArray_ObjectType(starts_obj, NPY_INT64);
-    starts = (PyArrayObject *)PyArray_FROM_OTF(starts_obj, DTYPE, NPY_ARRAY_IN_ARRAY);
-    DTYPE = PyArray_ObjectType(lengths_obj, NPY_INT64);
-    lengths = (PyArrayObject *)PyArray_FROM_OTF(lengths_obj, DTYPE, NPY_ARRAY_IN_ARRAY);
-    DTYPE = PyArray_ObjectType(resources_obj, NPY_INT64);
-    resources = (PyArrayObject *)PyArray_FROM_OTF(resources_obj, DTYPE, NPY_ARRAY_IN_ARRAY);
+    OwnedReference<PyArrayObject> starts, lengths, resources, learns, forgets, guesses, slips;
+    starts.pointer = to_array(PyTuple_GET_ITEM(args, 1), NPY_INT64);
+    lengths.pointer = to_array(PyTuple_GET_ITEM(args, 2), NPY_INT64);
+    resources.pointer = to_array(PyTuple_GET_ITEM(args, 3), NPY_INT64);
 
-    char* DM_NAMES[] = {"learns", "forgets", "guesses", "slips"};
-    PyArrayObject** DM_PTRS[] = {&learns, &forgets, &guesses, &slips};
-    for (int i = 0; i < 4; i++) {
-        PyObject *dp = PyDict_GetItemString(model_ptr, DM_NAMES[i]);
-        DTYPE = PyArray_ObjectType(dp, NPY_FLOAT); // hack to force correct type
-        *DM_PTRS[i] = (PyArrayObject *)PyArray_FROM_OTF(dp, DTYPE, NPY_ARRAY_IN_ARRAY);
-    }
-    prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
+    struct Input {
+        const char *name;
+        OwnedReference<PyArrayObject> *target;
+    };
+    const std::array<Input, 4> inputs = {{
+        {"learns", &learns}, {"forgets", &forgets}, {"guesses", &guesses}, {"slips", &slips},
+    }};
+    for (const Input &input : inputs)
+        input.target->pointer = to_array(PyDict_GetItemString(model_ptr, input.name), NPY_FLOAT); // hack to force correct type
+    double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    int num_subparts = (int) PyArray_DIM(slips, 0);
-    int num_sequences = (int) PyArray_DIM(starts, 0);
-    Index num_resources = PyArray_DIM(learns, 0);
-    
+    Index num_subparts = PyArray_DIM(slips.pointer, 0);
+    int num_sequences = static_cast<int>(PyArray_DIM(starts.pointer, 0));
+    Index num_resources = PyArray_DIM(learns.pointer, 0);
+
     Vector2d initial_distn;
     initial_distn << 1-prior, prior;
-    
-    MatrixXd As(2, 2*num_resources);
+
+    const DoubleVector learn_values = double_vector(learns.pointer);
+    const DoubleVector forget_values = double_vector(forgets.pointer);
+    // A vector, not a MatrixXd: clang-analyzer 22, though not 23, reports a false out-of-bounds write into a run-time-sized MatrixXd here.
+    std::vector<double> As_storage(4 * num_resources);
+    Map<MatrixXd> As(As_storage.data(), 2, 2*num_resources);
     for (Index n=0; n<num_resources; n++) {
-        double learn = extract_double(learns,n);
-        double forget = extract_double(forgets,n);
+        double learn = learn_values(n);
+        double forget = forget_values(n);
         As.col(2*n) << 1-learn, learn;
         As.col(2*n+1) << forget, 1-forget;
     }
-    
+
+    const Int64Vector start_values = int64_vector(starts.pointer);
+    const Int64Vector length_values = int64_vector(lengths.pointer);
+    const Int64Vector resource_values = int64_vector(resources.pointer);
     int64_t bigT = 0;
     for (int k=0; k<num_sequences; k++) {
-        bigT += extract_int64_t(lengths,k); //extract this as int??
+        bigT += length_values(k);
     }
-    
+
     //// outputs
-    int* all_stateseqs = new int[bigT];
-    int* all_data = new int[num_subparts * bigT]; //used to be int8_t
-    *all_data = 0;
-    
+    std::array<npy_intp, 2> stateseqs_dims = {1, bigT};
+    std::array<npy_intp, 2> data_dims = {num_subparts, bigT};
+    OwnedReference<PyObject> all_stateseqs_arr, all_data_arr;
+    all_stateseqs_arr.pointer = PyArray_ZEROS(2, stateseqs_dims.data(), NPY_INT, 0);
+    all_data_arr.pointer = PyArray_ZEROS(2, data_dims.data(), NPY_INT, 0);
+    if (all_stateseqs_arr.pointer == nullptr || all_data_arr.pointer == nullptr)
+        return nullptr;
+    Map<Matrix<int, Dynamic, 1>> all_stateseqs(static_cast<int *>(PyArray_DATA(as_array(all_stateseqs_arr.pointer))), bigT);
+    Map<Matrix<int, Dynamic, Dynamic, RowMajor>> all_data(static_cast<int *>(PyArray_DATA(as_array(all_data_arr.pointer))),
+                                                          num_subparts, bigT);
+
     /* COMPUTATION */
-    
+
+    const DoubleVector guess_values = double_vector(guesses.pointer);
+    const DoubleVector slip_values = double_vector(slips.pointer);
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
-        int64_t sequence_start = extract_int64_t(starts,sequence_index) - 1; //should i extract these as ints?
-        int64_t T = extract_int64_t(lengths, sequence_index);
-        
+        int64_t sequence_start = start_values(sequence_index) - 1;
+        int64_t T = length_values(sequence_index);
+
         Vector2d nextstate_distr = initial_distn;
 
         for (int t=0; t<T; t++) {
-            *(all_stateseqs + sequence_start + t) = nextstate_distr(0) < ((double) rand()) / ((double) RAND_MAX); //always all_stateseqs[0]?
-            for (int n=0; n<num_subparts; n++) {
-                *(all_data + n * (bigT) + sequence_start + t) = ((*(all_stateseqs + sequence_start + t)) ? extract_double(slips, n) : (1-extract_double(guesses, n))) < (((double) rand()) / ((double) RAND_MAX));
+            all_stateseqs(sequence_start + t) = nextstate_distr(0) < uniform_draw();
+            for (Index n=0; n<num_subparts; n++) {
+                all_data(n, sequence_start + t) = (all_stateseqs(sequence_start + t) ? slip_values(n) : (1-guess_values(n))) < uniform_draw();
             }
-            
-            nextstate_distr = As.col(2*(extract_int64_t(resources, sequence_start + t)-1)+*(all_stateseqs + sequence_start + t)); //extract int is right??
+
+            nextstate_distr = As.col(2*(resource_values(sequence_start + t)-1)+all_stateseqs(sequence_start + t));
         }
     }
-    
+
     PyObject *result = PyDict_New();
-
-    npy_intp dims1[] = {1, bigT};
-    PyObject *all_stateseqs_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims1, NPY_INT, all_stateseqs);
-    PyObject *capsule1 = PyCapsule_New(all_stateseqs, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) all_stateseqs_arr, capsule1);
-
-    npy_intp dims2[] = {num_subparts, bigT};
-    PyObject *all_data_arr = (PyObject *) PyArray_SimpleNewFromData(2, dims2, NPY_INT, all_data);
-    PyObject *capsule2 = PyCapsule_New(all_data, NULL, capsule_cleanup);
-    PyArray_SetBaseObject((PyArrayObject *) all_data_arr, capsule2);
-
-    PyDict_SetItemString(result, "stateseqs", all_stateseqs_arr);
-    PyDict_SetItemString(result, "data", all_data_arr);
-
-    Py_XDECREF(resources);
-    Py_XDECREF(starts);
-    Py_XDECREF(lengths);
-    Py_XDECREF(all_stateseqs_arr);
-    Py_XDECREF(all_data_arr);
-
-    for (int i = 0; i < 4; i++)
-        Py_XDECREF(*DM_PTRS[i]);
+    PyDict_SetItemString(result, "stateseqs", all_stateseqs_arr.pointer);
+    PyDict_SetItemString(result, "data", all_data_arr.pointer);
 
     return(result);
 }
 
-static PyMethodDef synthetic_data_helper_Methods[] = {
-    {"create_synthetic_data",  run, METH_VARARGS,
-     "Helper for creating synthetic data from true model"},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
-};
-
-
-static struct PyModuleDef synthetic_data_helper_module = {
-   PyModuleDef_HEAD_INIT,
-   "synthetic_data_helper",   /* name of module */
-   NULL, /* module documentation, may be NULL */
-   -1,       /* size of per-interpreter state of the module,
-                or -1 if the module keeps state in global variables. */
-   synthetic_data_helper_Methods
-};
-
 PyMODINIT_FUNC PyInit_synthetic_data_helper() {
-    return PyModule_Create(&synthetic_data_helper_module);
+    import_array();
+    static std::array<PyMethodDef, 2> methods = {{
+        {"create_synthetic_data", run, METH_VARARGS, "Helper for creating synthetic data from true model"},
+        {nullptr, nullptr, 0, nullptr},
+    }};
+    static PyModuleDef module = {
+        PyModuleDef_HEAD_INIT, "synthetic_data_helper", nullptr, -1, methods.data(), nullptr, nullptr, nullptr, nullptr,
+    };
+    return PyModule_Create(&module);
 }
-
