@@ -1,4 +1,5 @@
 from pyBKT.models import Model
+from pyBKT.fit.update_mastery import update_mastery, transition_mastery
 from enum import Enum
 import numpy as np
 
@@ -481,7 +482,7 @@ class SkillRoster:
     def set_model(self, model):
         self.model = model
         for s in self.students:
-            self.students[s].update(-1, {'multigs': self.model.model_type[-1], 'multilearn': self.model.model_type[0]}, append = False)
+            self.students[s].update(-1, {}, append = False)
 
     def get_mastery_state(self):
         return self.mastery_state
@@ -523,9 +524,10 @@ class State:
             data = self.process_data(correct, kwargs, append = append)
         else:
             raise ValueError("need to pass int or np.ndarray")
-        correct_predictions, state_predictions = self.predict(self.roster.model, self.roster.skill, data, self.current_state)
-        self.current_state['correct_prediction'] = correct_predictions[-1]
-        self.current_state['state_prediction'] = state_predictions[-1]
+        params = self.roster.model.fit_model[self.roster.skill]
+        correct_prediction, state_prediction = self.predict(params, data, self.current_state['state_prediction'])
+        self.current_state['correct_prediction'] = correct_prediction
+        self.current_state['state_prediction'] = state_prediction
         
         if self.roster.track_progress:
             self.tracked_states.append(dict(self.current_state))
@@ -534,7 +536,7 @@ class State:
     def process_data(self, corrects, kwargs, append = True):
         if self.roster.model is None:
             raise ValueError("model not specified")
-        multilearn, multigs = [kwargs.get(t, False) for t in ('multilearn', 'multigs')]
+        multilearn, multigs = kwargs.get('multilearn'), kwargs.get('multigs')
         gs_ref = self.roster.model.fit_model[self.roster.skill]['gs_names']
         resource_ref = self.roster.model.fit_model[self.roster.skill]['resource_names']
         if append:
@@ -545,44 +547,62 @@ class State:
         lengths = np.array([len(corrects)], dtype=np.int64)
         starts = np.array([1], dtype=np.int64)
         
-        if multilearn:
-            if isinstance(kwargs['multilearn'], list):
-                resargs = kwargs['multilearn']
-            else:
-                resargs = [kwargs['multilearn']]
-            resources = np.array(list(map(lambda x: resource_ref[x], resargs)))
-            if any(k not in resource_ref for k in resargs):
-                raise ValueError("specified learn class must be one of:", resource_ref.keys())
-        else:
+        # multiprior and multipair models also name extra learn classes, but every answer uses Default.
+        is_multilearn = self.roster.model.model_type[Model.MODELS_BKT.index('multilearn')]
+        if multilearn is None or multilearn is False:
+            if is_multilearn and len(resource_ref) > 1 and len(corrects) > 1:
+                raise ValueError("skill %r has learn classes %s; pass multilearn=<class> with each answer"
+                                 % (self.roster.skill, list(resource_ref)))
             resources = np.ones(len(data), dtype=np.int64)
+        else:
+            resargs = multilearn if isinstance(multilearn, list) else [multilearn]
+            for k in resargs:
+                if k not in resource_ref:
+                    raise ValueError("learn class %r is not in the fitted model for skill %r; expected one of %s"
+                                     % (k, self.roster.skill, list(resource_ref)))
+            if len(resargs) < len(corrects) - 1:
+                raise ValueError("got %d answers but %d learn classes; pass one class per answer"
+                                 % (len(corrects) - 1, len(resargs)))
+            resources = np.array(list(map(lambda x: resource_ref[x], resargs)))
 
-        if multigs:
-            if isinstance(kwargs['multigs'], list):
-                gsargs = kwargs['multigs']
-            else:
-                gsargs = [kwargs['multigs']]
-            if any(k not in gs_ref for k in gsargs):
-                raise ValueError("specified guess/slip class must be one of:", gs_ref.keys())
+        if multigs is None or multigs is False:
+            if len(gs_ref) > 1 and np.any(corrects != -1):
+                raise ValueError("skill %r has guess/slip classes %s; pass multigs=<class> with each answer"
+                                 % (self.roster.skill, list(gs_ref)))
+            data = np.asarray([data], dtype='int')
+        else:
+            gsargs = multigs if isinstance(multigs, list) else [multigs]
+            for k in gsargs:
+                if k not in gs_ref:
+                    raise ValueError("guess/slip class %r is not in the fitted model for skill %r; expected one of %s"
+                                     % (k, self.roster.skill, list(gs_ref)))
+            if len(gsargs) < len(corrects) - 1:
+                raise ValueError("got %d answers but %d guess/slip classes; pass one class per answer"
+                                 % (len(corrects) - 1, len(gsargs)))
             data_ref = np.array(list(map(lambda x: gs_ref[x], gsargs)))
             data_temp = np.zeros((len(gs_ref), len(corrects)))
             for i in range(len(data_temp[0]) - 1):
                 data_temp[data_ref[i]][i] = data[i]
             data = np.asarray(data_temp, dtype='int')
-        else:
-            data = np.asarray([data], dtype='int')
 
         Data = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data}
         return Data
 
-    def predict(self, model, skill, data, state):
-        if state['state_prediction'] > 0:
-            old_prior = model.fit_model[self.roster.skill]['pi_0']
-            model.fit_model[self.roster.skill]['pi_0'] = np.array([[1 - state['state_prediction']], [state['state_prediction']]])
-            model.fit_model[self.roster.skill]['prior'] = model.fit_model[self.roster.skill]['pi_0'][1][0]
-        correct_predictions, state_predictions = model._predict(model.fit_model[skill], data)
-        model.fit_model[self.roster.skill]['pi_0'] = old_prior if state['state_prediction'] > 0 else model.fit_model[self.roster.skill]['pi_0']
-        model.fit_model[self.roster.skill]['prior'] = model.fit_model[self.roster.skill]['pi_0'][1][0]
-        return correct_predictions, state_predictions[1]
+    def predict(self, params, data, mastery):
+        """ Steps mastery through each answer in data and returns the last (correct_prediction, state_prediction). """
+        if mastery <= 0:
+            mastery = params['prior']
+        answers, resources = data['data'], data['resources']
+        for t in range(answers.shape[1] - 1):
+            learn, forget = params['learns'][resources[t] - 1], params['forgets'][resources[t] - 1]
+            gs_class = np.flatnonzero(answers[:, t])
+            if len(gs_class):
+                gs = gs_class[0]
+                mastery = update_mastery(mastery, answers[gs, t] == 2, params['guesses'][gs], params['slips'][gs], learn, forget)
+            else:
+                mastery = transition_mastery(mastery, learn, forget)
+        gs = (answers[:, -1] != 0).argmax()
+        return params['guesses'][gs] * (1 - mastery) + (1 - params['slips'][gs]) * mastery, mastery
 
     def refresh(self):
         if self.current_state['state_prediction'] == -1:
