@@ -125,3 +125,27 @@ def test_a_guess_of_one_or_a_slip_of_zero_matches_predict(correct):
 
     assert scalar == pytest.approx(state_predictions[1][2], abs=1e-14)
     np.testing.assert_array_equal(vectorized, [scalar])
+
+
+def test_minus_one_is_no_answer_and_only_transitions():
+    """A correct value of -1 is an unobserved attempt, as in a correct column, so only learn and forget apply."""
+    rng = np.random.default_rng(2)
+    mastery = rng.random(200)
+    correct = rng.choice([-1, 0, 1], 200)
+    guess, slip, learn, forget = 0.2, 0.1, 0.15, 0.05
+
+    vectorized = update_mastery_array(mastery, correct, guess, slip, learn, forget)
+    scalar = [update_mastery(m, c, guess, slip, learn, forget) for m, c in zip(mastery, correct)]
+    np.testing.assert_array_equal(vectorized, scalar)
+
+    unanswered = correct == -1
+    np.testing.assert_array_equal(vectorized[unanswered], transition_mastery(mastery[unanswered], learn, forget))
+    assert update_mastery(0.3, -1, guess, slip, learn, forget) == transition_mastery(0.3, learn, forget)
+
+
+@pytest.mark.parametrize("correct", [2, -2, 0.5])
+def test_other_correct_values_raise(correct):
+    with pytest.raises(ValueError):
+        update_mastery(0.3, correct, 0.2, 0.1, 0.15)
+    with pytest.raises(ValueError):
+        update_mastery_array(np.array([0.3, 0.3]), np.array([1, correct]), 0.2, 0.1, 0.15)

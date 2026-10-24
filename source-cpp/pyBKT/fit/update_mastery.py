@@ -9,6 +9,9 @@ def update_mastery(mastery, correct, guess, slip, learn, forget = 0.0):
     """
     Returns a student's P(known) before their next answer, given P(known) before this
     answer and whether this answer was correct. No model is changed and nothing is refit.
+    ``correct`` is 1 or True for a right answer, 0 or False for a wrong one, and -1 for no
+    answer, as in a ``correct`` column. -1 applies only the learn/forget transition, like
+    ``transition_mastery``. Any other value raises ValueError.
 
     The update is Bayes' rule on the answer, P(known | answer), followed by the
     learn/forget transition: P(known next) = P(known | answer) * (1 - forget) + P(unknown | answer) * learn.
@@ -22,6 +25,10 @@ def update_mastery(mastery, correct, guess, slip, learn, forget = 0.0):
     >>> update_mastery(0.3, True, guess = 0.2, slip = 0.1, learn = 0.15)
     0.7097560975609756
     """
+    if correct == -1:
+        return transition_mastery(mastery, learn, forget)
+    if correct not in (0, 1):
+        raise ValueError("correct must be 1, 0, or -1 for no answer")
     known_likelihood, unknown_likelihood = (1 - slip, guess) if correct else (slip, 1 - guess)
     # The forward pass reads an answer probability of exactly 0 as 1, so a guess of 1 or a
     # slip of 0 never zeroes out both states. Doing the same keeps the results equal.
@@ -32,17 +39,21 @@ def update_mastery(mastery, correct, guess, slip, learn, forget = 0.0):
 def update_mastery_array(mastery, correct, guess, slip, learn, forget = 0.0):
     """
     Vectorized ``update_mastery`` for many students at once. Every argument is a scalar or a
-    NumPy array, broadcast together; ``correct`` is a boolean or 0/1 array. Each element gives
-    the same result as ``update_mastery`` on that element.
+    NumPy array, broadcast together; ``correct`` holds 1, 0 or -1, or booleans. Each element
+    gives the same result as ``update_mastery`` on that element.
 
     >>> update_mastery_array(np.array([0.3, 0.3]), np.array([1, 0]), 0.2, 0.1, 0.15)
     array([0.7097561 , 0.19322034])
     """
-    correct = np.asarray(correct, dtype = bool)
-    known_likelihood = np.where(correct, 1 - slip, slip)
-    unknown_likelihood = np.where(correct, guess, 1 - guess)
-    known = mastery * np.where(known_likelihood == 0, 1, known_likelihood)
-    unknown = (1 - mastery) * np.where(unknown_likelihood == 0, 1, unknown_likelihood)
+    correct = np.asarray(correct)
+    if not np.isin(correct, (-1, 0, 1)).all():
+        raise ValueError("correct must be 1, 0, or -1 for no answer")
+    right, unanswered = correct == 1, correct == -1
+    known_likelihood = np.where(right, 1 - slip, slip)
+    unknown_likelihood = np.where(right, guess, 1 - guess)
+    # An unanswered attempt weighs both states by 1, which leaves only the transition.
+    known = mastery * np.where(unanswered | (known_likelihood == 0), 1, known_likelihood)
+    unknown = (1 - mastery) * np.where(unanswered | (unknown_likelihood == 0), 1, unknown_likelihood)
     return _transition(known, unknown, learn, forget)
 
 def transition_mastery(mastery, learn, forget = 0.0):
