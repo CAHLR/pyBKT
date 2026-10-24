@@ -271,7 +271,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             data_ref = np.array(df3[defaults["multigs"]].apply(lambda x: gs_ref[x]))
         
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
-            data_temp = np.zeros((len(df3[defaults["multigs"]].unique()), len(df3)))
+            # one row per fitted class, even ones this data does not use
+            data_temp = np.zeros((len(gs_ref), len(df3)))
             for i in range(len(data_temp[0])):
                 data_temp[data_ref[i]][i] = data[i]
             Data["data"]=np.asarray(data_temp,dtype='int32')
