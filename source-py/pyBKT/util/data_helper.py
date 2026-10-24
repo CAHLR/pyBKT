@@ -132,6 +132,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     all_skills = all_skills[all_skills.str.match(skill_name).astype(bool)]
     if all_skills.empty:
         raise ValueError("no matching skills")
+    # find every skill's rows in one pass, instead of scanning all rows once per skill
+    rows_by_skill = df.groupby(defaults["skill_name"], sort=False).indices
     for skill_ in all_skills:
         
         if resource_refs is None or skill_ not in resource_refs:
@@ -144,7 +146,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             gs_ref = gs_refs[skill_]["gs_names"]
 
         # filter out based on skill
-        df3 = df[df[defaults["skill_name"]] == skill_]
+        df3 = df.iloc[rows_by_skill[skill_]]
         if df3.empty:
             raise ValueError("Incorrect Skill or Dataset Specified")
 
