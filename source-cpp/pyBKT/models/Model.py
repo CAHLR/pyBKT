@@ -19,7 +19,6 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypeGuard,
     overload,
 )
 
@@ -31,10 +30,13 @@ from pyBKT.generate import random_model_uni
 from pyBKT.util import check_data, crossvalidate, data_helper, metrics
 from pyBKT.util.structures import (
     CoreParams,
+    FixedName,
     FixedParams,
     FixedSpec,
     FloatArray,
     InitialParams,
+    ModelVariant,
+    ModelVariants,
     NameRefs,
     Params,
     SequenceData,
@@ -42,7 +44,7 @@ from pyBKT.util.structures import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Unpack
+    from typing_extensions import TypeIs, Unpack
 
     from pyBKT.util.structures import CrossvalidateOptions, FitOptions, ModelOptions
 
@@ -53,12 +55,16 @@ MetricChoice: TypeAlias = str | metrics.Metric
 MetricArgument: TypeAlias = (MetricChoice | list[str] | list[metrics.Metric] | list[MetricChoice]
                              | tuple[MetricChoice, ...])
 
+# The Model attributes that _update_param sets through setattr.
+ModelSetting: TypeAlias = Literal["parallel", "num_fits", "seed", "defaults", "skills", "fixed", "forgets",
+                                  "folds", "model_type"]
+
 # The array parameters coef_ accepts, in the order coef_ returns them.
 _ARRAY_PARAMS: Final[tuple[Literal["learns", "guesses", "slips", "forgets"], ...]] = (
     "learns", "guesses", "slips", "forgets")
 
 
-def _is_fitted(params: Params | InitialParams) -> TypeGuard[Params]:
+def _is_fitted(params: Params | InitialParams) -> "TypeIs[Params]":
     """Whether params came from a fit, rather than only from coef_."""
     return "As" in params
 
@@ -121,11 +127,11 @@ def _hold_given_values(spec: FixedSpec, fixed: FixedParams) -> None:
                 fixed[name] = value
 
 class Model:
-    MODELS_BKT: ClassVar[list[str]] = ['multilearn', 'multiprior', 'multipair', 'multigs']
-    MODEL_ARGS: ClassVar[list[str]] = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
-    FIT_ARGS: ClassVar[list[str]] = ['skills', 'num_fits', 'defaults', 'fixed',
-                            'parallel', 'forgets', 'preload'] + MODELS_BKT
-    CV_ARGS: ClassVar[list[str]] = FIT_ARGS + ['folds', 'seed']
+    MODELS_BKT: Final[tuple[ModelVariant, ...]] = ('multilearn', 'multiprior', 'multipair', 'multigs')
+    MODEL_ARGS: Final[tuple[str, ...]] = ('parallel', 'num_fits', 'seed', 'defaults', *MODELS_BKT)
+    FIT_ARGS: Final[tuple[str, ...]] = ('skills', 'num_fits', 'defaults', 'fixed',
+                                        'parallel', 'forgets', 'preload', *MODELS_BKT)
+    CV_ARGS: Final[tuple[str, ...]] = (*FIT_ARGS, 'folds', 'seed')
     DEFAULTS: ClassVar[dict[str, Any]] = {'num_fits': 5,
                 'defaults': None,
                 'parallel': True,
@@ -134,7 +140,7 @@ class Model:
                 'folds': 5,
                 'forgets': False,
                 'fixed': None,
-                'model_type': [False] * len(MODELS_BKT)}
+                'model_type': (False, False, False, False)}
     DEFAULTS_BKT: ClassVar[dict[str, str]] = {'order_id': 'order_id',
                     'skill_name': 'skill_name',
                     'correct': 'correct',
@@ -144,7 +150,7 @@ class Model:
                     'multipair': 'problem_id',
                     'multigs': 'template_id',
                     'folds': 'template_id'}
-    INITIALIZABLE_PARAMS: ClassVar[list[str]] = ['prior', 'learns', 'guesses', 'slips', 'forgets']
+    INITIALIZABLE_PARAMS: Final[tuple[FixedName, ...]] = ('prior', 'learns', 'guesses', 'slips', 'forgets')
 
     # Most are set with setattr in _update_param, so they are declared here for type checkers.
     fit_model: dict[str, Params | InitialParams] | None
@@ -156,7 +162,7 @@ class Model:
     rand: np.random.RandomState
     # Column names, plus the fold count crossvalidate stores under 'folds'. convert_data adds the columns it finds.
     defaults: dict[str, Any] | None
-    model_type: list[bool]
+    model_type: ModelVariants
     skills: str | Sequence[str]
     folds: int | str
     forgets: bool
@@ -472,16 +478,16 @@ class Model:
 
     @overload
     def _data_helper(self, data_path: str | None, data: pd.DataFrame | None, defaults: dict[str, Any] | None,
-                     skills: str | Sequence[str], model_type: list[bool], gs_ref: Mapping[str, NameRefs] | None = ...,
+                     skills: str | Sequence[str], model_type: ModelVariants, gs_ref: Mapping[str, NameRefs] | None = ...,
                      resource_ref: Mapping[str, NameRefs] | None = ..., return_df: Literal[False] = ...,
                      folds: bool = ...) -> dict[str, SkillData]: ...
     @overload
     def _data_helper(self, data_path: str | None, data: pd.DataFrame | None, defaults: dict[str, Any] | None,
-                     skills: str | Sequence[str], model_type: list[bool], gs_ref: Mapping[str, NameRefs] | None = ...,
+                     skills: str | Sequence[str], model_type: ModelVariants, gs_ref: Mapping[str, NameRefs] | None = ...,
                      resource_ref: Mapping[str, NameRefs] | None = ..., *, return_df: Literal[True],
                      folds: bool = ...) -> tuple[dict[str, SkillData], pd.DataFrame]: ...
     def _data_helper(self, data_path: str | None, data: pd.DataFrame | None, defaults: dict[str, Any] | None,
-                     skills: str | Sequence[str], model_type: list[bool], gs_ref: Mapping[str, NameRefs] | None = None,
+                     skills: str | Sequence[str], model_type: ModelVariants, gs_ref: Mapping[str, NameRefs] | None = None,
                      resource_ref: Mapping[str, NameRefs] | None = None, return_df: bool = False,
                      folds: bool = False) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]:
         """ Processes data given defaults, skills, and the model type. """
@@ -594,10 +600,10 @@ class Model:
 
 
     @overload
-    def _update_param(self, params: list[str], args: Mapping[str, object], keep: bool = ...) -> None: ...
+    def _update_param(self, params: list[ModelSetting], args: Mapping[str, object], keep: bool = ...) -> None: ...
     @overload
-    def _update_param(self, params: str, args: object, keep: bool = ...) -> None: ...
-    def _update_param(self, params: str | list[str], args: object, keep: bool = False) -> None:
+    def _update_param(self, params: ModelSetting, args: object, keep: bool = ...) -> None: ...
+    def _update_param(self, params: ModelSetting | list[ModelSetting], args: object, keep: bool = False) -> None:
         """ Updates parameters given kwargs. """
         if isinstance(params, str):
             setattr(self, params, args)
@@ -615,7 +621,7 @@ class Model:
         if 'seed' in params:
             self.rand = np.random.RandomState(self.seed)
 
-    def _update_defaults(self, defaults: Mapping[str, object]) -> list[bool]:
+    def _update_defaults(self, defaults: Mapping[str, object]) -> ModelVariants:
         """ Update the default column names. """
         model_types = [False] * 4
         for d in defaults:
@@ -635,7 +641,7 @@ class Model:
                 if self.defaults is None:
                     self.defaults = {}
                 self.defaults[d] = defaults[d]
-        return model_types
+        return (model_types[0], model_types[1], model_types[2], model_types[3])
 
     def _check_params(self, params: Mapping[str, object]) -> bool:
         """ Checks if BKT parameters are valid. """
@@ -666,7 +672,7 @@ class Model:
                 and len(self.fit_model[skill]['slips']) != num_gs:
             raise ValueError("invalid number of slip classes in initialization")
 
-    def _check_args(self, expected_args: list[str], args: Mapping[str, object]) -> None:
+    def _check_args(self, expected_args: Sequence[str], args: Mapping[str, object]) -> None:
         for arg in args:
             if arg not in expected_args:
                 raise ValueError("provided arguments are not recognized. they must be one or more of: " + \

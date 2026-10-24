@@ -20,7 +20,7 @@ def EM_fit(model: Params, data: SequenceData, tol: float | None = None, maxiter:
     log_likelihoods = np.zeros((maxiter, 1))
 
     for i in range(maxiter):
-        result = E_step.run(data, model, 1, int(parallel), fixed)
+        result = E_step.run(data, model, 1, parallel, fixed)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):

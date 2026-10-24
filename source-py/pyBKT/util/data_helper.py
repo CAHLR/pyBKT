@@ -16,36 +16,36 @@ import numpy as np
 import pandas as pd
 import requests
 
-from pyBKT.util.structures import NameMap, NameRefs, SkillData
+from pyBKT.util.structures import ModelVariants, NameMap, NameRefs, SkillData
 
 
 @overload
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
-                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 model_type: ModelVariants | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
                  resource_refs: Mapping[str, NameRefs] | None = ..., return_df: Literal[False] = ...,
                  folds: bool = ...) -> dict[str, SkillData]: ...
 @overload
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None,
-                 model_type: Sequence[bool] | None, gs_refs: Mapping[str, NameRefs] | None,
+                 model_type: ModelVariants | None, gs_refs: Mapping[str, NameRefs] | None,
                  resource_refs: Mapping[str, NameRefs] | None, return_df: Literal[True],
                  folds: bool = ...) -> tuple[dict[str, SkillData], pd.DataFrame]: ...
 @overload
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
-                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 model_type: ModelVariants | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
                  resource_refs: Mapping[str, NameRefs] | None = ..., *, return_df: Literal[True],
                  folds: bool = ...) -> tuple[dict[str, SkillData], pd.DataFrame]: ...
 @overload
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None,
-                 model_type: Sequence[bool] | None, gs_refs: Mapping[str, NameRefs] | None,
+                 model_type: ModelVariants | None, gs_refs: Mapping[str, NameRefs] | None,
                  resource_refs: Mapping[str, NameRefs] | None, return_df: bool,
                  folds: bool = ...) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]: ...
 @overload
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = ...,
-                 model_type: Sequence[bool] | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
+                 model_type: ModelVariants | None = ..., gs_refs: Mapping[str, NameRefs] | None = ...,
                  resource_refs: Mapping[str, NameRefs] | None = ..., *, return_df: bool,
                  folds: bool = ...) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]: ...
 def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defaults: dict[str, str] | None = None,
-                 model_type: Sequence[bool] | None = None, gs_refs: Mapping[str, NameRefs] | None = None,
+                 model_type: ModelVariants | None = None, gs_refs: Mapping[str, NameRefs] | None = None,
                  resource_refs: Mapping[str, NameRefs] | None = None, return_df: bool = False,
                  folds: bool = False) -> dict[str, SkillData] | tuple[dict[str, SkillData], pd.DataFrame]:
     if model_type:
@@ -213,7 +213,7 @@ def convert_data(url: str | pd.DataFrame, skill_name: str | Sequence[str], defau
                 
             resources = np.ones(len(data), dtype=np.int64)
             if resource_ref is None:
-                new_resource_ref = {}
+                new_resource_ref: NameMap = {}
                 new_resource_ref["Default"] = 1 #no pair
             else:
                 new_resource_ref = resource_ref

@@ -1,6 +1,6 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypedDict, TypeVar
 
 import numpy as np
 
@@ -11,6 +11,9 @@ if TYPE_CHECKING:
     from typing_extensions import Unpack
 
 StudentT = TypeVar("StudentT", bound=Hashable)
+
+# One answer: 1 or True for right, 0 or False for wrong, -1 for no answer.
+Answer: TypeAlias = Literal[-1, 0, 1] | bool
 
 
 class UpdateOptions(TypedDict, total=False):
@@ -247,7 +250,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].get_state_types()
         
-    def update_state(self, skill_name: str, student_name: Hashable, correct: int | IntArray,
+    def update_state(self, skill_name: str, student_name: Hashable, correct: Answer | IntArray,
                      **kwargs: "Unpack[UpdateOptions]") -> "State":
         """
         Updates state of a particular student for a skill given one response.
@@ -264,7 +267,7 @@ class Roster:
             raise ValueError("skill not found in roster")
         return self.skill_rosters[skill_name].update_state(student_name, correct, **kwargs)
 
-    def update_states(self, skill_name: str, corrects: Mapping[StudentT, int | IntArray],
+    def update_states(self, skill_name: str, corrects: Mapping[StudentT, Answer | IntArray],
                       **kwargs: "Unpack[UpdateOptions]") -> dict[Hashable, "State"]:
         """
         Updates state of all students for a skill given one response each.
@@ -468,14 +471,14 @@ class SkillRoster:
     def get_state_types(self) -> dict[Hashable, StateType]:
         return {s: self.get_state_type(s) for s in self.students}
         
-    def update_state(self, student_name: Hashable, correct: int | IntArray,
+    def update_state(self, student_name: Hashable, correct: Answer | IntArray,
                      **kwargs: "Unpack[UpdateOptions]") -> "State":
         if student_name not in self.students:
             raise ValueError("student name not found in roster for this skill")
         self.students[student_name].update(correct, kwargs) 
         return self.get_state(student_name)
 
-    def update_states(self, corrects: Mapping[StudentT, int | IntArray],
+    def update_states(self, corrects: Mapping[StudentT, Answer | IntArray],
                       **kwargs: "Unpack[UpdateOptions]") -> dict[Hashable, "State"]:
         if any(i not in self.students for i in corrects):
             raise ValueError("student name not found in roster for this skill")
@@ -555,7 +558,7 @@ class State:
     def get_correct_prob(self) -> float:
         return self.current_state['correct_prediction']
 
-    def update(self, correct: int | IntArray, kwargs: UpdateOptions, append: bool = True) -> None:
+    def update(self, correct: Answer | IntArray, kwargs: UpdateOptions, append: bool = True) -> None:
         if isinstance(correct, int):
             data = self.process_data(np.array([correct]), kwargs, append = append)
         elif isinstance(correct, np.ndarray):

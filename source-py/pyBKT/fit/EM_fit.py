@@ -9,7 +9,7 @@
 
 import warnings
 from multiprocessing import Pool, cpu_count, current_process
-from typing import TypeAlias, TypedDict
+from typing import Literal, TypeAlias, TypedDict
 
 import numpy as np
 
@@ -91,7 +91,7 @@ def EM_fit(model: Params, data: SequenceData, tol: float = 0.005, maxiter: int =
     return(model, log_likelihoods[:i+1])
 
 def run(data: SequenceData, model: CoreParams, trans_softcounts: FloatArray, emission_softcounts: FloatArray,
-        init_softcounts: FloatArray, num_outputs: int, parallel: bool = True, fixed: FixedParams | None = None) -> EStepResult:
+        init_softcounts: FloatArray, num_outputs: Literal[1], parallel: bool = True, fixed: FixedParams | None = None) -> EStepResult:
     if fixed is None:
         fixed = {}
 

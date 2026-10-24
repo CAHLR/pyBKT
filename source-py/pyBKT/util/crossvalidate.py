@@ -7,8 +7,8 @@
 #########################################
 
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from collections.abc import Hashable, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -43,7 +43,7 @@ def fix_data(data: SkillData, indices: IntArray) -> SkillData:
         training_data["gs_names"] = data["gs_names"]
     return (training_data)
 
-def fix_data_specified(data: SkillData, label: Any, count: int) -> tuple[SkillData, SkillData]:
+def fix_data_specified(data: SkillData, label: Hashable, count: int) -> tuple[SkillData, SkillData]:
     
     train_starts = np.zeros(len(data["starts"]), dtype = 'int')
     train_lengths = np.zeros(len(data["lengths"]), dtype = 'int')

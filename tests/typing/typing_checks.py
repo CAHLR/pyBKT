@@ -53,6 +53,10 @@ roster = Roster(["Morgan", "Bob"], "Box and Whisker", model=bkt)
 assert_type(roster.update_state("Box and Whisker", "Morgan", 1), State)
 assert_type(roster.get_mastery_probs("Box and Whisker"), dict[Hashable, float])
 
+roster.update_state("Box and Whisker", "Bob", -1)
+roster.update_state("Box and Whisker", "Bob", True)
+Model(defaults={"user_id": "student", "correct": "right"})
+
 # Mistakes the types must reject.
 Model(num_fit=5)  # type: ignore[call-arg]
 bkt.fit(data=frame, fixed={"Box and Whisker": {"learn": True}})  # type: ignore[typeddict-unknown-key]
@@ -63,3 +67,5 @@ EM_fit.EM_fit({"prior": 0.5, "learns": np.array([0.1]), "forgets": np.array([0.0
 counts = np.zeros((1, 2, 2), dtype=np.int64)
 M_step.run(model, counts, counts, np.zeros((2, 1)))  # type: ignore[arg-type]
 roster.update_state("Box and Whisker", "Morgan", "1")  # type: ignore[arg-type]
+roster.update_state("Box and Whisker", "Morgan", 2)  # type: ignore[arg-type]
+Model(defaults={"user": "student"})  # type: ignore[arg-type]

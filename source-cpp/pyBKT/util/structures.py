@@ -5,7 +5,7 @@ Arrays of parameters hold float64. Answer data holds integers of any width
 class. Starts, lengths and resources hold integers too, and starts and
 resources count from 1.
 """
-from collections.abc import Sequence
+from collections.abc import Hashable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,7 +14,6 @@ from typing import (
     Protocol,
     TypeAlias,
     TypedDict,
-    TypeGuard,
     get_args,
 )
 
@@ -23,13 +22,19 @@ import numpy.typing as npt
 
 if TYPE_CHECKING:
     import pandas as pd
+    from typing_extensions import TypeIs
 
 FloatArray: TypeAlias = npt.NDArray[np.float64]
 IntArray: TypeAlias = npt.NDArray[np.integer[Any]]
 AnswerArray: TypeAlias = npt.NDArray[np.integer[Any]]
 
 # Name maps are keyed by the values of a data column, which can be strings or numbers.
-NameMap: TypeAlias = dict[Any, int]
+NameMap: TypeAlias = dict[Hashable, int]
+
+# The model variants, in the order Model.MODELS_BKT and model_type list them.
+ModelVariant: TypeAlias = Literal["multilearn", "multiprior", "multipair", "multigs"]
+# Whether each variant is on: multilearn, multiprior, multipair, multigs.
+ModelVariants: TypeAlias = tuple[bool, bool, bool, bool]
 
 
 ParamName: TypeAlias = Literal["prior", "learns", "forgets", "guesses", "slips", "As", "emissions", "pi_0",
@@ -39,12 +44,12 @@ PARAM_NAMES: Final = frozenset(get_args(ParamName))
 FIXED_NAMES: Final = frozenset(get_args(FixedName))
 
 
-def is_param_name(name: str) -> TypeGuard[ParamName]:
+def is_param_name(name: str) -> "TypeIs[ParamName]":
     """Whether name is a key of Params."""
     return name in PARAM_NAMES
 
 
-def is_fixed_name(name: str) -> TypeGuard[FixedName]:
+def is_fixed_name(name: str) -> "TypeIs[FixedName]":
     """Whether name is a key of FixedParams."""
     return name in FIXED_NAMES
 
@@ -127,13 +132,27 @@ class FixedSpec(TypedDict, total=False):
     slips: bool | FloatArray
 
 
+class ColumnNames(TypedDict, total=False):
+    """Data column names by role, for Model's defaults option."""
+
+    order_id: str
+    skill_name: str
+    correct: str
+    user_id: str
+    multilearn: str
+    multiprior: str
+    multipair: str
+    multigs: str
+    folds: str
+
+
 class ModelOptions(TypedDict, total=False):
     """Keyword arguments to Model(). A model variant takes True, or the name of its data column."""
 
     parallel: bool
     num_fits: int
     seed: int
-    defaults: dict[str, str] | None
+    defaults: ColumnNames | None
     multilearn: bool | str
     multiprior: bool | str
     multipair: bool | str
@@ -145,7 +164,7 @@ class FitOptions(TypedDict, total=False):
 
     skills: str | Sequence[str]
     num_fits: int
-    defaults: dict[str, str] | None
+    defaults: ColumnNames | None
     fixed: Literal[True] | dict[str, FixedSpec] | None
     parallel: bool
     forgets: bool

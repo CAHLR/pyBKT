@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pyBKT.util.structures import (
     CompiledEStepResult,
     CoreParams,
@@ -5,4 +7,4 @@ from pyBKT.util.structures import (
     SequenceData,
 )
 
-def run(data: SequenceData, model: CoreParams, num_outputs: int, parallel: int, fixed: FixedParams, /) -> CompiledEStepResult: ...
+def run(data: SequenceData, model: CoreParams, num_outputs: Literal[1], parallel: bool, fixed: FixedParams, /) -> CompiledEStepResult: ...
