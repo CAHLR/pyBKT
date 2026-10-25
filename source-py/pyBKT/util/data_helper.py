@@ -104,7 +104,7 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     elif defaults["user_id"] not in df.columns:
         raise KeyError("specified user id default column not in data")
     if df[defaults["user_id"]].isna().any():
-        raise ValueError("Missing values found in user_id column")
+        raise ValueError(f"Missing values found in user ID column {defaults['user_id']!r}")
         
     if "correct" not in defaults:
         raise KeyError("correct default column not specified")
