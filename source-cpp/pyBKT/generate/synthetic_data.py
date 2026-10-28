@@ -6,13 +6,14 @@
 # Last edited: 26 February 2020         #
 #########################################
 
+
 import numpy as np
 from numpy.random import uniform
-from time import time
+
 from pyBKT.generate import synthetic_data_helper
 
+
 def synthetic_data(model, lengths, resources = None):
-    start = time()
     num_resources = len(model["learns"])
     bigT = sum(lengths)
 
@@ -53,7 +54,6 @@ def create_synthetic_data(model, starts, lengths, resources):
     inverted_guess = 1 - guesses
     num_res, num_subparts, num_seqs, num_guesses = \
             len(learns), len(slips), len(starts), len(guesses)
-    use_ne = len(guesses) >= 1000
     initial_dist = np.array([1 - model['prior'], model['prior']])
 
     as_matrix = np.empty((2, 2 * num_res))

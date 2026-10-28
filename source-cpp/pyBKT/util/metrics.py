@@ -1,5 +1,9 @@
-import numpy as np
 import re
+from collections.abc import Callable
+from typing import Any
+
+import numpy as np
+
 
 def error_check(flat_true_values, pred_values):
     if len(flat_true_values) != len(pred_values):
@@ -48,7 +52,7 @@ def rmse(flat_true_values, pred_values):
     if len(flat_true_values) == 0:
         return np.nan
     error_check(flat_true_values, pred_values)
-    rmse, c = 0, 0
+    rmse, c = 0.0, 0
     for i in range(len(flat_true_values)):
         if flat_true_values[i] != -1:
             rmse += ((flat_true_values[i] - pred_values[i]) ** 2)
@@ -58,19 +62,20 @@ def rmse(flat_true_values, pred_values):
     return rmse
 
 def fetch_supported_metrics():
-    supported_metrics = {}
+    supported_metrics: dict[str, Callable[..., Any]] = {}
     try:
         import sklearn.metrics as sk
     except ModuleNotFoundError:
         return supported_metrics
     dummy_x, dummy_y = [0, 1] * 5, [1, 0] * 5
     for metric_locs in sk._regression, sk._classification:
-        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs) if re.search('_loss$|_score$|_error$', i)}
-        for metric in potential_metrics:
+        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs)
+                             if re.search('_loss$|_score$|_error$', i) and not i.startswith('_')}
+        for metric, function in potential_metrics.items():
             try:
-                potential_metrics[metric](dummy_x, dummy_y)
-                supported_metrics[metric] = potential_metrics[metric]
-            except Exception:
+                function(dummy_x, dummy_y)
+                supported_metrics[metric] = function
+            except (TypeError, ValueError):
                 pass
     return supported_metrics
 

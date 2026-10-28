@@ -16,7 +16,7 @@ def fitted_values(model, parameter):
 
 def test_recovers_the_standard_bkt_parameters():
     """prior, learn, guess and slip come back within 0.03 of the values that generated the data."""
-    truth = dict(prior=0.3, learn=0.15, guess=0.2, slip=0.1)
+    truth = {"prior": 0.3, "learn": 0.15, "guess": 0.2, "slip": 0.1}
     attempts = simulate_attempts(seed=3, students=1500, attempts=12, **truth)
 
     model = Model(seed=0, num_fits=3, parallel=False)

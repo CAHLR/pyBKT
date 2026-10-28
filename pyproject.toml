@@ -1,3 +1,24 @@
 [build-system]
 requires = ["setuptools", "numpy"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+target-version = "py310"
+extend-exclude = ["source-cpp/pyBKT/Eigen"]
+src = ["source-py", "tests"]
+
+[tool.ruff.lint]
+# Module names such as EM_fit.py are part of the public import path.
+ignore = ["N999"]
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+warn_unused_ignores = true
+# The bundled Eigen folder carries its own Python 2 scripts.
+exclude = ["/Eigen/"]
+
+[[tool.mypy.overrides]]
+# scikit-learn ships no type information.
+module = ["sklearn.*"]
+ignore_missing_imports = true
