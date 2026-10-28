@@ -7,16 +7,59 @@
 # Last edited: 20 March 2020            #
 #########################################
 
-import numpy as np
 import warnings
-from time import time
-from pyBKT.util import check_data
-from pyBKT.fit import M_step
 from multiprocessing import Pool, cpu_count, current_process
+from typing import TypeAlias, TypedDict
+
+import numpy as np
+
+from pyBKT.fit import M_step
+from pyBKT.util import check_data
+from pyBKT.util.structures import (
+    AnswerArray,
+    CoreParams,
+    EStepResult,
+    FixedParams,
+    FloatArray,
+    IntArray,
+    Params,
+    SequenceData,
+    Softcounts,
+)
 
 gs = globals()
 
-def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {}):
+
+class EStepInput(TypedDict):
+    """What every E-step worker reads."""
+
+    As: FloatArray
+    Bn: FloatArray
+    initial_distn: FloatArray
+    allresources: IntArray
+    starts: IntArray
+    lengths: IntArray
+    num_resources: int
+    num_subparts: int
+    alldata: AnswerArray
+    normalizeLengths: bool
+    alpha_out: FloatArray
+
+
+class EStepTask(EStepInput):
+    """One worker's share of the sequences, from sequence_idx_start up to sequence_idx_end."""
+
+    sequence_idx_start: int
+    sequence_idx_end: int
+
+
+# A worker's softcounts and log-likelihood, and each sequence's start, length and forward messages.
+EStepChunk: TypeAlias = tuple[FloatArray, FloatArray, FloatArray, float, list[tuple[int, int, FloatArray]]]
+
+def EM_fit(model: Params, data: SequenceData, tol: float = 0.005, maxiter: int = 100, parallel: bool = True,
+           fixed: FixedParams | None = None) -> tuple[Params, FloatArray]:
+    if fixed is None:
+        fixed = {}
 
     check_data.check_data(data)
 
@@ -28,13 +71,12 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {})
     init_softcounts = np.zeros((2, 1))
     log_likelihoods = np.zeros((maxiter, 1))
 
-    result = {}
-    result['all_trans_softcounts'] = trans_softcounts
-    result['all_emission_softcounts'] = emission_softcounts
-    result['all_initial_softcounts'] = init_softcounts
+    softcounts: Softcounts = {'all_trans_softcounts': trans_softcounts, 'all_emission_softcounts': emission_softcounts,
+                              'all_initial_softcounts': init_softcounts}
 
     for i in range(maxiter):
-        result = run(data, model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], 1, parallel, fixed = fixed)
+        result = run(data, model, softcounts['all_trans_softcounts'], softcounts['all_emission_softcounts'], softcounts['all_initial_softcounts'], 1, parallel, fixed = fixed)
+        softcounts = result
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):
@@ -48,7 +90,10 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {})
 
     return(model, log_likelihoods[:i+1])
 
-def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num_outputs, parallel = True, fixed = {}):
+def run(data: SequenceData, model: CoreParams, trans_softcounts: FloatArray, emission_softcounts: FloatArray,
+        init_softcounts: FloatArray, num_outputs: int, parallel: bool = True, fixed: FixedParams | None = None) -> EStepResult:
+    if fixed is None:
+        fixed = {}
 
     # Processed Parameters
     alldata = data["data"]
@@ -90,22 +135,21 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
 
     total_loglike = 0.0
 
-    input = {"As": As, "Bn": Bn, "initial_distn": initial_distn, 'allresources': allresources, \
+    input: EStepInput = {"As": As, "Bn": Bn, "initial_distn": initial_distn, 'allresources': allresources, \
              'starts': starts,
              'lengths': lengths, \
              'num_resources': num_resources, 'num_subparts': num_subparts, \
              'alldata': alldata, 'normalizeLengths': normalizeLengths, 'alpha_out': alpha_out}
 
     num_threads = cpu_count() if parallel else 1
-    thread_counts = [None for i in range(num_threads)]
+    thread_counts: list[EStepTask] = []
     for thread_num in range(num_threads):
         blocklen = 1 + ((num_sequences - 1) // num_threads)
         sequence_idx_start = int(blocklen * thread_num)
         sequence_idx_end = min(sequence_idx_start+blocklen, num_sequences)
-        thread_counts[thread_num] = {'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end}
-        thread_counts[thread_num].update(input)
+        thread_counts.append({'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end, **input})
 
-    x = []
+    x: list[EStepChunk] = []
     if parallel and not current_process().daemon:
         # Daemonic processes (e.g. pool workers of an outer Pool) cannot have
         # children, so only attempt the pool from non-daemonic processes.
@@ -133,31 +177,32 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
         all_initial_softcounts += i[2] #+ all_initial_softcounts
         for sequence_start, T, alpha in i[4]:
             alpha_out[:, sequence_start: sequence_start + T] += alpha
-    all_trans_softcounts = all_trans_softcounts.flatten(order = 'F')
-    all_emission_softcounts = all_emission_softcounts.flatten(order = 'F')
-    result = {}
-    result["total_loglike"] = total_loglike;
-    result["all_trans_softcounts"] = np.reshape(all_trans_softcounts, (num_resources, 2, 2), order = 'C')
-    result["all_emission_softcounts"] = np.reshape(all_emission_softcounts, (num_subparts, 2, 2), order = 'C')
-    result["all_initial_softcounts"] = all_initial_softcounts
-    result["alpha_out"] = alpha_out.flatten(order = 'F').reshape(alpha_out.shape, order = 'C')
+    flat_trans_softcounts = all_trans_softcounts.flatten(order = 'F')
+    flat_emission_softcounts = all_emission_softcounts.flatten(order = 'F')
+    result: EStepResult = {
+        "total_loglike": total_loglike,
+        "all_trans_softcounts": np.reshape(flat_trans_softcounts, (num_resources, 2, 2), order = 'C'),
+        "all_emission_softcounts": np.reshape(flat_emission_softcounts, (num_subparts, 2, 2), order = 'C'),
+        "all_initial_softcounts": all_initial_softcounts,
+        "alpha_out": alpha_out.flatten(order = 'F').reshape(alpha_out.shape, order = 'C'),
+    }
 
     return result
 
-def interleave(m, v1, v2):
+def interleave(m: FloatArray, v1: FloatArray, v2: FloatArray) -> None:
     m[0::2], m[1::2] = v1, v2
 
-def inner(x):
-    As, Bn, initial_distn, allresources, starts, lengths, num_resources, num_subparts, alldata, normalizeLengths, alpha_out, sequence_idx_start, sequence_idx_end = \
+def inner(x: EStepTask) -> EStepChunk:
+    As, Bn, initial_distn, allresources, starts, lengths, num_resources, num_subparts, alldata, normalizeLengths, _alpha_out, sequence_idx_start, sequence_idx_end = \
             x['As'], x['Bn'], x['initial_distn'], x['allresources'], x['starts'], x['lengths'], x['num_resources'], x['num_subparts'], x['alldata'], x['normalizeLengths'], \
             x['alpha_out'], x['sequence_idx_start'], x['sequence_idx_end']
     N_R, N_S = 2 * num_resources, 2 * num_subparts
     trans_softcounts_temp = np.zeros((2, N_R))
     emission_softcounts_temp = np.zeros((2, N_S))
     init_softcounts_temp = np.zeros((2, 1))
-    loglike = 0
+    loglike = 0.0
 
-    alphas = []
+    alphas: list[tuple[int, int, FloatArray]] = []
     dot, sum, log = np.dot, np.sum, np.log
 
     for sequence_index in range(sequence_idx_start, sequence_idx_end):
@@ -236,4 +281,4 @@ def inner(x):
                     emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, t]
         init_softcounts_temp += gamma[:, 0].reshape((2, 1))
         alphas.append((sequence_start, T, alpha))
-    return [trans_softcounts_temp, emission_softcounts_temp, init_softcounts_temp, loglike, alphas]
+    return (trans_softcounts_temp, emission_softcounts_temp, init_softcounts_temp, loglike, alphas)

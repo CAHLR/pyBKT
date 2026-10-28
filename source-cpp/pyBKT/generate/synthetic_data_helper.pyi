@@ -1,0 +1,3 @@
+from pyBKT.util.structures import CoreParams, IntArray, SyntheticDraws
+
+def create_synthetic_data(model: CoreParams, starts: IntArray, lengths: IntArray, resources: IntArray, /) -> SyntheticDraws: ...

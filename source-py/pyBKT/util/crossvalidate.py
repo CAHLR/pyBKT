@@ -6,25 +6,27 @@
 # Last edited: 27 March 2021            #
 #########################################
 
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
-from pyBKT.generate import synthetic_data, random_model_uni
-from pyBKT.fit import EM_fit, predict_onestep
-from copy import deepcopy
+
+from pyBKT.util.structures import FloatArray, IntArray, SkillData
+
+if TYPE_CHECKING:
+    from pyBKT.models.Model import Model
+    from pyBKT.util.metrics import Metric
+
 
 # returns data only for the indices given based on starts array
-def fix_data(data, indices):
-    training_data = {}
+def fix_data(data: SkillData, indices: IntArray) -> SkillData:
     prev_starts = data["starts"][indices]
     lengths = data["lengths"][indices]
     total_length = np.sum(lengths)
     d = np.zeros((len(data["data"]), total_length), dtype=np.int32)
     resources = np.ones(total_length, dtype=np.int64)
-    
-    if "resource_names" in data:
-        training_data["resource_names"] = data["resource_names"]
-    if "gs_names" in data:
-        training_data["gs_names"] = data["gs_names"]
-    
+
     starts = np.zeros(len(prev_starts), dtype=np.int64)
     current_index = 1
     for i in range(len(prev_starts)):
@@ -34,15 +36,14 @@ def fix_data(data, indices):
         resources[starts[i]-1:starts[i]+lengths[i]-1] = data["resources"][prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
         current_index += lengths[i]
     
-    training_data["starts"] = starts
-    training_data["lengths"] = lengths
-    training_data["data"] = d
-    training_data["resources"]=resources
+    training_data: SkillData = {"starts": starts, "lengths": lengths, "data": d, "resources": resources}
+    if "resource_names" in data:
+        training_data["resource_names"] = data["resource_names"]
+    if "gs_names" in data:
+        training_data["gs_names"] = data["gs_names"]
     return (training_data)
 
-def fix_data_specified(data, label, count):
-    training_data = {}
-    testing_data = {}
+def fix_data_specified(data: SkillData, label: Any, count: int) -> tuple[SkillData, SkillData]:
     
     train_starts = np.zeros(len(data["starts"]), dtype = 'int')
     train_lengths = np.zeros(len(data["lengths"]), dtype = 'int')
@@ -82,11 +83,10 @@ def fix_data_specified(data, label, count):
     test_lengths = test_lengths[real_test]
     test_starts = test_starts[real_test]
     
-    training_data["starts"] = train_starts
-    training_data["lengths"] = train_lengths
-    training_data["data"] = train_data
-    training_data["resources"] = train_resources
-    
+    training_data: SkillData = {"starts": train_starts, "lengths": train_lengths, "data": train_data,
+                                "resources": train_resources}
+    testing_data: SkillData = {"starts": test_starts, "lengths": test_lengths, "data": test_data,
+                               "resources": test_resources}
     if "resource_names" in data:
         training_data["resource_names"] = data["resource_names"]
         testing_data["resource_names"] = data["resource_names"]
@@ -94,32 +94,25 @@ def fix_data_specified(data, label, count):
         training_data["gs_names"] = data["gs_names"]
         testing_data["gs_names"] = data["gs_names"]
     
-    testing_data["starts"] = test_starts
-    testing_data["lengths"] = test_lengths
-    testing_data["data"] = test_data
-    testing_data["resources"] = test_resources
-    
     
     
     return training_data, testing_data
 
 # TODO: Rename seed to 'rand' in next major version
-def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
-
-    num_learns = len(data["resource_names"]) if "resource_names" in data else 1
-    num_gs = len(data["gs_names"]) if "gs_names" in data else num_gs
+def crossvalidate(model: "Model", data: SkillData, skill: str, folds: int | str, metric: "Sequence[Metric]",
+                  seed: int | np.random.RandomState, use_folds: bool = False) -> FloatArray:
 
     # create random permutation to act as indices for folds for crossvalidation
     # TODO: Remove interoperability between int and RandomState in next major version
     shuffle = (np.random.RandomState(seed=seed) if isinstance(seed, int) else seed).permutation(len(data["starts"]))
-    all_true, all_pred = [], []
     metrics = np.zeros((len(metric), ))
 
     
     if use_folds: # predetermined folds
         all_labels, all_counts = np.unique(data["folds"], return_counts=True)
         all_folds = dict(zip(all_labels, all_counts))
-        folds = len(all_folds)
+        num_folds = len(all_folds)
+        assert model.fit_model is not None
         
         for label, count in all_folds.items():
             training_data, test_data = fix_data_specified(data, label, count)
@@ -127,8 +120,11 @@ def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
             metrics += model._evaluate({skill: test_data}, metric)
             
     else: # crossvalidation on students which are identified by the starts array
-        split_size = len(data["starts"]) // folds
-        for iteration in range(folds):
+        # Without a folds column, folds is the number of folds.
+        assert not isinstance(folds, str)
+        num_folds = folds
+        split_size = len(data["starts"]) // num_folds
+        for iteration in range(num_folds):
             model.fit_model = {}
             # create training/test data based on random permutation from earlier
             train = np.concatenate((shuffle[0: iteration * split_size], shuffle[(iteration + 1) * split_size:
@@ -140,4 +136,4 @@ def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
             test_data = fix_data(data, test)
             metrics += model._evaluate({skill: test_data}, metric)
 
-    return metrics / folds
+    return metrics / num_folds

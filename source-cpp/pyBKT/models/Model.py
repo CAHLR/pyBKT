@@ -6,26 +6,30 @@
 # Last edited: 07 April 2021            #
 #########################################
 
-import numpy as np
 import numbers
 import os
-import pandas as pd
-import random
 import pickle
+import random
 import urllib.request as urllib2
-from pyBKT.generate import synthetic_data, random_model_uni
+from typing import Any, ClassVar
+
+import numpy as np
+import pandas as pd
+
 from pyBKT.fit import EM_fit, predict_onestep
-from pyBKT.util import crossvalidate, data_helper, check_data, metrics
+from pyBKT.generate import random_model_uni
+from pyBKT.util import check_data, crossvalidate, data_helper, metrics
+from pyBKT.util.structures import FixedParams, Params, is_fixed_name, is_param_name
 
 pd.options.display.float_format = '{:,.5f}'.format
 
 class Model:
-    MODELS_BKT = ['multilearn', 'multiprior', 'multipair', 'multigs']
-    MODEL_ARGS = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
-    FIT_ARGS = ['skills', 'num_fits', 'defaults', 'fixed',
+    MODELS_BKT: ClassVar[list[str]] = ['multilearn', 'multiprior', 'multipair', 'multigs']
+    MODEL_ARGS: ClassVar[list[str]] = ['parallel', 'num_fits', 'seed', 'defaults'] + MODELS_BKT
+    FIT_ARGS: ClassVar[list[str]] = ['skills', 'num_fits', 'defaults', 'fixed',
                             'parallel', 'forgets', 'preload'] + MODELS_BKT
-    CV_ARGS = FIT_ARGS + ['folds', 'seed']
-    DEFAULTS = {'num_fits': 5,
+    CV_ARGS: ClassVar[list[str]] = FIT_ARGS + ['folds', 'seed']
+    DEFAULTS: ClassVar[dict[str, Any]] = {'num_fits': 5,
                 'defaults': None,
                 'parallel': True,
                 'skills': '.*',
@@ -34,7 +38,7 @@ class Model:
                 'forgets': False,
                 'fixed': None,
                 'model_type': [False] * len(MODELS_BKT)}
-    DEFAULTS_BKT = {'order_id': 'order_id',
+    DEFAULTS_BKT: ClassVar[dict[str, str]] = {'order_id': 'order_id',
                     'skill_name': 'skill_name',
                     'correct': 'correct',
                     'user_id': 'user_id',
@@ -43,7 +47,20 @@ class Model:
                     'multipair': 'problem_id',
                     'multigs': 'template_id',
                     'folds': 'template_id'}
-    INITIALIZABLE_PARAMS = ['prior', 'learns', 'guesses', 'slips', 'forgets']
+    INITIALIZABLE_PARAMS: ClassVar[list[str]] = ['prior', 'learns', 'guesses', 'slips', 'forgets']
+
+    # Most are set with setattr in _update_param, so they are declared here for type checkers.
+    fit_model: dict[str, Any] | None
+    parallel: bool
+    num_fits: int
+    seed: int
+    rand: np.random.RandomState
+    defaults: dict[str, str] | None
+    model_type: list[bool]
+    skills: str | list[str]
+    folds: int | str
+    forgets: bool
+    fixed: Any
 
     def __init__(self, **kwargs):
         """
@@ -109,7 +126,7 @@ class Model:
         self._update_param(['skills'], {'skills': list(all_data.keys())})
         for skill in all_data:
             self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets, 
-                                              preload = kwargs['preload'] if 'preload' in kwargs else False)
+                                              preload = kwargs.get('preload', False))
         self.manual_param_init = False
 
     def predict(self, data_path = None, data = None):
@@ -185,7 +202,7 @@ class Model:
                         raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
                     metric[i] = metrics.SUPPORTED_METRICS[m] 
                 elif not callable(m):
-                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+                    raise TypeError("metric must either be a string, function or list/tuple of strings and functions")
 
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type,
                                      gs_ref = self.fit_model, resource_ref = self.fit_model)
@@ -221,7 +238,7 @@ class Model:
         if not isinstance(metric, (tuple, list)):
             metric = [metric]
         if not isinstance(data, pd.DataFrame) and not isinstance(data_path, str):
-            raise ValueError("no data specified")
+            raise TypeError("no data specified")
         else:
             for i in range(len(metric)):
                 m = metric[i]
@@ -233,7 +250,7 @@ class Model:
                 elif callable(m):
                     metric_names.append(m.__name__)
                 else:
-                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+                    raise TypeError("metric must either be a string, function or list/tuple of strings and functions")
 
         self._check_args(Model.CV_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
@@ -400,33 +417,36 @@ class Model:
             self._check_fixed(self)
         num_fit_initializations = self.num_fits
         best_likelihood = float("-inf")
-        best_model = None
+        best_model: Params | None = None
 
         for i in range(num_fit_initializations):
             fitmodel = random_model_uni.random_model_uni(num_learns, num_gs, rand=self.rand)
-            optional_args = {'fixed': {}}
+            fixed: FixedParams = {}
             if forgets:
                 fitmodel["forgets"] = self.rand.uniform(size = fitmodel["forgets"].shape)
             if self.model_type[Model.MODELS_BKT.index('multiprior')]:
                 fitmodel["prior"] = 0
-            if self.manual_param_init and skill in self.fit_model:
+            if self.manual_param_init and self.fit_model is not None and skill in self.fit_model:
                 for var in self.fit_model[skill]:
                     if self.fixed is not None and skill in self.fixed and var in self.fixed[skill] and \
                             isinstance(self.fixed[skill][var], bool) and self.fixed[skill][var]:
-                        optional_args['fixed'][var] = self.fit_model[skill][var] 
-                    elif var in fitmodel:
+                        if is_fixed_name(var):
+                            fixed[var] = self.fit_model[skill][var]
+                    elif is_param_name(var) and var in fitmodel:
                         fitmodel[var] = self.fit_model[skill][var]
             if hasattr(self, "fixed") and self.fixed is not None and skill in self.fixed:
                 for var in self.fixed[skill]:
-                    if not isinstance(self.fixed[skill][var], bool):
-                        optional_args['fixed'][var] = self.fixed[skill][var]
+                    if not isinstance(self.fixed[skill][var], bool) and is_fixed_name(var):
+                        fixed[var] = self.fixed[skill][var]
             if not preload:
-                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, **optional_args)
+                fitmodel, log_likelihoods = EM_fit.EM_fit(fitmodel, data, parallel = self.parallel, fixed = fixed)
                 if log_likelihoods[-1] > best_likelihood:
                     best_likelihood = log_likelihoods[-1]
                     best_model = fitmodel
             else:
                 best_model = fitmodel
+        if best_model is None:
+            raise ValueError("num_fits must be at least 1")
         fit_model = best_model
         fit_model["learns"] = fit_model["As"][:, 1, 0]
         fit_model["forgets"] = fit_model["As"][:, 0, 1]
@@ -441,10 +461,10 @@ class Model:
 
     def _evaluate(self, all_data, metric):
         """ Helper function for evaluating. """
-        per_skill = []
-        true, pred = [], []
+        assert self.fit_model is not None
+        true, pred = np.array([]), np.array([])
         for skill in all_data:
-            correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
+            correct_predictions, _state_predictions = self._predict(self.fit_model[skill], all_data[skill])
             real_data = all_data[skill]['data']
             true = np.append(true, real_data.sum(axis = 0))
             pred = np.append(pred, correct_predictions)
@@ -464,6 +484,7 @@ class Model:
 
     def _format_param(self, skill, param, value):
         """ Formats parameter for nice printing. """
+        assert self.fit_model is not None
         if isinstance(value, np.ndarray):
             ptype = 'resource_names' if (param == 'learns' or param == 'forgets') \
                                      else 'gs_names'
@@ -481,7 +502,7 @@ class Model:
         elif isinstance(self.fixed, dict):
             return
         else:
-            raise ValueError("fixed parameter incorrectly specified")
+            raise TypeError("fixed parameter incorrectly specified")
 
 
     def _update_param(self, params, args, keep = False):
@@ -500,7 +521,7 @@ class Model:
         
         # Update RandomState if seed is one of the parameters to update
         if 'seed' in params:
-            setattr(self, 'rand', np.random.RandomState(self.seed))
+            self.rand = np.random.RandomState(self.seed)
 
     def _update_defaults(self, defaults):
         """ Update the default column names. """
@@ -515,7 +536,7 @@ class Model:
                     self.defaults[d] = defaults[d]
                     model_types[Model.MODELS_BKT.index(d)] = True
                 else:
-                    raise ValueError("model type must either be boolean for automatic column inference" + \
+                    raise TypeError("model type must either be boolean for automatic column inference" + \
                                      " or string specifying column")
             elif d in Model.DEFAULTS_BKT:
                 if self.defaults is None:
@@ -557,14 +578,14 @@ class Model:
 
     def _check_data(self, data_path, data):
         if not isinstance(data_path, str) and not isinstance(data, pd.DataFrame):
-            raise ValueError("no data specified")
+            raise TypeError("no data specified")
         elif isinstance(data_path, str) and isinstance(data, pd.DataFrame):
-            raise ValueError("cannot specify both data location and data")
+            raise TypeError("cannot specify both data location and data")
         elif isinstance(data_path, str) and not os.path.exists(data_path):
             raise ValueError("data path is invalid or file not found")
 
     def __repr__(self):
         ret = 'Model('
-        args = ['%s=%s' % (arg, str(getattr(self, arg))) for arg in Model.MODEL_ARGS if hasattr(self, arg)]
+        args = [f'{arg}={getattr(self, arg)!s}' for arg in Model.MODEL_ARGS if hasattr(self, arg)]
         ret += ', '.join(args) + ')'
         return ret
