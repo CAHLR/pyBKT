@@ -24,23 +24,23 @@ class Roster:
         State(StateType.UNMASTERED, {'correct_prediction': 0.5242746611208322, 'state_prediction': 0.08836967920678879}, Roster(...))
 
         """
+        if model is not None and not isinstance(model, Model):
+            raise TypeError("invalid model, must be of type pyBKT.models.Model")
+        if not isinstance(mastery_state, float) or not (0 <= mastery_state <= 1):
+            raise ValueError("invalid mastery state, must be between 0 and 1")
+        if not isinstance(track_progress, bool):
+            raise TypeError("track progress must be a boolean")
         self.skill_rosters = {}
         self.students = students
         if isinstance(skills, str):
             skills = [skills]
         elif not isinstance(skills, list):
-            raise ValueError("skills must be a list or string")
+            raise TypeError("skills must be a list or string")
         for s in skills:
             self.skill_rosters[s] = SkillRoster(students, s, mastery_state = mastery_state, 
                                                 track_progress = track_progress, model = model)
-        if model is not None and not isinstance(model, Model):
-            raise ValueError("invalid model, must be of type pyBKT.models.Model")
         self.model = model
-        if not isinstance(mastery_state, float) or not (0 <= mastery_state <= 1):
-            raise ValueError("invalid mastery state, must be between 0 and 1")
         self.mastery_state = mastery_state
-        if not isinstance(track_progress, bool):
-            raise ValueError("track progress must be a boolean")
         self.track_progress = track_progress
 
     # STATE BASED METHODS
@@ -339,7 +339,7 @@ class Roster:
         """
         self.model = model
         if not isinstance(model, Model):
-            raise ValueError("invalid model, must be of type pyBKT.models.Model")
+            raise TypeError("invalid model, must be of type pyBKT.models.Model")
         for s in self.skill_rosters:
             self.skill_rosters[s].set_model(model)
 
@@ -458,7 +458,7 @@ class SkillRoster:
 
     def add_students(self, student_names, initial_states = StateType.DEFAULT_STATE):
         if not isinstance(student_names, list):
-            raise ValueError("student names must be a list")
+            raise TypeError("student names must be a list")
         if not isinstance(initial_states, list):
             initial_states = [initial_states] * len(student_names)
         for i, s in enumerate(student_names):
@@ -522,7 +522,7 @@ class State:
         elif isinstance(correct, np.ndarray):
             data = self.process_data(correct, kwargs, append = append)
         else:
-            raise ValueError("need to pass int or np.ndarray")
+            raise TypeError("need to pass int or np.ndarray")
         correct_predictions, state_predictions = self.predict(self.roster.model, self.roster.skill, data, self.current_state)
         self.current_state['correct_prediction'] = correct_predictions[-1]
         self.current_state['state_prediction'] = state_predictions[-1]
