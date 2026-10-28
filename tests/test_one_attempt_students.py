@@ -1,7 +1,6 @@
 """A student with a single attempt still gives evidence about guess and slip."""
 import numpy as np
 import pandas as pd
-import pytest
 
 from helpers import simulate_attempts
 from pyBKT.fit import EM_fit

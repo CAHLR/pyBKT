@@ -1,10 +1,12 @@
-import numpy as np
-from pyBKT.util import check_data
-from pyBKT.fit import E_step
-from pyBKT.fit import M_step
-import os
 
-def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {}):
+import numpy as np
+
+from pyBKT.fit import E_step, M_step
+
+
+def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = None):
+    if fixed is None:
+        fixed = {}
 
     if tol is None: 
         tol = 1e-3
