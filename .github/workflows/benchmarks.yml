@@ -1,0 +1,56 @@
+name: Benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  asv:
+    name: Compare speed with the base branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      # asv checks out and builds both commits, so it needs the full history.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install asv
+        run: python -m pip install asv==0.6.6 virtualenv
+
+      - name: Download ASSISTments 2009 from pyBKT-examples
+        run: curl --fail --silent --show-error --location --output "$RUNNER_TEMP/as.csv" https://raw.githubusercontent.com/CAHLR/pyBKT-examples/master/data/as.csv
+
+      # A slower benchmark is reported in the job summary but doesn't fail the
+      # job, because noise on a shared runner can slow unchanged code. The job
+      # fails only when asv itself fails and prints no comparison.
+      - name: Compare the pull request with its base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || 'HEAD' }}
+          PYBKT_BENCH_ASSISTMENTS: ${{ runner.temp }}/as.csv
+        run: |
+          asv machine --yes
+          set +e
+          asv continuous --factor 1.2 --split --interleave-rounds --show-stderr "$BASE_SHA" "$HEAD_SHA" | tee asv.txt
+          set -e
+          {
+            echo "## asv: head compared with base, factor 1.2"
+            echo '```'
+            cat asv.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -q -E "BENCHMARKS NOT SIGNIFICANTLY CHANGED|SOME BENCHMARKS HAVE CHANGED SIGNIFICANTLY" asv.txt
