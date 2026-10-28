@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

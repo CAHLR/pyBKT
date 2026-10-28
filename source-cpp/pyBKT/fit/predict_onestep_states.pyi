@@ -1,0 +1,3 @@
+from pyBKT.util.structures import CoreParams, FloatArray, SequenceData
+
+def run(data: SequenceData, model: CoreParams, forward_messages: FloatArray, parallel: bool, /) -> FloatArray: ...

@@ -6,13 +6,24 @@
 # Last edited: 26 February 2020         #
 #########################################
 
-import numpy as np
-from numpy.random import uniform
-from time import time
-from pyBKT.generate import synthetic_data_helper
 
-def synthetic_data(model, lengths, resources = None):
-    start = time()
+import numpy as np
+import numpy.typing as npt
+from numpy.random import uniform
+
+from pyBKT.generate import synthetic_data_helper
+from pyBKT.util.structures import (
+    CoreParams,
+    FloatArray,
+    IntArray,
+    Params,
+    SyntheticData,
+    SyntheticDraws,
+    SyntheticModel,
+)
+
+
+def synthetic_data(model: Params | SyntheticModel, lengths: IntArray, resources: IntArray | None = None) -> SyntheticData:
     num_resources = len(model["learns"])
     bigT = sum(lengths)
 
@@ -36,16 +47,12 @@ def synthetic_data(model, lengths, resources = None):
 
     # syn_data["data"][:, resources != 1] = 0 #no data emitted unless resource == 1
 
-    datastruct = {}
-    datastruct["stateseqs"] = syn_data["stateseqs"]
-    datastruct["data"] = syn_data["data"]
-    datastruct["starts"] = starts
-    datastruct["lengths"] = lengths
-    datastruct["resources"] = resources
+    datastruct: SyntheticData = {"stateseqs": syn_data["stateseqs"], "data": syn_data["data"], "starts": starts,
+                                 "lengths": lengths, "resources": resources}
 
     return datastruct
 
-def create_synthetic_data(model, starts, lengths, resources):
+def create_synthetic_data(model: CoreParams, starts: IntArray, lengths: IntArray, resources: IntArray) -> SyntheticDraws:
     """ Randomly models synthetic through the preexisting MODEL, given the
         STARTS and RESOURCES. """
     learns, forgets, guesses, slips = \
@@ -53,7 +60,6 @@ def create_synthetic_data(model, starts, lengths, resources):
     inverted_guess = 1 - guesses
     num_res, num_subparts, num_seqs, num_guesses = \
             len(learns), len(slips), len(starts), len(guesses)
-    use_ne = len(guesses) >= 1000
     initial_dist = np.array([1 - model['prior'], model['prior']])
 
     as_matrix = np.empty((2, 2 * num_res))
@@ -63,8 +69,8 @@ def create_synthetic_data(model, starts, lengths, resources):
     req_length = lengths[:num_seqs]
     big_t = int(sum(req_length))
 
-    all_stateseqs, all_data, result = \
-            np.empty((1, big_t), dtype = np.int32), np.empty((num_subparts, big_t), dtype = np.int32), {}
+    all_stateseqs, all_data = \
+            np.empty((1, big_t), dtype = np.int32), np.empty((num_subparts, big_t), dtype = np.int32)
     all_data[0][0] = 0
     for seq_index in range(num_seqs):
         seq_start, T = starts[seq_index] - 1, lengths[seq_index]
@@ -73,11 +79,12 @@ def create_synthetic_data(model, starts, lengths, resources):
         other_rand = uniform(size = T)
         loop(big_rand, other_rand, T, num_guesses, nextstate_dist, seq_start, 
              slips, inverted_guess, all_data, all_stateseqs, as_matrix, resources)
-    result['stateseqs'], result['data'] = all_stateseqs, all_data
+    result: SyntheticDraws = {'stateseqs': all_stateseqs, 'data': all_data}
     return result
 
-def loop(big_rand, other_rand, T, num_guesses, nextstate_dist, seq_start, 
-             slips, inverted_guess, all_data, all_stateseqs, as_matrix, resources):
+def loop(big_rand: FloatArray, other_rand: FloatArray, T: int, num_guesses: int, nextstate_dist: FloatArray,
+         seq_start: int, slips: FloatArray, inverted_guess: FloatArray, all_data: npt.NDArray[np.int32],
+         all_stateseqs: npt.NDArray[np.int32], as_matrix: FloatArray, resources: IntArray) -> None:
   for t in range(T):
     k = seq_start + t
     r = resources[k]
@@ -88,6 +95,6 @@ def loop(big_rand, other_rand, T, num_guesses, nextstate_dist, seq_start,
     get = r * 2 + a_sq - 2
     nextstate_dist = as_matrix[:, get]
 
-def interleave(m, v1, v2):
+def interleave(m: FloatArray, v1: FloatArray, v2: FloatArray) -> None:
     m[0::2], m[1::2] = v1, v2
 

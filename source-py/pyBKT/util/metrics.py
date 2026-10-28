@@ -1,11 +1,22 @@
-import numpy as np
 import re
+from collections.abc import Callable, Sequence
+from typing import Any, TypeAlias
 
-def error_check(flat_true_values, pred_values):
+import numpy as np
+import numpy.typing as npt
+
+from pyBKT.util.structures import FloatArray
+
+# Labels are 1 for right, 0 for wrong and -1 for no answer; predictions are probabilities.
+Values: TypeAlias = Sequence[float] | npt.NDArray[np.number[Any]]
+Metric: TypeAlias = Callable[[FloatArray, FloatArray], float]
+
+
+def error_check(flat_true_values: Values, pred_values: Values) -> None:
     if len(flat_true_values) != len(pred_values):
         raise ValueError("preds and true values need to have same shape")
 
-def accuracy(flat_true_values, pred_values):
+def accuracy(flat_true_values: Values, pred_values: Values) -> float:
     error_check(flat_true_values, pred_values)
     if len(flat_true_values) == 0:
         return np.nan
@@ -17,7 +28,7 @@ def accuracy(flat_true_values, pred_values):
             correct += 1
     return correct/len([x for x in flat_true_values if (x == 0 or x == 1)])
 
-def auc(flat_true_values, pred_values):
+def auc(flat_true_values: Values, pred_values: Values) -> float:
     error_check(flat_true_values, pred_values)
     # multiprior handling, remove phantom nondata
     if len(flat_true_values) == 0:
@@ -43,37 +54,38 @@ def auc(flat_true_values, pred_values):
     rank_sum = ranks[positives].sum()
     return float((rank_sum - num_positive * (num_positive + 1) / 2) / (num_positive * num_negative))
 
-def rmse(flat_true_values, pred_values):
+def rmse(flat_true_values: Values, pred_values: Values) -> float:
     # represent correct as 1, incorrect as 0 for RMSE calculation
     if len(flat_true_values) == 0:
         return np.nan
     error_check(flat_true_values, pred_values)
-    rmse, c = 0, 0
+    rmse, c = 0.0, 0
     for i in range(len(flat_true_values)):
         if flat_true_values[i] != -1:
             rmse += ((flat_true_values[i] - pred_values[i]) ** 2)
             c += 1
     rmse /= c
-    rmse = rmse ** 0.5
-    return rmse
+    root: float = rmse ** 0.5
+    return root
 
-def fetch_supported_metrics():
-    supported_metrics = {}
+def fetch_supported_metrics() -> dict[str, Metric]:
+    supported_metrics: dict[str, Metric] = {}
     try:
         import sklearn.metrics as sk
     except ModuleNotFoundError:
         return supported_metrics
     dummy_x, dummy_y = [0, 1] * 5, [1, 0] * 5
     for metric_locs in sk._regression, sk._classification:
-        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs) if re.search('_loss$|_score$|_error$', i)}
-        for metric in potential_metrics:
+        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs)
+                             if re.search('_loss$|_score$|_error$', i) and not i.startswith('_')}
+        for metric, function in potential_metrics.items():
             try:
-                potential_metrics[metric](dummy_x, dummy_y)
-                supported_metrics[metric] = potential_metrics[metric]
-            except Exception:
+                function(dummy_x, dummy_y)
+                supported_metrics[metric] = function
+            except (TypeError, ValueError):
                 pass
     return supported_metrics
 
 
-SUPPORTED_METRICS = {'accuracy': accuracy, 'auc': auc, 'rmse': rmse}
+SUPPORTED_METRICS: dict[str, Metric] = {'accuracy': accuracy, 'auc': auc, 'rmse': rmse}
 SUPPORTED_METRICS.update(fetch_supported_metrics())

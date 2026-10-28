@@ -1,7 +1,15 @@
-import numpy as np
-from pyBKT.util import dirrnd
+from typing import Any
 
-def random_model(num_resources=None, num_subparts=None, trans_prior=None, given_notknow_prior=None, given_know_prior=None, pi_0_prior=None):
+import numpy as np
+import numpy.typing as npt
+
+from pyBKT.util import dirrnd
+from pyBKT.util.structures import Params
+
+
+def random_model(num_resources: int | None = None, num_subparts: int | None = None, trans_prior: npt.NDArray[Any] | None = None,
+                 given_notknow_prior: npt.NDArray[Any] | None = None, given_know_prior: npt.NDArray[Any] | None = None,
+                 pi_0_prior: npt.NDArray[Any] | None = None) -> Params:
 
     if num_resources is None: num_resources = 1
     if num_subparts is None: num_subparts = 1
@@ -40,16 +48,8 @@ def random_model(num_resources=None, num_subparts=None, trans_prior=None, given_
     # emissions[2, :, :] = np.transpose([[0.97, 0.01], [0.03, 0.99]])
     # emissions[3, :, :] = np.transpose([[0.93, 0.14], [0.07, 0.86]])
 
-    modelstruct = {}
-
-    modelstruct['prior'] = pi_0[1][0]
-    modelstruct['learns'] = As[:, 1, 0]
-    modelstruct['forgets'] = As[:, 0, 1]
-    modelstruct['guesses'] = given_notknow[1, :]
-    modelstruct['slips'] = given_know[0, :]
-
-    modelstruct['As'] = As
-    modelstruct['emissions'] = emissions
-    modelstruct['pi_0'] = pi_0
+    modelstruct: Params = {'prior': pi_0[1][0], 'learns': As[:, 1, 0], 'forgets': As[:, 0, 1],
+                           'guesses': given_notknow[1, :], 'slips': given_know[0, :], 'As': As,
+                           'emissions': emissions, 'pi_0': pi_0}
 
     return(modelstruct)
