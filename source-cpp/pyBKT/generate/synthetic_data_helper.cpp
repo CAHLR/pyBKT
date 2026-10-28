@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <stdint.h>
-#include <alloca.h>
 #include <Eigen/Core>
 #include <Python.h>
 #include <numpy/ndarrayobject.h>
@@ -18,21 +17,21 @@
 using namespace Eigen;
 using namespace std;
 
-static double extract_double(PyArrayObject *arr, int i) {
+static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
     return ((double*) PyArray_DATA(arr))[i];
 }
 
-static double extract_double_2d(PyArrayObject *arr, int i, int j) {
+static double extract_double_2d(PyArrayObject *arr, Py_ssize_t i, Py_ssize_t j) {
     return ((double*) PyArray_DATA(arr))[i * PyArray_DIM(arr, 1) + j];
 }
 
-static double extract_int64_t(PyArrayObject *arr, int i) {
+static int64_t extract_int64_t(PyArrayObject *arr, Py_ssize_t i) {
     return ((int64_t*) PyArray_DATA(arr))[i];
 }
 
 void capsule_cleanup(PyObject *capsule) {
-    void *memory = PyCapsule_GetPointer(capsule, NULL);
-    delete memory;
+    int *memory = (int *) PyCapsule_GetPointer(capsule, NULL);
+    delete[] memory;
 }
 
 
@@ -70,13 +69,13 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     int num_subparts = (int) PyArray_DIM(slips, 0);
     int num_sequences = (int) PyArray_DIM(starts, 0);
-    int num_resources = (int) PyArray_DIM(learns, 0);
+    Index num_resources = PyArray_DIM(learns, 0);
     
     Vector2d initial_distn;
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2, 2*num_resources);
-    for (int n=0; n<num_resources; n++) {
+    for (Index n=0; n<num_resources; n++) {
         double learn = extract_double(learns,n);
         double forget = extract_double(forgets,n);
         As.col(2*n) << 1-learn, learn;

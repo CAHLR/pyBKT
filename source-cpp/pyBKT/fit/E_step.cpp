@@ -10,7 +10,7 @@
 
 #include <iostream>
 #include <stdint.h>
-#include <alloca.h>
+#include <vector>
 #include <Eigen/Core>
 #include <omp.h>
 #include <Python.h>
@@ -21,11 +21,11 @@ using namespace std;
 
 //original comment:
 //"TODO if we aren't outputting gamma, don't need to write it to memory (just
-//need t and t+1), so we can save the stack array for each HMM at the cost of
+//need t and t+1), so we can save the working array for each HMM at the cost of
 //a branch"
 //
 
-static double extract_double(PyArrayObject *arr, int i) {
+static double extract_double(PyArrayObject *arr, Py_ssize_t i) {
     return ((double*) PyArray_DATA(arr))[i];
 }
 
@@ -94,9 +94,31 @@ static PyArrayObject* to_integer_array(PyObject *obj, int dtype, const char *nam
     return result;
 }
 
+// Looks up an optional fixed-parameter array under the key Model uses and converts it to
+// doubles. Leaves *out NULL when the key is absent. A single value is allowed where
+// can_broadcast is set, as M_step broadcasts it. Sets a ValueError when the array has
+// fewer than count entries otherwise, so run() never reads past its end.
+static bool get_fixed_array(PyObject *fixed, const char *key, Py_ssize_t count, bool can_broadcast,
+                            PyArrayObject **out) {
+    *out = NULL;
+    PyObject *value = PyDict_GetItemString(fixed, key);
+    if (value == NULL)
+        return true;
+    *out = (PyArrayObject *) PyArray_FROM_OTF(value, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST);
+    if (*out == NULL)
+        return false;
+    if (PyArray_SIZE(*out) < count && !(can_broadcast && PyArray_SIZE(*out) == 1)) {
+        PyErr_Format(PyExc_ValueError, "fixed %s has %zd entries but the model has %zd",
+                     key, (Py_ssize_t) PyArray_SIZE(*out), count);
+        Py_CLEAR(*out);
+        return false;
+    }
+    return true;
+}
+
 void capsule_cleanup(PyObject *capsule) {
-    void *memory = PyCapsule_GetPointer(capsule, NULL);
-    delete memory;
+    double *memory = (double *) PyCapsule_GetPointer(capsule, NULL);
+    delete[] memory;
 }
 
 static PyObject* run(PyObject * module, PyObject * args) {
@@ -121,9 +143,6 @@ static PyObject* run(PyObject * module, PyObject * args) {
         return NULL;
     }
 
-    if (!parallel)
-        omp_set_num_threads(1);
-
     // Load all the numpy arrays in data & model
     char* DM_NAMES[] = {"data", "resources", "starts", "lengths", "learns", "forgets", "guesses", "slips"};
     PyArrayObject** DM_PTRS[] = {&alldata, &allresources, &starts, &lengths, &learns, &forgets, &guesses, &slips};
@@ -145,11 +164,11 @@ static PyObject* run(PyObject * module, PyObject * args) {
     }
     prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
-    int bigT = (int) PyArray_DIM(alldata, 1), num_subparts = (int) PyArray_DIM(alldata, 0);
+    Index bigT = PyArray_DIM(alldata, 1), num_subparts = PyArray_DIM(alldata, 0);
     int len_allresources = (int) PyArray_DIM(allresources, 0);
     int num_sequences = (int) PyArray_DIM(starts, 0);
     int len_lengths = (int) PyArray_DIM(lengths, 0);
-    int num_resources = (int) PyArray_DIM(learns, 0);
+    Index num_resources = PyArray_DIM(learns, 0);
 
     Map<Array<int32_t,Dynamic,Dynamic,RowMajor>,Aligned> alldata_arr(reinterpret_cast<int*>(PyArray_DATA(alldata)),num_subparts,bigT);
     Map<Array<int64_t, Eigen::Dynamic, 1>,Aligned> allresources_arr(reinterpret_cast<int64_t*>(PyArray_DATA(allresources)),len_allresources,1);
@@ -160,29 +179,46 @@ static PyObject* run(PyObject * module, PyObject * args) {
     //then the original code goes to find the optional parameters.
 
     PyObject* fixed_prior = PyDict_GetItemString(fixed, "prior");
-    PyObject* fixed_learn = (PyObject*)PyDict_GetItemString(fixed, "learn");
-    PyObject* fixed_forget = (PyObject*)PyDict_GetItemString(fixed, "forget");
-    PyObject* fixed_guess = (PyObject*)PyDict_GetItemString(fixed, "guess");
-    PyObject* fixed_slip = (PyObject*)PyDict_GetItemString(fixed, "slip");
+    PyArrayObject *fixed_learn = NULL, *fixed_forget = NULL, *fixed_guess = NULL, *fixed_slip = NULL;
+    if (!get_fixed_array(fixed, "learns", num_resources, false, &fixed_learn) ||
+        !get_fixed_array(fixed, "forgets", num_resources, false, &fixed_forget) ||
+        !get_fixed_array(fixed, "guesses", num_subparts, true, &fixed_guess) ||
+        !get_fixed_array(fixed, "slips", num_subparts, true, &fixed_slip)) {
+        Py_XDECREF(fixed_learn);
+        Py_XDECREF(fixed_forget);
+        Py_XDECREF(fixed_guess);
+        for (int i = 0; i < 8; i++)
+            Py_XDECREF(*DM_PTRS[i]);
+        return NULL;
+    }
 
     if (fixed_prior) {
         prior = PyFloat_AsDouble(fixed_prior);
+        if (prior == -1.0 && PyErr_Occurred()) {
+            Py_XDECREF(fixed_learn);
+            Py_XDECREF(fixed_forget);
+            Py_XDECREF(fixed_guess);
+            Py_XDECREF(fixed_slip);
+            for (int i = 0; i < 8; i++)
+                Py_XDECREF(*DM_PTRS[i]);
+            return NULL;
+        }
     }
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
     
     MatrixXd As(2,2*num_resources);
-    for (int n=0; n<num_resources; n++) {
+    for (Index n=0; n<num_resources; n++) {
         double learn = -1;
         double forget = -1;
         if (fixed_learn) {
-            learn = extract_double((PyArrayObject*)fixed_learn, n);
+            learn = extract_double(fixed_learn, n);
         }
         if (learn < 0) {
             learn = extract_double(learns, n);
         }
         if (fixed_forget) {
-            forget = extract_double((PyArrayObject*)fixed_forget, n);
+            forget = extract_double(fixed_forget, n);
         }
         if (forget < 0) {
             forget = extract_double(forgets, n);
@@ -193,17 +229,17 @@ static PyObject* run(PyObject * module, PyObject * args) {
     
         
     Array2Xd Bn(2,2*num_subparts);
-    for (int n=0; n<num_subparts; n++) {
+    for (Index n=0; n<num_subparts; n++) {
         double guess = -1;
         double slip = -1;
         if (fixed_guess) {
-            guess = extract_double((PyArrayObject*)fixed_guess, n);
+            guess = extract_double(fixed_guess, PyArray_SIZE(fixed_guess) == 1 ? 0 : n);
         }
         if (guess < 0) {
             guess = extract_double(guesses, n);
         }
         if (fixed_slip) {
-            slip = extract_double((PyArrayObject*)fixed_slip, n);
+            slip = extract_double(fixed_slip, PyArray_SIZE(fixed_slip) == 1 ? 0 : n);
         }
         if (slip < 0) {
             slip = extract_double(slips, n);
@@ -230,9 +266,9 @@ static PyObject* run(PyObject * module, PyObject * args) {
     all_emission_softcounts.setZero();
     Array2d all_initial_softcounts(2, 1); //should i use these dimensions? the same as the original vector??
     all_initial_softcounts.setZero();*/
-    double* r_trans_softcounts = new double[2*2*num_resources];
-    double* r_emission_softcounts = new double[2*2*num_subparts];
-    double* r_init_softcounts = new double[2*1];
+    double* r_trans_softcounts = new double[2*(2*num_resources)];
+    double* r_emission_softcounts = new double[2*(2*num_subparts)];
+    double* r_init_softcounts = new double[2];
     Map<ArrayXXd,Aligned> all_trans_softcounts(r_trans_softcounts,2,2*num_resources);
     all_trans_softcounts.setZero();
     Map<Array2Xd,Aligned> all_emission_softcounts(r_emission_softcounts,2,2*num_subparts);
@@ -271,12 +307,17 @@ static PyObject* run(PyObject * module, PyObject * args) {
     new (&alpha_out) Map<Array2Xd,Aligned>(r_alpha_out,2,bigT);
 
     /* COMPUTATION */
-    #pragma omp parallel
+    #pragma omp parallel if(parallel) default(none) \
+        shared(num_resources, num_subparts, num_sequences, starts_arr, lengths_arr, alldata_arr, allresources_arr, \
+               Bn, As, initial_distn, normalizeLengths, alpha_out, all_trans_softcounts, all_emission_softcounts, \
+               all_initial_softcounts, total_loglike)
     {
-        double s_trans_softcounts[2*2*num_resources] __attribute__((aligned(16)));
-        double s_emission_softcounts[2*2*num_subparts] __attribute__((aligned(16)));
-        Map<ArrayXXd,Aligned> trans_softcounts_temp(s_trans_softcounts,2,2*num_resources);
-        Map<ArrayXXd,Aligned> emission_softcounts_temp(s_emission_softcounts,2,2*num_subparts);
+        // heap, not stack: long sequences or many resources overflow a thread's stack
+        vector<double> s_trans_softcounts(2*(2*num_resources));
+        vector<double> s_emission_softcounts(2*(2*num_subparts));
+        vector<double> s_likelihoods, s_alpha, s_gamma;
+        Map<ArrayXXd,Unaligned> trans_softcounts_temp(s_trans_softcounts.data(),2,2*num_resources);
+        Map<ArrayXXd,Unaligned> emission_softcounts_temp(s_emission_softcounts.data(),2,2*num_subparts);
         Array2d init_softcounts_temp;
         double loglike;
 
@@ -296,10 +337,14 @@ static PyObject* run(PyObject * module, PyObject * args) {
             int64_t sequence_start = starts_arr(sequence_index, 0) - 1;
 
             int64_t T = lengths_arr(sequence_index, 0);
+            if ((int64_t) s_alpha.size() < 2*T) {
+                s_likelihoods.resize(2*T);
+                s_alpha.resize(2*T);
+                s_gamma.resize(2*T);
+            }
 
             //// likelihoods
-            double s_likelihoods[2*T];
-            Map<Array2Xd,Aligned> likelihoods(s_likelihoods,2,T);
+            Map<Array2Xd,Unaligned> likelihoods(s_likelihoods.data(),2,T);
 
             likelihoods.setOnes();
              for (int t=0; t<T; t++) {
@@ -316,13 +361,12 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
             //// forward messages
             double norm;
-            double s_alpha[2*T] __attribute__((aligned(16)));
             double contribution;
-            Map<MatrixXd,Aligned> alpha(s_alpha,2,T);
+            Map<MatrixXd,Unaligned> alpha(s_alpha.data(),2,T);
             alpha.col(0) = initial_distn * likelihoods.col(0);
             norm = alpha.col(0).sum();
             alpha.col(0) /= norm;
-            loglike += log(norm) / (normalizeLengths? T : 1);
+            loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
 
             for (int t=0; t<T-1; t++) {
                 int64_t resources_temp = allresources_arr(sequence_start+t, 0);
@@ -330,13 +374,12 @@ static PyObject* run(PyObject * module, PyObject * args) {
                     * likelihoods.col(t+1);
                 norm = alpha.col(t+1).sum();
                 alpha.col(t+1) /= norm;
-                loglike += log(norm) / (normalizeLengths? T : 1);
+                loglike += log(norm) / static_cast<double>(normalizeLengths? T : 1);
             }
 
             //// backward messages and statistic counting
 
-            double s_gamma[2*T] __attribute__((aligned(16)));
-            Map<Array2Xd,Aligned> gamma(s_gamma,2,T);
+            Map<Array2Xd,Unaligned> gamma(s_gamma.data(),2,T);
             gamma.col(T-1) = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
                 int32_t data_temp = alldata_arr(n, sequence_start+(T-1));
@@ -345,7 +388,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
                 }
             }
 
-            for (int t=T-2; t>=0; t--) {
+            for (int64_t t=T-2; t>=0; t--) {
 
 				int64_t resources_temp = allresources_arr(sequence_start+t, 0);
                 Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
@@ -414,7 +457,8 @@ static PyObject* run(PyObject * module, PyObject * args) {
     PyDict_SetItemString(result, "all_emission_softcounts", all_emission_softcounts_arr);
     PyDict_SetItemString(result, "all_initial_softcounts", all_initial_softcounts_arr);
     PyDict_SetItemString(result, "alpha", alpha_out_arr);
-    PyDict_SetItemString(result, "total_loglike", PyLong_FromLong(*total_loglike));
+    PyObject *total_loglike_obj = PyFloat_FromDouble(*total_loglike);
+    PyDict_SetItemString(result, "total_loglike", total_loglike_obj);
 
     for (int i = 0; i < 8; i++)
         Py_XDECREF(*DM_PTRS[i]);
@@ -422,6 +466,11 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Py_XDECREF(all_emission_softcounts_arr);
     Py_XDECREF(all_initial_softcounts_arr);
     Py_XDECREF(alpha_out_arr);
+    Py_XDECREF(total_loglike_obj);
+    Py_XDECREF(fixed_learn);
+    Py_XDECREF(fixed_forget);
+    Py_XDECREF(fixed_guess);
+    Py_XDECREF(fixed_slip);
 
     return(result);
 }
