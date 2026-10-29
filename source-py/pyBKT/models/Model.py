@@ -488,12 +488,14 @@ class Model:
         """ Updates parameters given kwargs. """
         if isinstance(args, dict):
             for param in params:
-                if param not in args and (param not in self.keep or not self.keep[param]):
+                if param in args:
+                    setattr(self, param, args[param])
+                    # A Model setting passed to fit or crossvalidate stays until a call passes a new one.
+                    self.keep[param] = keep or param in Model.MODEL_ARGS
+                elif not self.keep.get(param, False):
                     arg = Model.DEFAULTS[param]
                     setattr(self, param, arg() if callable(arg) else arg) # Allow random seed to differ between models
-                elif param in args:
-                    setattr(self, param, args[param])
-                self.keep[param] = keep
+                    self.keep[param] = keep
         else:
             setattr(self, params, args)
             self.keep[params] = keep
