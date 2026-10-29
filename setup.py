@@ -32,6 +32,10 @@ if platform.system() == 'Darwin':
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-O3', '-stdlib=libc++', '-Xpreprocessor', '-fopenmp']
     ALL_LINK_ARGS = ['-stdlib=libc++']
     ALL_LIBRARIES = ['pthread', 'dl', 'util', 'm', 'omp']
+elif platform.system() == 'Windows':
+    ALL_COMPILE_ARGS = ['/w', '/openmp', '/O2']
+    ALL_LINK_ARGS = []
+    ALL_LIBRARIES = []
 else:
     ALL_COMPILE_ARGS = ['-c', '-fPIC', '-w', '-fopenmp', '-O2']
     ALL_LINK_ARGS = ['-fopenmp']
@@ -50,7 +54,7 @@ with open('README.md', encoding='utf-8') as f:
 LIBRARY_DIRS += [sys.exec_prefix + '/lib']
 clean()
 try:
-    module1 = Extension('pyBKT/generate/synthetic_data_helper',
+    module1 = Extension('pyBKT.generate.synthetic_data_helper',
                         sources = [npath('source-cpp/pyBKT/generate/synthetic_data_helper.cpp')], 
                         include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
@@ -58,7 +62,7 @@ try:
                         libraries = ALL_LIBRARIES, 
                         extra_link_args = ALL_LINK_ARGS)
 
-    module2 = Extension('pyBKT/fit/E_step', 
+    module2 = Extension('pyBKT.fit.E_step', 
                         sources = [npath('source-cpp/pyBKT/fit/E_step.cpp')],
                         include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,
@@ -66,7 +70,7 @@ try:
                         libraries = ALL_LIBRARIES, 
                         extra_link_args = ALL_LINK_ARGS)
 
-    module3 = Extension('pyBKT/fit/predict_onestep_states',
+    module3 = Extension('pyBKT.fit.predict_onestep_states',
                         sources = [npath('source-cpp/pyBKT/fit/predict_onestep_states.cpp')],
                         include_dirs = INCLUDE_DIRS,
                         extra_compile_args = ALL_COMPILE_ARGS,

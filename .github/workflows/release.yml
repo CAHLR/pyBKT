@@ -36,6 +36,8 @@ jobs:
             macos-deployment-target: "14.0"
           - os: macos-15-intel
             macos-deployment-target: "15.0"
+          - os: windows-latest
+          - os: windows-11-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -55,11 +57,29 @@ jobs:
           CIBW_TEST_ENVIRONMENT: PIP_NO_DEPS=1
           CIBW_TEST_COMMAND: python -c "import pyBKT.fit.E_step"
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-* cp315-*"
+          # NumPy has no Python 3.10 wheel for Windows on ARM.
+          CIBW_ARCHS_WINDOWS: auto64
+          CIBW_SKIP: cp310-win_arm64
           CIBW_BEFORE_ALL_MACOS: brew install libomp
           CIBW_ENVIRONMENT_MACOS: >-
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos-deployment-target }}
             CPPFLAGS="-I$(brew --prefix libomp)/include"
             LDFLAGS="-L$(brew --prefix libomp)/lib"
+
+      # Python doesn't ship vcomp140.dll, and the runners' Visual Studio copy
+      # hides a missing one from the import test.
+      - name: Check that each Windows wheel carries vcomp140.dll
+        if: runner.os == 'Windows'
+        shell: python
+        run: |
+          import glob, sys, zipfile
+          wheels = glob.glob("wheelhouse/*.whl")
+          missing = [w for w in wheels if not any("vcomp140" in n.lower() for n in zipfile.ZipFile(w).namelist())]
+          print(f"{len(wheels) - len(missing)} of {len(wheels)} wheels carry vcomp140.dll")
+          if not wheels:
+              sys.exit("no wheels in wheelhouse/")
+          if missing:
+              sys.exit(f"missing vcomp140.dll: {missing}")
 
       - uses: actions/upload-artifact@v4
         with:
