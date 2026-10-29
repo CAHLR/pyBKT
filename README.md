@@ -43,9 +43,9 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 # Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally. 
 
-We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. On Linux (x86_64 and arm64) and macOS (Apple silicon on macOS 14 or later, Intel on macOS 15 or later), pip installs a precompiled wheel with the C++ extension, so no compiler is needed. On other platforms, including Windows, pip builds pyBKT from source. If the C++ build fails there, pip installs the pure Python implementation instead. To make the install fail instead, set `PYBKT_REQUIRE_CPP=1`.
+We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. On Linux and macOS, pip installs a precompiled wheel with the C++ extension, so no compiler is needed. The Linux wheels need x86_64 or arm64, with glibc 2.28 or later, or musl 1.2 or later, such as Alpine. The macOS wheels need Apple silicon on macOS 14 or later, or Intel on macOS 15 or later. On other platforms, including Windows, pip builds pyBKT from source. If the C++ build fails there, pip installs the pure Python implementation instead. To make the install fail instead, set `PYBKT_REQUIRE_CPP=1`.
 
-The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). 
+The pure Python version fits models much more slowly than the C++ version, because its dynamic programming runs in Python loops. These speed comparisons, measured on one machine with an earlier version of pyBKT, show the difference. Model fitting is far more demanding than prediction.
 
 |                 Test Description                | pyBKT (Python) | pyBKT (C++) |
 |:-----------------------------------------------:|:--------------:|---------------:|
@@ -61,13 +61,15 @@ This section applies only when pip builds from source, which happens when no whe
 
 ### Linux
 
-If you have a C++ compiler already installed, pip will install pyBKT with fast C++ inferencing. C++ compilers are already installed on nearly all Linux distributions. If it is not installed on your machine, type `sudo apt install gcc g++` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without a compiler, pip will install pyBKT without C++ speed optimizations.
+Building from source needs a C++ compiler and the Python headers. On Debian and Ubuntu, run `sudo apt install g++ python3-dev`. On Alpine, run `apk add build-base python3-dev`. Other distributions have the same packages under their own package manager, such as `dnf` or `pacman`. Without them, pip installs pyBKT without the C++ extension.
 
 ### Mac
 
-The latest version of Python is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
+Building from source needs Apple's command line tools and Homebrew's OpenMP library, with the compiler pointed at the library:
 ```
+    xcode-select --install
     brew install libomp
+    export CPPFLAGS="-I$(brew --prefix libomp)/include" LDFLAGS="-L$(brew --prefix libomp)/lib"
 ```
 
 ## Installing pyBKT ##
