@@ -18,7 +18,7 @@ Examples from the paper can be found in [pyBKT-examples](https://github.com/CAHL
 [pyBKT Tutorial from LAK Workshop in Google Colab Notebook](https://colab.research.google.com/drive/1Kg6AvXKdSZXoqzSZ5BRHuewyHRMvrZs1 "pyBKT quick start in Colab") 
 
 ## Requirements
-Python >= 3.5
+Python >= 3.10
 
 Supported OS: All platforms! (Yes, Windows too)
 
@@ -43,9 +43,9 @@ pyBKT can be used to define and fit many BKT variants, including these from the 
 # Installation and setup
 This is intended as a quick overview of steps to install and setup and to run pyBKT locally. 
 
-We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. Note that pip, by default, will install the C++/Python version unless the required libraries are not found or there is an error during installation. In the case of such issues, it will revert to the pure Python implementation. To make the install fail instead, set `PYBKT_REQUIRE_CPP=1`.
+We offer both a pure Python port and a Python/C++ extension version of pyBKT for the sake of accessibility and ease of use on any platform. On Linux and macOS, pip installs a precompiled wheel with the C++ extension, so no compiler is needed. The Linux wheels need x86_64 or arm64, with glibc 2.28 or later, or musl 1.2 or later, such as Alpine. The macOS wheels need Apple silicon on macOS 14 or later, or Intel on macOS 15 or later. On other platforms, including Windows, pip builds pyBKT from source. If the C++ build fails there, pip installs the pure Python implementation instead. To make the install fail instead, set `PYBKT_REQUIRE_CPP=1`.
 
-The former pure Python versions does not fit models or scale as quickly or efficiently as the latter (due to nested for loops needed for DP). Here are a few speed comparisons - both on the same machine - that may be useful in deciding which version is more appropriate given the usage (e.g. model fitting is far more demanding than prediction). 
+The pure Python version fits models much more slowly than the C++ version, because its dynamic programming runs in Python loops. These speed comparisons, measured on one machine with an earlier version of pyBKT, show the difference. Model fitting is far more demanding than prediction.
 
 |                 Test Description                | pyBKT (Python) | pyBKT (C++) |
 |:-----------------------------------------------:|:--------------:|---------------:|
@@ -55,46 +55,48 @@ The former pure Python versions does not fit models or scale as quickly or effic
 | synthetic data, predict onestep (500 students)  |       ~2s      |      ~0.8s     |
 | synthetic data, predict onestep (5000 students) |     ~2m15s     |      ~35s      |
 
-## Installing Dependencies for Fast C++ Inferencing (Optional - for OS X and Linux) ##
+## Building the C++ extension from source (Optional - for OS X and Linux)
 
-Note: this section is not applicable for Windows as running the Python/C++ version is cumbersome and untested. For Windows, we only offer the slower, pure Python version of pyBKT (it will be installed automatically).
+This section applies only when pip builds from source, which happens when no wheel matches your platform or when you install from a clone of the repository. It is not applicable for Windows, as running the Python/C++ version there is cumbersome and untested. On Windows, the build falls back to the slower, pure Python version of pyBKT automatically.
 
 ### Linux
 
-If you have a C++ compiler already installed, pip will install pyBKT with fast C++ inferencing. C++ compilers are already installed on nearly all Linux distributions. If it is not installed on your machine, type `sudo apt install gcc g++` if using Debian based distributions. Otherwise, whichever package manager is appropriately suited to your distribution (`dnf`, `pacman`, etc.). Without a compiler, pip will install pyBKT without C++ speed optimizations.
+Building from source needs a C++ compiler and the Python headers. On Debian and Ubuntu, run `sudo apt install g++ python3-dev`. On Alpine, run `apk add build-base python3-dev`. Other distributions have the same packages under their own package manager, such as `dnf` or `pacman`. Without them, pip installs pyBKT without the C++ extension.
 
 ### Mac
 
-The latest version of Python is necessary for OS X. If homebrew is installed, run the following commands to download the necessary dependencies:
+Building from source needs Apple's command line tools and Homebrew's OpenMP library, with the compiler pointed at the library:
 ```
+    xcode-select --install
     brew install libomp
+    export CPPFLAGS="-I$(brew --prefix libomp)/include" LDFLAGS="-L$(brew --prefix libomp)/lib"
 ```
 
-## Installing pyBKT ##
+## Installing pyBKT
 
 You can simply run:
 ```
     pip install pyBKT
 ``` 
-Alternatively, if `pip` poses some problems, you can clone the repository as such and then run the `setup.py` script manually.
+Alternatively, you can clone the repository and install it with pip, which builds it from source.
 
 ```
     git clone https://github.com/CAHLR/pyBKT.git
     cd pyBKT
-    python3 setup.py install
+    pip install .
 ```
 
-# Preparing Data and Running Model #
+# Preparing Data and Running Model
 
 The following serves as a mini-tutorial for how to get started with pyBKT. There is more information available at the Colab notebook listed at the top of the README.
 
-## Input and Output Data ##
+## Input and Output Data
 
 The accepted input formats are Pandas DataFrames and data files of type csv (comma separated) or tsv (tab separated). pyBKT will automatically infer which delimiter to use in the case that it is passed a data file. Since column names mapping meaning to each field in the data (i.e. skill name, correct/incorrect) vary per data source, you may need to specify a mapping from your data file's column names to pyBKT's expected column names. In many cases with Cognitive Tutor and Assistments datasets, pyBKT will be able to automatically infer column name mappings, but in the case that it is unable to, it will raise an exception. Note that the correctness is given by -1 (no response), 0 (incorrect), or 1 (correct).
 
-## Creating and Training Models ##
+## Creating and Training Models
 
-The process of creating and training models in pyBKT resemble that of SciKit Learn. pyBKT provides easy methods of fetching online datasets and to fit on a combination or all skills available in any particular dataset.
+The process of creating and training models in pyBKT resembles that of scikit-learn. pyBKT provides easy methods of fetching online datasets and to fit on a combination or all skills available in any particular dataset.
 
 ```python
 from pyBKT.models import Model
@@ -145,9 +147,13 @@ print(model.params())
 ```
 
 Note that if we train on a dataset that has unfamiliar columns to pyBKT, you will be required to specify a mapping of column names in that dataset to expected pyBKT columns. This is referred to as the model defaults (i.e. it specifies the default column names to lookup in the dataset). An example usage is provided below for an unknown dataset which has column names "row", "skill\_t", "answer", and "gs\_classes".
-``` python
+```python
+import pandas as pd
+from pyBKT.models import Model
+
 # Load unfamiliar dataset.
 df = pd.read_csv('mystery.csv')
+model = Model(seed = 42, num_fits = 1)
 
 # For other non-Assistments/CogTutor style datasets, we will need to specify the
 # columns corresponding to each required column (i.e. the user ID, correct/incorrect).
@@ -169,11 +175,13 @@ model.fit(data = df, defaults = defaults)
 training_acc = model.evaluate(data = df, metric = 'accuracy')
 ```
 
-## Model Prediction and Evaluation ##
+## Model Prediction and Evaluation
 
-Prediction and evaluation behave similarly to SciKit-Learn. pyBKT offers a variety of features for prediction and evaluation.
+Prediction and evaluation behave similarly to scikit-learn. pyBKT offers a variety of features for prediction and evaluation.
 
 ```python
+import numpy as np
+import pandas as pd
 from pyBKT.models import Model
 
 # Initialize the model with an optional seed
@@ -210,11 +218,12 @@ def mae(true_vals, pred_vals):
 training_mae = model.evaluate(data_path = 'ct.csv', metric = mae)
 ```
 
-## Crossvalidation ##
+## Crossvalidation
 
 Crossvalidation is offered as a blackbox function similar to a combination of fit and evaluate that accepts a particular number of folds, a seed, and a metric (either one of the 3 provided that are 'rmse', 'auc' or 'accuracy' or a custom Python function taking 2 arguments). Similar arguments for the model types, data path/data, and skill names are accepted as with the fit function.
 
-``` python
+```python
+import numpy as np
 from pyBKT.models import Model
 
 # Initialize the model with an optional seed
@@ -238,9 +247,9 @@ crossvalidated_mae_errs = model.crossvalidate(data_path = 'ct.csv', skills = ".*
 crossvalidated_multigsf = model.crossvalidate(data_path = 'ct.csv', multigs = True, forgets = True)
 ```
 
-## Roster ##
+## Roster
 
-The model has been extended into the Roster to accomodate and simulate the learning environment for a cohort of students learning any combination of individual skills. The Roster feature has the efficient ability to track individuals' progress through the mastery and correctness probabilities outputted by BKT by storing only the current latent and observable state of the student. The following shows an example of Roster being used in practise:
+The model has been extended into the Roster to accommodate and simulate the learning environment for a cohort of students learning any combination of individual skills. The Roster feature has the efficient ability to track individuals' progress through the mastery and correctness probabilities outputted by BKT by storing only the current latent and observable state of the student. The following shows an example of Roster being used in practice:
 
 ```python
 from pyBKT.models import *
@@ -287,8 +296,8 @@ print("Bob's mastery (t = 2):", roster.get_state_type('Calculate unit rate', 'Bo
 print("Bob's probability of mastery (t = 2):", roster.get_mastery_prob('Calculate unit rate', 'Bob'))
 
 # We can print aggregate statistics for mastery and correctness.
-print("Both students' probabilites of correctness:", roster.get_correct_probs('Calculate unit rate'))
-print("Both students' probabilites of mastery:", roster.get_mastery_probs('Calculate unit rate'))
+print("Both students' probabilities of correctness:", roster.get_correct_probs('Calculate unit rate'))
+print("Both students' probabilities of mastery:", roster.get_mastery_probs('Calculate unit rate'))
 
 # Add a new student, Sarah.
 roster.add_student('Calculate unit rate', 'Sarah')
@@ -297,7 +306,7 @@ roster.add_student('Calculate unit rate', 'Sarah')
 sarah_new_state = roster.update_state('Calculate unit rate', 'Sarah', np.array([1, 0, 1, 0, 1, 1, 1]))
 
 # Print Sarah's correctness and mastery probability.
-print("Sarah's correctness probability:", sarah_new_state.get_correct_prob()
+print("Sarah's correctness probability:", sarah_new_state.get_correct_prob())
 print("Sarah's mastery probability:", sarah_new_state.get_mastery_prob())
 
 # Delete Bob from the roster.
@@ -312,7 +321,7 @@ print("Jeff's probability of mastery (t' = 0):", roster.get_mastery_prob('Calcul
 
 ```
 
-## Parameter Fixing ##
+## Parameter Fixing
 
 Another advanced feature supported by pyBKT is parameter fixing, where we can fix one or more parameters and train the model conditioned on those fixed parameters. This can be useful if you already know the ground truth value of some parameters beforehand, or to avoid degenerate model creation by fixing parameters at reasonable values. To specify which parameters and values we want fixed for any skill, we can pass in a dictionary to model.coef_, and then specify fixed=True in the model.fit call:
 
@@ -329,24 +338,28 @@ model.params()
 Within the model.coef_ dictionary, the 'prior' parameter takes a scalar, while 'learns', 'forgets', 'guesses', and 'slips' takes an np.array, in order to provide support for parameter fixing in model extensions with multiple learn or guess classes. An example of such is shown below. 
 
 ```python
+import numpy as np
+from pyBKT.models import Model
+model = Model()
+
 # The Plot pi skill has 10 different guess/slip classes. This is how you would fix those slip classes to 0, 0.1, ..., 0.9 and train the model conditioned on those slip values.
 model.coef_ = {'Plot pi': {'slips': np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])}}
 model.fit(data_path = 'ct.csv', skills='Plot pi', multigs=True, fixed=True)
 model.params()
 ```
 
-## Extended Features ##
+## Extended Features
 
 Extended features include model parameter initialization by setting model.coef_, providing a configuration dictionary, setting model default columns, and more. For more information about these features, take a look at the Colab notebook provided at the top of the README.
 
-# Internal Data Format #
+# Internal Data Format
 
-_pyBKT_ models student mastery of a skills as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable has two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
+_pyBKT_ models student mastery of a skill as they progress through series of learning resources and checks for understanding. Mastery is modelled as a latent variable with two states - "knowing" and "not knowing". At each checkpoint, students may be given a learning resource (i.e. watch a video) and/or question(s) to check for understanding. The model finds the probability of learning, forgetting, slipping and guessing that maximizes the likelihood of observed student responses to questions. 
 
 To run the pyBKT model, define the following variables:
 * `num_subparts`: The number of unique questions used to check understanding. Each subpart has a unique set of emission probabilities.
 * `num_resources`: The number of unique learning resources available to students.
-* `num_fit_initialization`: The number of iterations in the EM step.
+* `num_fit_initialization`: The number of times EM restarts from random parameters, keeping the best fit. `Model(num_fits=...)` sets it.
 
 
 Next, create an input object `Data`, containing the following attributes: 
@@ -375,7 +388,7 @@ Next, create an input object `Data`, containing the following attributes:
 * `stateseqs`: this attribute is the true knowledge state for above data and should be left undefined before running the `pyBKT` model. 
 
 
-The output of the model can will be stored in a `fitmodel` object, containing the following probabilities as attributes: 
+The output of the model is stored in a `fitmodel` object, containing the following probabilities as attributes: 
 * `As`: the transition probability between the "knowing" and "not knowing" state. Includes both the `learns` and `forgets` probabilities, and their inverse. `As` creates a separate transition probability for each resource.
 * `learns`: the probability of transitioning to the "knowing" state given "not known".
 * `forgets`: the probability of transitioning to the "not knowing" state given "known".
@@ -387,7 +400,7 @@ The `fitmodel` also includes the following emission probabilities:
 
 
 ## Citation
-To credit this library, please cite our paper published in the Educaitonal Data Mining Conference:
+To credit this library, please cite our paper published in the Educational Data Mining Conference:
 
 Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. In S. Hsiao, & S. Sahebi  (Eds.) *Proceedings of the 14th International Conference on Educational Data Mining* (EDM). Pages 468-474.
 ```
@@ -400,6 +413,5 @@ Badrinath, A., Wang, F., Pardos, Z.A. (2021) pyBKT: An Accessible Python Library
 }
 ```
 
-## TODOs ##
-* Exporting compiled binaries on PyPi
+## TODOs
 * Additional model variants
