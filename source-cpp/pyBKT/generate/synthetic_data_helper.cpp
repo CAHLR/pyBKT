@@ -11,6 +11,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 #include <vector>
 #include <Eigen/Core>
 #include <Python.h>
@@ -119,6 +120,20 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
                                                           num_subparts, bigT);
 
     /* COMPUTATION */
+
+    // every step reads its resource ID, including the last step of each sequence
+    const Index num_resource_values = PyArray_DIM(resources.pointer, 0);
+    for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
+        for (int64_t t = 0; t < length_values(sequence_index); t++) {
+            const int64_t position = start_values(sequence_index) - 1 + t;
+            if (position < 0 || position >= num_resource_values || resource_values(position) < 1 ||
+                resource_values(position) > num_resources) {
+                const std::string message = "resources needs one ID from 1 to " + std::to_string(num_resources) + " for each answer";
+                PyErr_SetString(PyExc_ValueError, message.c_str());
+                return nullptr;
+            }
+        }
+    }
 
     const DoubleVector guess_values = double_vector(guesses.pointer);
     const DoubleVector slip_values = double_vector(slips.pointer);
