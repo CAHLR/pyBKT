@@ -279,9 +279,15 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             for i in range(len(data_temp[0])):
                 data_temp[data_ref[i]][i] = data[i]
             Data["data"]=np.asarray(data_temp,dtype='int32')
+            gs_classes = data_ref
+            if multiprior_index is not None:
+                gs_classes = np.insert(gs_classes, multiprior_index - np.arange(len(multiprior_index)), 0)
+            # each column's guess/slip class, which a missing answer's all-zero column can't show
+            Data["gs_classes"]=np.asarray(gs_classes, dtype=np.int64)
         else:
             data = [data]
             Data["data"]=np.asarray(data,dtype='int32')
+            Data["gs_classes"]=np.zeros(len(data[0]), dtype=np.int64)
 
         # for when no resource and/or guess column is selected
         if not multilearn and not multipair and not multiprior:
