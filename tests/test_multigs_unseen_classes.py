@@ -25,7 +25,7 @@ def test_predict_on_a_subset_of_classes_matches_predict_with_all_classes():
     with_other = pd.concat([only_c, other_student])
 
     alone = model.predict(data=only_c)
-    together = model.predict(data=with_other).loc[only_c.index]
+    together = model.predict(data=with_other).loc[alone.index]
 
     for column in ["correct_predictions", "state_predictions"]:
         np.testing.assert_allclose(alone[column], together[column])
