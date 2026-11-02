@@ -74,9 +74,9 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
     interleave(As[1], learns.copy(), 1 - forgets)
 
     if 'guesses' in fixed:
-        guesses = fixed['guesses'] * (fixed['guesses'] < 0) + fixed['guesses'] * (fixed['guesses'] >= 0)
+        guesses = guesses * (fixed['guesses'] < 0) + fixed['guesses'] * (fixed['guesses'] >= 0)
     if 'slips' in fixed:
-        slips = fixed['slips'] * (fixed['slips'] < 0) + fixed['slips'] * (fixed['slips'] >= 0)
+        slips = slips * (fixed['slips'] < 0) + fixed['slips'] * (fixed['slips'] >= 0)
     Bn = np.empty((2, 2 * num_subparts))
     interleave(Bn[0], 1 - guesses, guesses.copy())
     interleave(Bn[1], slips.copy(), 1 - slips)
