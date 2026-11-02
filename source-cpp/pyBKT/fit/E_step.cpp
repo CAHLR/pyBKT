@@ -94,6 +94,28 @@ static PyArrayObject* to_integer_array(PyObject *obj, int dtype, const char *nam
     return result;
 }
 
+// Looks up an optional fixed-parameter array under the key Model uses and converts it to
+// doubles. Leaves *out NULL when the key is absent. A single value is allowed where
+// can_broadcast is set, as M_step broadcasts it. Sets a ValueError when the array has
+// fewer than count entries otherwise, so run() never reads past its end.
+static bool get_fixed_array(PyObject *fixed, const char *key, Py_ssize_t count, bool can_broadcast,
+                            PyArrayObject **out) {
+    *out = NULL;
+    PyObject *value = PyDict_GetItemString(fixed, key);
+    if (value == NULL)
+        return true;
+    *out = (PyArrayObject *) PyArray_FROM_OTF(value, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST);
+    if (*out == NULL)
+        return false;
+    if (PyArray_SIZE(*out) < count && !(can_broadcast && PyArray_SIZE(*out) == 1)) {
+        PyErr_Format(PyExc_ValueError, "fixed %s has %zd entries but the model has %zd",
+                     key, (Py_ssize_t) PyArray_SIZE(*out), count);
+        Py_CLEAR(*out);
+        return false;
+    }
+    return true;
+}
+
 void capsule_cleanup(PyObject *capsule) {
     double *memory = (double *) PyCapsule_GetPointer(capsule, NULL);
     delete[] memory;
@@ -157,13 +179,30 @@ static PyObject* run(PyObject * module, PyObject * args) {
     //then the original code goes to find the optional parameters.
 
     PyObject* fixed_prior = PyDict_GetItemString(fixed, "prior");
-    PyObject* fixed_learn = (PyObject*)PyDict_GetItemString(fixed, "learn");
-    PyObject* fixed_forget = (PyObject*)PyDict_GetItemString(fixed, "forget");
-    PyObject* fixed_guess = (PyObject*)PyDict_GetItemString(fixed, "guess");
-    PyObject* fixed_slip = (PyObject*)PyDict_GetItemString(fixed, "slip");
+    PyArrayObject *fixed_learn = NULL, *fixed_forget = NULL, *fixed_guess = NULL, *fixed_slip = NULL;
+    if (!get_fixed_array(fixed, "learns", num_resources, false, &fixed_learn) ||
+        !get_fixed_array(fixed, "forgets", num_resources, false, &fixed_forget) ||
+        !get_fixed_array(fixed, "guesses", num_subparts, true, &fixed_guess) ||
+        !get_fixed_array(fixed, "slips", num_subparts, true, &fixed_slip)) {
+        Py_XDECREF(fixed_learn);
+        Py_XDECREF(fixed_forget);
+        Py_XDECREF(fixed_guess);
+        for (int i = 0; i < 8; i++)
+            Py_XDECREF(*DM_PTRS[i]);
+        return NULL;
+    }
 
     if (fixed_prior) {
         prior = PyFloat_AsDouble(fixed_prior);
+        if (prior == -1.0 && PyErr_Occurred()) {
+            Py_XDECREF(fixed_learn);
+            Py_XDECREF(fixed_forget);
+            Py_XDECREF(fixed_guess);
+            Py_XDECREF(fixed_slip);
+            for (int i = 0; i < 8; i++)
+                Py_XDECREF(*DM_PTRS[i]);
+            return NULL;
+        }
     }
     Array2d initial_distn;
     initial_distn << 1-prior, prior;
@@ -173,13 +212,13 @@ static PyObject* run(PyObject * module, PyObject * args) {
         double learn = -1;
         double forget = -1;
         if (fixed_learn) {
-            learn = extract_double((PyArrayObject*)fixed_learn, n);
+            learn = extract_double(fixed_learn, n);
         }
         if (learn < 0) {
             learn = extract_double(learns, n);
         }
         if (fixed_forget) {
-            forget = extract_double((PyArrayObject*)fixed_forget, n);
+            forget = extract_double(fixed_forget, n);
         }
         if (forget < 0) {
             forget = extract_double(forgets, n);
@@ -194,13 +233,13 @@ static PyObject* run(PyObject * module, PyObject * args) {
         double guess = -1;
         double slip = -1;
         if (fixed_guess) {
-            guess = extract_double((PyArrayObject*)fixed_guess, n);
+            guess = extract_double(fixed_guess, PyArray_SIZE(fixed_guess) == 1 ? 0 : n);
         }
         if (guess < 0) {
             guess = extract_double(guesses, n);
         }
         if (fixed_slip) {
-            slip = extract_double((PyArrayObject*)fixed_slip, n);
+            slip = extract_double(fixed_slip, PyArray_SIZE(fixed_slip) == 1 ? 0 : n);
         }
         if (slip < 0) {
             slip = extract_double(slips, n);
@@ -425,6 +464,10 @@ static PyObject* run(PyObject * module, PyObject * args) {
     Py_XDECREF(all_initial_softcounts_arr);
     Py_XDECREF(alpha_out_arr);
     Py_XDECREF(total_loglike_obj);
+    Py_XDECREF(fixed_learn);
+    Py_XDECREF(fixed_forget);
+    Py_XDECREF(fixed_guess);
+    Py_XDECREF(fixed_slip);
 
     return(result);
 }
