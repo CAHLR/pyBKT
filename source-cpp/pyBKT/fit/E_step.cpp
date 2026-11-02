@@ -143,8 +143,9 @@ static PyArrayObject *to_integer_array(PyObject *obj, int dtype, const char *nam
     return as_array(PyArray_FROM_OTF(raw.pointer, dtype, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
 }
 
-static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
-    return as_array(PyArray_FROM_OTF(obj, PyArray_ObjectType(obj, minimum_type), NPY_ARRAY_IN_ARRAY));
+// The kernels read every parameter as double, so cast float32 and other inputs to float64 here.
+static PyArrayObject *to_double_array(PyObject *obj) {
+    return as_array(PyArray_FROM_OTF(obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
 }
 
 // Looks up an optional fixed-parameter array under the key Model uses and converts it to
@@ -222,7 +223,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     }};
     for (const Input &input : inputs) {
         PyObject *value = PyDict_GetItemString(input.source, input.name);
-        input.target->pointer = input.integer_type == NPY_NOTYPE ? to_array(value, NPY_FLOAT)
+        input.target->pointer = input.integer_type == NPY_NOTYPE ? to_double_array(value)
                                                                  : to_integer_array(value, input.integer_type, input.name);
         if (input.target->pointer == nullptr)
             return nullptr;

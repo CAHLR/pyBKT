@@ -50,6 +50,11 @@ static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
     return as_array(PyArray_FROM_OTF(obj, PyArray_ObjectType(obj, minimum_type), NPY_ARRAY_IN_ARRAY));
 }
 
+// The kernels read every parameter as double, so cast float32 and other inputs to float64 here.
+static PyArrayObject *to_double_array(PyObject *obj) {
+    return as_array(PyArray_FROM_OTF(obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
+}
+
 // A uniform draw in [0, 1] from the C library generator.
 static double uniform_draw() {
     return static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
@@ -76,7 +81,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
         {"learns", &learns}, {"forgets", &forgets}, {"guesses", &guesses}, {"slips", &slips},
     }};
     for (const Input &input : inputs)
-        input.target->pointer = to_array(PyDict_GetItemString(model_ptr, input.name), NPY_FLOAT); // hack to force correct type
+        input.target->pointer = to_double_array(PyDict_GetItemString(model_ptr, input.name));
     double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
     Index num_subparts = PyArray_DIM(slips.pointer, 0);

@@ -130,6 +130,11 @@ static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
     return as_array(PyArray_FROM_OTF(obj, PyArray_ObjectType(obj, minimum_type), NPY_ARRAY_IN_ARRAY));
 }
 
+// The kernels read every parameter as double, so cast float32 and other inputs to float64 here.
+static PyArrayObject *to_double_array(PyObject *obj) {
+    return as_array(PyArray_FROM_OTF(obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
+}
+
 static PyObject *run(PyObject * /* module */, PyObject *args) {
     long parallel = 0;
     if (PyTuple_GET_SIZE(args) != 4 || !parse_int(PyTuple_GET_ITEM(args, 3), parallel)) {
@@ -142,7 +147,7 @@ static PyObject *run(PyObject * /* module */, PyObject *args) {
     const bool is_parallel = parallel != 0;
 
     OwnedReference<PyArrayObject> forward_messages;
-    forward_messages.pointer = to_array(fwd_msgs, NPY_FLOAT);
+    forward_messages.pointer = to_double_array(fwd_msgs);
 
     OwnedReference<PyArrayObject> alldata, allresources, starts, lengths, learns, forgets, guesses, slips;
     struct Input {
@@ -166,7 +171,7 @@ static PyObject *run(PyObject * /* module */, PyObject *args) {
         if (input.is_integer)
             input.target->pointer = to_integer_array(value, NPY_INT64, input.name);
         else
-            input.target->pointer = to_array(value, input.target == &alldata ? NPY_INT : NPY_FLOAT);
+            input.target->pointer = input.target == &alldata ? to_array(value, NPY_INT) : to_double_array(value);
         if (input.target->pointer == nullptr)
             return nullptr;
     }
