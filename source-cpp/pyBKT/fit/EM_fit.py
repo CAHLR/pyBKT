@@ -1,10 +1,14 @@
-import numpy as np
-from pyBKT.util import check_data
-from pyBKT.fit import E_step
-from pyBKT.fit import M_step
-import os
 
-def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {}):
+import numpy as np
+
+from pyBKT.fit import E_step, M_step
+from pyBKT.util.structures import FixedParams, FloatArray, Params, SequenceData
+
+
+def EM_fit(model: Params, data: SequenceData, tol: float | None = None, maxiter: int | None = None,
+           parallel: bool = True, fixed: FixedParams | None = None) -> tuple[Params, FloatArray]:
+    if fixed is None:
+        fixed = {}
 
     if tol is None: 
         tol = 1e-3
@@ -16,7 +20,7 @@ def EM_fit(model, data, tol = None, maxiter = None, parallel = True, fixed = {})
     log_likelihoods = np.zeros((maxiter, 1))
 
     for i in range(maxiter):
-        result = E_step.run(data, model, 1, int(parallel), fixed)
+        result = E_step.run(data, model, 1, parallel, fixed)
         for j in range(num_resources):
             result['all_trans_softcounts'][j] = result['all_trans_softcounts'][j].transpose()
         for j in range(num_subparts):
