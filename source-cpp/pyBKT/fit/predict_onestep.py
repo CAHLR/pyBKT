@@ -21,6 +21,6 @@ def run(model, data, parallel = True, fixed = {}):
     # multiguess solution, should work
     correct_emission_predictions = np.expand_dims(model["guesses"], axis = 1) @ np.expand_dims(state_predictions[0,:], axis = 0) + np.expand_dims(1-model["slips"], axis = 1) @ np.expand_dims(state_predictions[1,:], axis = 0)
     #correct_emission_predictions = model['guesses'] * np.asarray([state_predictions[0,:]]).T + (1 - model['slips']) * np.asarray([state_predictions[1,:]]).T
-    flattened_predictions = np.take_along_axis(correct_emission_predictions, (data['data'] != 0).argmax(axis = 0)[:, None].T, axis = 0)
+    flattened_predictions = np.take_along_axis(correct_emission_predictions, data['gs_classes'][None, :], axis = 0)
     return (flattened_predictions.ravel(), state_predictions)
 
