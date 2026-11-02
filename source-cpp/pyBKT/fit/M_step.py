@@ -1,6 +1,20 @@
 import numpy as np
 
-def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {}):
+def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {}, priors = None):
+
+    # Beta(a, b) priors add a pseudo-counts to the "yes" event and b to the "no"
+    # event, so each parameter becomes (count_yes + a) / (count_yes + count_no + a + b).
+    # A pair applies to every resource or subpart; an array of pairs gives one per row.
+    if priors is not None:
+        for name, (yes, no) in {'prior': (init_softcounts[1], init_softcounts[0]),
+                                'learns': (trans_softcounts[:, 1, 0], trans_softcounts[:, 0, 0]),
+                                'forgets': (trans_softcounts[:, 0, 1], trans_softcounts[:, 1, 1]),
+                                'guesses': (emission_softcounts[:, 0, 1], emission_softcounts[:, 0, 0]),
+                                'slips': (emission_softcounts[:, 1, 0], emission_softcounts[:, 1, 1])}.items():
+            if name in priors:
+                a, b = np.asarray(priors[name], dtype = float).T
+                yes += a
+                no += b
 
     z = np.sum(trans_softcounts, axis=1) == 0
     for i in range(len(z)):

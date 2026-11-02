@@ -16,7 +16,7 @@ from multiprocessing import Pool, cpu_count, current_process
 
 gs = globals()
 
-def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {}):
+def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {}, priors = None):
 
     check_data.check_data(data)
 
@@ -44,7 +44,7 @@ def EM_fit(model, data, tol = 0.005, maxiter = 100, parallel = True, fixed = {})
         if(i > 1 and abs(log_likelihoods[i][0] - log_likelihoods[i-1][0]) <= tol):
             break
 
-        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], fixed = fixed)
+        model = M_step.run(model, result['all_trans_softcounts'], result['all_emission_softcounts'], result['all_initial_softcounts'], fixed = fixed, priors = priors)
 
     return(model, log_likelihoods[:i+1])
 
