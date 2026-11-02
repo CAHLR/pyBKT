@@ -23,11 +23,6 @@
 
 using namespace Eigen;
 
-//original comment:
-//"TODO if we aren't outputting gamma, don't need to write it to memory (just
-//need t and t+1), so we can save the working array for each HMM at the cost of
-//a branch"
-//
 
 using Int64Vector = Map<const Matrix<int64_t, Dynamic, 1>>;
 using DoubleVector = Map<const VectorXd>;
@@ -320,7 +315,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
         // heap, not stack: long sequences or many resources overflow a thread's stack
         std::vector<double> s_trans_softcounts(2*(2*num_resources));
         std::vector<double> s_emission_softcounts(2*(2*num_subparts));
-        std::vector<double> s_likelihoods, s_alpha, s_gamma;
+        std::vector<double> s_likelihoods, s_alpha;
         Map<ArrayXXd,Unaligned> trans_softcounts_temp(s_trans_softcounts.data(),2,2*num_resources);
         Map<ArrayXXd,Unaligned> emission_softcounts_temp(s_emission_softcounts.data(),2,2*num_subparts);
         Array2d init_softcounts_temp;
@@ -343,7 +338,6 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
             if (static_cast<int64_t>(s_alpha.size()) < 2*T) {
                 s_likelihoods.resize(2*T);
                 s_alpha.resize(2*T);
-                s_gamma.resize(2*T);
             }
 
             //// likelihoods
@@ -380,12 +374,12 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
 
             //// backward messages and statistic counting
 
-            Map<Array2Xd,Unaligned> gamma(s_gamma.data(),2,T);
-            gamma.col(T-1) = alpha.col(T-1);
+            // each step's counts are taken as soon as its gamma is known, so only one column is kept
+            Array2d gamma = alpha.col(T-1);
             for (int n=0; n<num_subparts; n++) {
                 int32_t data_temp = alldata_arr(n, sequence_start+(T-1));
                 if (data_temp != 0) {
-                    emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(T-1);
+                    emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma;
                 }
             }
 
@@ -395,21 +389,21 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
                 Matrix2d A = As.block<2,2>(0,2*(resources_temp-1));
                 Array22d pair = A.array();
                 pair.rowwise() *= alpha.col(t).transpose().array();
-                pair.colwise() *= gamma.col(t+1);
+                pair.colwise() *= gamma;
                 pair.colwise() /= (A*alpha.col(t)).array();
                 pair = (pair != pair).select(0.,pair); // NOTE: replace NaNs
                 trans_softcounts_temp.block<2,2>(0,2*(resources_temp-1)) += pair;
 
-                gamma.col(t) = pair.colwise().sum().transpose();
+                gamma = pair.colwise().sum().transpose();
                 // NOTE: we have to touch the data again here
                 for (int n=0; n<num_subparts; n++) {
                     int32_t data_temp = alldata_arr(n, sequence_start+t);
                     if (data_temp != 0) {
-                        emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma.col(t);
+                        emission_softcounts_temp.col(2*n + (data_temp == 2)) += gamma;
                     }
                 }
             }
-            init_softcounts_temp += gamma.col(0);
+            init_softcounts_temp += gamma;
 
             alpha_out.block(0,sequence_start,2,T) = alpha;
         }
