@@ -371,7 +371,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
 
             for (int t=0; t<T-1; t++) {
                 int64_t resources_temp = allresources_arr(sequence_start+t, 0);
-                alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
+                alpha.col(t+1) = (As.block<2,2>(0,2*(resources_temp-1)) * alpha.col(t)).array()
                     * likelihoods.col(t+1);
                 norm = alpha.col(t+1).sum();
                 alpha.col(t+1) /= norm;
@@ -392,13 +392,13 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
             for (int64_t t=T-2; t>=0; t--) {
 
 				int64_t resources_temp = allresources_arr(sequence_start+t, 0);
-                Matrix2d A = As.block(0,2*(resources_temp-1),2,2);
+                Matrix2d A = As.block<2,2>(0,2*(resources_temp-1));
                 Array22d pair = A.array();
                 pair.rowwise() *= alpha.col(t).transpose().array();
                 pair.colwise() *= gamma.col(t+1);
                 pair.colwise() /= (A*alpha.col(t)).array();
                 pair = (pair != pair).select(0.,pair); // NOTE: replace NaNs
-                trans_softcounts_temp.block(0,2*(resources_temp-1),2,2) += pair;
+                trans_softcounts_temp.block<2,2>(0,2*(resources_temp-1)) += pair;
 
                 gamma.col(t) = pair.colwise().sum().transpose();
                 // NOTE: we have to touch the data again here

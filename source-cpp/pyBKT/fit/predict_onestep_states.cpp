@@ -225,7 +225,7 @@ static PyObject *run(PyObject * /* module */, PyObject *args) {
         predictions.col(0) = initial_distn;
         for (int64_t t = 0; t < T - 1; t++) {
             const int64_t resource = resource_values(sequence_start + t);
-            predictions.col(t + 1) = As.block(0, 2 * (resource - 1), 2, 2) * forward.col(t);
+            predictions.col(t + 1) = As.block<2, 2>(0, 2 * (resource - 1)) * forward.col(t);
         }
     }
 
