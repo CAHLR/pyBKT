@@ -276,8 +276,13 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             # make data n-dimensional, fill in corresponding row and make other non-row entries 0
             # one row per fitted class, even ones this data does not use
             data_temp = np.zeros((len(gs_ref), len(df3)))
+            # the answers before multiprior inserts its placeholders, so each lines up with its own row
+            answers = np.array(df3[defaults["correct"]])
             for i in range(len(data_temp[0])):
-                data_temp[data_ref[i]][i] = data[i]
+                data_temp[data_ref[i]][i] = answers[i]
+            if multiprior_index is not None:
+                # an empty column for each placeholder, at its position in the answers without placeholders
+                data_temp = np.insert(data_temp, multiprior_index - np.arange(len(multiprior_index)), 0, axis=1)
             Data["data"]=np.asarray(data_temp,dtype='int32')
         else:
             data = [data]
