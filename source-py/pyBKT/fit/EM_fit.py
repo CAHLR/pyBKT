@@ -208,12 +208,12 @@ def inner(x):
             loglike += log(norm) / (T if normalizeLengths else 1)
 
         # backward messages and statistic counting
-        gamma = np.empty((2, T))
-        gamma[:, (T - 1)] = alpha[:, (T - 1)].copy()
+        # each step's counts are taken as soon as its gamma is known, so only one column is kept
+        gamma = alpha[:, (T - 1)].copy()
         for n in range(num_subparts):
             data_temp = alldata[n][sequence_start + (T - 1)]
             if data_temp:
-                emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, (T - 1)]
+                emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma
 
         # copy it to begin with for efficiency
         As_temp = As.copy()
@@ -224,16 +224,16 @@ def inner(x):
             pair = A.copy() # don't want to modify original A
             pair[0] *= alpha[:, t]
             pair[1] *= alpha[:, t]
-            dotted, gamma_t = dot(A, alpha[:, t]), gamma[:, (t + 1)]
+            dotted, gamma_t = dot(A, alpha[:, t]), gamma
             pair[:, 0] = (pair[:, 0] * gamma_t) / dotted
             pair[:, 1] = (pair[:, 1] * gamma_t) / dotted
             np.nan_to_num(pair, copy = False)
             trans_softcounts_temp[0: 2, k: k + 2] += pair
-            gamma[:, t] = sum(pair, axis = 0)
+            gamma = sum(pair, axis = 0)
             for n in range(num_subparts):
                 data_temp = alldata[n][sequence_start+t]
                 if data_temp:
-                    emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma[:, t]
-        init_softcounts_temp += gamma[:, 0].reshape((2, 1))
+                    emission_softcounts_temp[:, (2 * n + int(data_temp == 2))] += gamma
+        init_softcounts_temp += gamma.reshape((2, 1))
         alphas.append((sequence_start, T, alpha))
     return [trans_softcounts_temp, emission_softcounts_temp, init_softcounts_temp, loglike, alphas]
