@@ -445,10 +445,11 @@ class Model:
         true, pred = [], []
         for skill in all_data:
             correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
-            real_data = all_data[skill]['data']
-            true = np.append(true, real_data.sum(axis = 0))
-            pred = np.append(pred, correct_predictions)
-        true = true - 1
+            labels = all_data[skill]['data'].sum(axis = 0) - 1
+            # -1 marks a missing answer or a multiprior placeholder
+            answered = labels != -1
+            true = np.append(true, labels[answered])
+            pred = np.append(pred, correct_predictions[answered])
         try:
             res = [m(true, pred) for m in metric]
         except ValueError:
