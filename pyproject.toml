@@ -1,3 +1,40 @@
 [build-system]
 requires = ["setuptools", "numpy"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+target-version = "py310"
+extend-exclude = ["source-cpp/pyBKT/Eigen"]
+src = ["source-py", "tests"]
+
+[tool.ruff.lint]
+# Module names such as EM_fit.py are part of the public import path.
+ignore = ["N999"]
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+warn_unused_ignores = true
+# The bundled Eigen folder carries its own Python 2 scripts.
+exclude = ["/Eigen/"]
+
+[[tool.mypy.overrides]]
+# scikit-learn ships no type information.
+module = ["sklearn.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The fitting internals are typed strictly; Model and Roster are not annotated yet.
+module = ["pyBKT.fit.*", "pyBKT.generate.*", "pyBKT.util.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+warn_return_any = true
+strict_equality = true
+implicit_reexport = false
+
+[[tool.mypy.overrides]]
+# crossvalidate calls Model's methods, which are not annotated yet.
+module = ["pyBKT.util.crossvalidate"]
+disallow_untyped_calls = false

@@ -7,12 +7,14 @@
 #########################################
 
 import os
-from os.path import normpath as npath
-import sys
-from sysconfig import get_paths
-from setuptools import setup, Extension
 import platform
-from distutils.command.build_ext import build_ext
+import sys
+from os.path import normpath as npath
+from sysconfig import get_paths
+
+from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
+from setuptools.errors import BaseError, CCompilerError
 
 sys.tracebacklimit = 0
 
@@ -109,9 +111,10 @@ try:
         cmdclass = {'build_ext': CustomBuildExtCommand},
         ext_modules = [module1, module2, module3]
     )
-except:
+# setuptools reports a failed C++ build as SystemExit, or as the compiler error itself when DISTUTILS_DEBUG
+# is set. A setup_requires download that fails raises BaseError, and a NumPy that won't import ImportError.
+except (SystemExit, ImportError, BaseError, CCompilerError):
     # Set PYBKT_REQUIRE_CPP=1 to fail the install instead of falling back.
-    # Re-raising also lets setuptools' setup_requires probe through.
     if os.environ.get('PYBKT_REQUIRE_CPP') == '1':
         raise
 # LEGACY PURE PYTHON VERSION:

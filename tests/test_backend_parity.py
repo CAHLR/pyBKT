@@ -24,26 +24,26 @@ MULTIGS = [False, False, False, True]
 
 # Under EM, a forget rate that starts at 0 stays at 0, so only the "forgets" case starts above 0.
 CASES = {
-    "default": dict(
-        simulation=dict(prior=0.3, learn=0.2, guess=0.2, slip=0.1),
-        model_type=DEFAULT_MODEL,
-        start_forget=0.0,
-    ),
-    "forgets": dict(
-        simulation=dict(prior=0.3, learn=0.2, guess=0.2, slip=0.1, forget=0.05),
-        model_type=DEFAULT_MODEL,
-        start_forget=0.1,
-    ),
-    "multilearn": dict(
-        simulation=dict(prior=0.3, learn={"a": 0.1, "b": 0.35}, guess=0.2, slip=0.1, templates=("a", "b")),
-        model_type=MULTILEARN,
-        start_forget=0.0,
-    ),
-    "multigs": dict(
-        simulation=dict(prior=0.3, learn=0.2, guess={"a": 0.1, "b": 0.4}, slip=0.1, templates=("a", "b")),
-        model_type=MULTIGS,
-        start_forget=0.0,
-    ),
+    "default": {
+        "simulation": {"prior": 0.3, "learn": 0.2, "guess": 0.2, "slip": 0.1},
+        "model_type": DEFAULT_MODEL,
+        "start_forget": 0.0,
+    },
+    "forgets": {
+        "simulation": {"prior": 0.3, "learn": 0.2, "guess": 0.2, "slip": 0.1, "forget": 0.05},
+        "model_type": DEFAULT_MODEL,
+        "start_forget": 0.1,
+    },
+    "multilearn": {
+        "simulation": {"prior": 0.3, "learn": {"a": 0.1, "b": 0.35}, "guess": 0.2, "slip": 0.1, "templates": ("a", "b")},
+        "model_type": MULTILEARN,
+        "start_forget": 0.0,
+    },
+    "multigs": {
+        "simulation": {"prior": 0.3, "learn": 0.2, "guess": {"a": 0.1, "b": 0.4}, "slip": 0.1, "templates": ("a", "b")},
+        "model_type": MULTIGS,
+        "start_forget": 0.0,
+    },
 }
 
 def fit_em(case):
