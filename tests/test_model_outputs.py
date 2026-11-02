@@ -17,8 +17,8 @@ BUILD = "compiled" if IS_COMPILED else "python"
 REFERENCE_FILE = Path(__file__).parent / "reference" / "model_outputs.json"
 
 CASES = {
-    "default": dict(),
-    "forgets": dict(forgets=True),
+    "default": {},
+    "forgets": {"forgets": True},
 }
 
 

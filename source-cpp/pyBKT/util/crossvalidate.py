@@ -6,10 +6,9 @@
 # Last edited: 27 March 2021            #
 #########################################
 
+
 import numpy as np
-from pyBKT.generate import synthetic_data, random_model_uni
-from pyBKT.fit import EM_fit, predict_onestep
-from copy import deepcopy
+
 
 # returns data only for the indices given based on starts array
 def fix_data(data, indices):
@@ -106,13 +105,9 @@ def fix_data_specified(data, label, count):
 # TODO: Rename seed to 'rand' in next major version
 def crossvalidate(model, data, skill, folds, metric, seed, use_folds=False):
 
-    num_learns = len(data["resource_names"]) if "resource_names" in data else 1
-    num_gs = len(data["gs_names"]) if "gs_names" in data else num_gs
-
     # create random permutation to act as indices for folds for crossvalidation
     # TODO: Remove interoperability between int and RandomState in next major version
     shuffle = (np.random.RandomState(seed=seed) if isinstance(seed, int) else seed).permutation(len(data["starts"]))
-    all_true, all_pred = [], []
     metrics = np.zeros((len(metric), ))
 
     

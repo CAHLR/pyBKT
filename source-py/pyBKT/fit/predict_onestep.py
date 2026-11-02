@@ -7,8 +7,12 @@
 # Last edited: 20 March 2020            #
 #########################################
 
+from typing import Any
+
 import numpy as np
+
 from pyBKT.fit.EM_fit import run as E_step_run
+
 
 # correct_emission_predictions is a  num_subparts x T array, where element
 # (i,t) is predicted probability that answer to subpart i at time t+1 is correct
@@ -21,7 +25,7 @@ def run(model, data, parallel = True):
     emission_softcounts = np.zeros((num_subparts, 2, 2))
     init_softcounts = np.zeros((2, 1))
 
-    result = {}
+    result: dict[str, Any] = {}
     result['all_trans_softcounts'] = trans_softcounts
     result['all_emission_softcounts'] = emission_softcounts
     result['all_initial_softcounts'] = init_softcounts
@@ -39,11 +43,11 @@ def run(model, data, parallel = True):
     return (flattened_predictions.ravel(), state_predictions)
 
 def predict_onestep_states(data, model, forward_messages):
-    alldata, allresources, starts, lengths, learns, forgets, guesses, slips, prior = \
+    alldata, allresources, starts, lengths, learns, forgets, _guesses, _slips, prior = \
             data["data"], data["resources"], data["starts"], data["lengths"], \
             model["learns"], model["forgets"], model["guesses"], model["slips"], \
             model["prior"]
-    bigT, num_subparts, num_sequences, num_resources = \
+    bigT, _num_subparts, num_sequences, num_resources = \
             len(alldata[0]), len(alldata), len(starts), len(learns)
 
     initial_distn = np.array([1 - prior, prior])
