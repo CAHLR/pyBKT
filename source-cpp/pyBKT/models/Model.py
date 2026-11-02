@@ -185,7 +185,7 @@ class Model:
                         raise ValueError("metric must be one of: " + ", ".join(metrics.SUPPORTED_METRICS))
                     metric[i] = metrics.SUPPORTED_METRICS[m] 
                 elif not callable(m):
-                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+                    raise TypeError("metric must either be a string, function or list/tuple of strings and functions")
 
         all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type,
                                      gs_ref = self.fit_model, resource_ref = self.fit_model)
@@ -221,7 +221,7 @@ class Model:
         if not isinstance(metric, (tuple, list)):
             metric = [metric]
         if not isinstance(data, pd.DataFrame) and not isinstance(data_path, str):
-            raise ValueError("no data specified")
+            raise TypeError("no data specified")
         else:
             for i in range(len(metric)):
                 m = metric[i]
@@ -233,7 +233,7 @@ class Model:
                 elif callable(m):
                     metric_names.append(m.__name__)
                 else:
-                    raise ValueError("metric must either be a string, function or list/tuple of strings and functions")
+                    raise TypeError("metric must either be a string, function or list/tuple of strings and functions")
 
         self._check_args(Model.CV_ARGS, kwargs)
         self._update_param(['skills', 'num_fits', 'defaults', 
@@ -481,7 +481,7 @@ class Model:
         elif isinstance(self.fixed, dict):
             return
         else:
-            raise ValueError("fixed parameter incorrectly specified")
+            raise TypeError("fixed parameter incorrectly specified")
 
 
     def _update_param(self, params, args, keep = False):
@@ -515,7 +515,7 @@ class Model:
                     self.defaults[d] = defaults[d]
                     model_types[Model.MODELS_BKT.index(d)] = True
                 else:
-                    raise ValueError("model type must either be boolean for automatic column inference" + \
+                    raise TypeError("model type must either be boolean for automatic column inference" + \
                                      " or string specifying column")
             elif d in Model.DEFAULTS_BKT:
                 if self.defaults is None:
@@ -557,9 +557,9 @@ class Model:
 
     def _check_data(self, data_path, data):
         if not isinstance(data_path, str) and not isinstance(data, pd.DataFrame):
-            raise ValueError("no data specified")
+            raise TypeError("no data specified")
         elif isinstance(data_path, str) and isinstance(data, pd.DataFrame):
-            raise ValueError("cannot specify both data location and data")
+            raise TypeError("cannot specify both data location and data")
         elif isinstance(data_path, str) and not os.path.exists(data_path):
             raise ValueError("data path is invalid or file not found")
 

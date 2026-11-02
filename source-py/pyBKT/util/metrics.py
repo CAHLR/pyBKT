@@ -65,12 +65,13 @@ def fetch_supported_metrics():
         return supported_metrics
     dummy_x, dummy_y = [0, 1] * 5, [1, 0] * 5
     for metric_locs in sk._regression, sk._classification:
-        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs) if re.search('_loss$|_score$|_error$', i)}
+        potential_metrics = {i: getattr(metric_locs, i) for i in dir(metric_locs)
+                             if re.search('_loss$|_score$|_error$', i) and not i.startswith('_')}
         for metric in potential_metrics:
             try:
                 potential_metrics[metric](dummy_x, dummy_y)
                 supported_metrics[metric] = potential_metrics[metric]
-            except Exception:
+            except (TypeError, ValueError):
                 pass
     return supported_metrics
 
