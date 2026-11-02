@@ -360,6 +360,19 @@ class Model:
             orig_model = pickle.load(handle)
         for attr in vars(orig_model):
             setattr(self, attr, getattr(orig_model, attr))
+        self._rename_missing_skill()
+
+    def _rename_missing_skill(self):
+        """ Renames a missing skill to 'nan'. Models fitted before every missing skill name became 'nan'
+        may call it 'None' or '<NA>', depending on the pandas version and dtypes. """
+        if not self.fit_model or 'nan' in self.fit_model:
+            return
+        for old_name in ('None', '<NA>'):
+            if old_name in self.fit_model:
+                self.fit_model['nan'] = self.fit_model.pop(old_name)
+                if isinstance(self.skills, list):
+                    self.skills = ['nan' if skill == old_name else skill for skill in self.skills]
+                return
 
 
     def fetch_dataset(self, link, loc):
