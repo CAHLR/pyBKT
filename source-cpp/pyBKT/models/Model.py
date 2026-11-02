@@ -6,6 +6,8 @@
 # Last edited: 07 April 2021            #
 #########################################
 
+import contextlib
+import copy
 import numpy as np
 import numbers
 import os
@@ -75,9 +77,10 @@ class Model:
         0.6128265543747811
 
         """
-        if not self.manual_param_init:
-            self.fit_model = {}
-        self.partial_fit(data_path = data_path, data = data, **kwargs)
+        with self._restore_on_error():
+            if not self.manual_param_init:
+                self.fit_model = {}
+            self.partial_fit(data_path = data_path, data = data, **kwargs)
 
     def partial_fit(self, data_path = None, data = None, **kwargs):
         """
@@ -96,21 +99,22 @@ class Model:
         0.6579800168987382
 
         """
-        self._check_data(data_path, data)
-        self._check_args(Model.FIT_ARGS, kwargs)
-        self._update_param(['skills', 'num_fits', 'defaults', 'fixed',
-                            'parallel', 'forgets'], kwargs)
-        if self.fit_model is None or self.fit_model == {}:
-            self.fit_model = {}
-        if self.fit_model == {} or (self.manual_param_init and self.fit_model):
-            self._update_param('model_type', self._update_defaults(kwargs))
-        self.manual_param_init = True
-        all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
-        self._update_param(['skills'], {'skills': list(all_data.keys())})
-        for skill in all_data:
-            self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets, 
-                                              preload = kwargs['preload'] if 'preload' in kwargs else False)
-        self.manual_param_init = False
+        with self._restore_on_error():
+            self._check_data(data_path, data)
+            self._check_args(Model.FIT_ARGS, kwargs)
+            self._update_param(['skills', 'num_fits', 'defaults', 'fixed',
+                                'parallel', 'forgets'], kwargs)
+            if self.fit_model is None or self.fit_model == {}:
+                self.fit_model = {}
+            if self.fit_model == {} or (self.manual_param_init and self.fit_model):
+                self._update_param('model_type', self._update_defaults(kwargs))
+            self.manual_param_init = True
+            all_data = self._data_helper(data_path, data, self.defaults, self.skills, self.model_type)
+            self._update_param(['skills'], {'skills': list(all_data.keys())})
+            for skill in all_data:
+                self.fit_model[skill] = self._fit(all_data[skill], skill, self.forgets, 
+                                                  preload = kwargs['preload'] if 'preload' in kwargs else False)
+            self.manual_param_init = False
 
     def predict(self, data_path = None, data = None):
         """
@@ -374,6 +378,18 @@ class Model:
         name = link.split('/')[-1]
         with open(os.path.normpath(loc + '/' + name), 'wb') as f:
             f.write(file_data.read())
+
+    @contextlib.contextmanager
+    def _restore_on_error(self):
+        """ Puts every attribute back as it was if the body raises, so a failed fit leaves the model unchanged. """
+        saved = copy.deepcopy(self.__dict__)
+        try:
+            yield
+        except BaseException:
+            self.__dict__.update(saved)
+            for name in set(self.__dict__) - set(saved):
+                del self.__dict__[name]
+            raise
 
     def _data_helper(self, data_path, data, defaults, skills, model_type, gs_ref = None, resource_ref = None, return_df = False, folds = False):
         """ Processes data given defaults, skills, and the model type. """
