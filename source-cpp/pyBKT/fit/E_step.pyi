@@ -1,0 +1,3 @@
+from typing import Any
+
+def run(data: dict[str, Any], model: dict[str, Any], num_outputs: int, parallel: int, fixed: dict[str, Any], /) -> dict[str, Any]: ...

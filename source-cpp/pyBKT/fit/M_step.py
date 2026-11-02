@@ -1,6 +1,9 @@
 import numpy as np
 
-def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = {}):
+
+def run(model, trans_softcounts, emission_softcounts, init_softcounts, fixed = None):
+    if fixed is None:
+        fixed = {}
 
     z = np.sum(trans_softcounts, axis=1) == 0
     for i in range(len(z)):
