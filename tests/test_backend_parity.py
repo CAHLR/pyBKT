@@ -1,4 +1,4 @@
-"""The compiled and pure-Python E-steps must fit the same parameters.
+"""The compiled and pure-Python E-steps must fit the same parameters and log-likelihoods.
 
 Each case runs 20 EM iterations, with no early stop, from the same starting
 model. The expected values in ``reference/em_parity.json`` come from the
@@ -47,26 +47,27 @@ CASES = {
 }
 
 def fit_em(case):
-    """Run 20 EM iterations for one case and return the fitted parameters."""
+    """Run 20 EM iterations for one case and return the fitted parameters and log-likelihoods."""
     attempts = simulate_attempts(seed=1, students=200, attempts=8, **CASES[case]["simulation"])
     data = data_helper.convert_data(attempts, "skill", model_type=CASES[case]["model_type"])["skill"]
     start = random_model_uni.random_model_uni(
         len(data["resource_names"]), len(data["gs_names"]), rand=np.random.RandomState(0)
     )
     start["forgets"] = np.full(len(data["resource_names"]), CASES[case]["start_forget"])
-    fitted, _ = EM_fit.EM_fit(start, data, tol=-1, maxiter=20, parallel=False)
+    fitted, log_likelihoods = EM_fit.EM_fit(start, data, tol=-1, maxiter=20, parallel=False)
     return {
         "prior": [float(fitted["prior"])],
         "learns": np.ravel(fitted["learns"]).tolist(),
         "forgets": np.ravel(fitted["forgets"]).tolist(),
         "guesses": np.ravel(fitted["guesses"]).tolist(),
         "slips": np.ravel(fitted["slips"]).tolist(),
+        "log_likelihoods": np.ravel(log_likelihoods).tolist(),
     }
 
 
 @pytest.mark.parametrize("case", CASES)
 def test_em_matches_reference(case):
-    """Both builds fit the same parameters from the same data and starting model."""
+    """Both builds fit the same parameters and log-likelihoods from the same data and starting model."""
     expected_values = json.loads(REFERENCE_FILE.read_text())[case]
     fitted = fit_em(case)
     for parameter, expected in expected_values.items():
