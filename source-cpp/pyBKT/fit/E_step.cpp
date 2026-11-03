@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <string>
+#include <utility>
 #include <vector>
 #include <Eigen/Core>
 #include <omp.h>
@@ -126,6 +127,25 @@ static bool check_inputs(PyArrayObject *alldata, PyArrayObject *allresources, Py
             }
         }
     }
+    // Every column of data belongs to exactly one sequence, so no answer is counted twice or skipped.
+    std::vector<bool> is_covered(static_cast<size_t>(bigT), false);
+    for (Py_ssize_t k = 0; k < num_sequences; k++) {
+        for (int64_t t = start_values(k) - 1; t < start_values(k) - 1 + length_values(k); t++) {
+            auto covered = is_covered.at(static_cast<size_t>(t));
+            if (covered) {
+                set_value_error("more than one sequence covers data column " + std::to_string(t + 1) +
+                                ", counting from 1 as starts does");
+                return false;
+            }
+            covered = true;
+        }
+    }
+    const auto uncovered = std::find(is_covered.begin(), is_covered.end(), false);
+    if (uncovered != is_covered.end()) {
+        set_value_error("no sequence covers data column " + std::to_string(uncovered - is_covered.begin() + 1) +
+                        ", counting from 1 as starts does");
+        return false;
+    }
     return true;
 }
 
@@ -141,6 +161,37 @@ static PyArrayObject *to_integer_array(PyObject *obj, int dtype, const char *nam
         return nullptr;
     }
     return as_array(PyArray_FROM_OTF(raw.pointer, dtype, NPY_ARRAY_IN_ARRAY | NPY_ARRAY_FORCECAST));
+}
+
+template <typename T>
+static bool check_answer_codes(PyArrayObject *codes) {
+    const Map<const Matrix<T, Dynamic, 1>> values(static_cast<const T *>(PyArray_DATA(codes)), PyArray_SIZE(codes));
+    for (Index i = 0; i < values.size(); i++) {
+        if (values(i) < 0 || values(i) > 2) {
+            set_value_error("data has answer code " + std::to_string(values(i)) +
+                            " but codes must be 0 (no answer), 1 (incorrect) or 2 (correct)");
+            return false;
+        }
+    }
+    return true;
+}
+
+// Converts data to the int32 answer codes run() reads, after checking each code. A wider
+// array is checked before it is narrowed, because the cast would turn 2**32 + 1 into 1.
+static PyArrayObject *to_answer_array(PyObject *obj) {
+    const bool is_int32 = PyArray_Check(obj) != 0 && PyArray_TYPE(as_array(obj)) == NPY_INT32;
+    OwnedReference<PyArrayObject> codes;
+    codes.pointer = to_integer_array(obj, is_int32 ? NPY_INT32 : NPY_INT64, "data");
+    if (codes.pointer == nullptr)
+        return nullptr;
+    if (is_int32) {
+        if (!check_answer_codes<int32_t>(codes.pointer))
+            return nullptr;
+        return std::exchange(codes.pointer, nullptr);
+    }
+    if (!check_answer_codes<int64_t>(codes.pointer))
+        return nullptr;
+    return as_array(PyArray_CastToType(codes.pointer, PyArray_DescrFromType(NPY_INT32), 0));
 }
 
 static PyArrayObject *to_array(PyObject *obj, int minimum_type) {
@@ -186,7 +237,6 @@ static double *double_data(PyObject *array) {
 }
 
 static PyObject* run(PyObject * /* module */, PyObject * args) {
-    //TODO: check that dicts have the required members.
     Eigen::initParallel();
 
     // data, model, num_outputs, parallel and fixed
@@ -201,6 +251,10 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     PyObject *data_ptr = PyTuple_GET_ITEM(args, 0);
     PyObject *model_ptr = PyTuple_GET_ITEM(args, 1);
     PyObject *fixed = PyTuple_GET_ITEM(args, 4);
+    if (PyDict_Check(data_ptr) == 0 || PyDict_Check(model_ptr) == 0 || PyDict_Check(fixed) == 0) {
+        PyErr_SetString(PyExc_TypeError, "data, model and fixed must be dicts");
+        return nullptr;
+    }
 
     // Load all the numpy arrays in data & model
     OwnedReference<PyArrayObject> alldata, allresources, starts, lengths, learns, forgets, guesses, slips;
@@ -222,15 +276,30 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     }};
     for (const Input &input : inputs) {
         PyObject *value = PyDict_GetItemString(input.source, input.name);
-        input.target->pointer = input.integer_type == NPY_NOTYPE ? to_array(value, NPY_FLOAT)
-                                                                 : to_integer_array(value, input.integer_type, input.name);
+        if (value == nullptr) {
+            PyErr_SetString(PyExc_KeyError, input.name);
+            return nullptr;
+        }
+        if (input.target == &alldata)
+            input.target->pointer = to_answer_array(value);
+        else if (input.integer_type == NPY_NOTYPE)
+            input.target->pointer = to_array(value, NPY_FLOAT);
+        else
+            input.target->pointer = to_integer_array(value, input.integer_type, input.name);
         if (input.target->pointer == nullptr)
             return nullptr;
     }
     if (!check_inputs(alldata.pointer, allresources.pointer, starts.pointer, lengths.pointer, learns.pointer,
                       forgets.pointer, guesses.pointer, slips.pointer))
         return nullptr;
-    double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
+    PyObject *prior_value = PyDict_GetItemString(model_ptr, "prior");
+    if (prior_value == nullptr) {
+        PyErr_SetString(PyExc_KeyError, "prior");
+        return nullptr;
+    }
+    double prior = PyFloat_AsDouble(prior_value);
+    if (prior == -1.0 && PyErr_Occurred() != nullptr)
+        return nullptr;
 
     Index bigT = PyArray_DIM(alldata.pointer, 1), num_subparts = PyArray_DIM(alldata.pointer, 0);
     int num_sequences = static_cast<int>(PyArray_DIM(starts.pointer, 0));
