@@ -22,6 +22,9 @@ def synthetic_data(model, lengths, resources = None):
 
     if resources is None:
         resources = np.random.randint(1, high = num_resources+1, size = bigT)
+    resources = np.asarray(resources)
+    if len(resources) < bigT or np.any((resources < 1) | (resources > num_resources)):
+        raise ValueError(f"resources needs one ID from 1 to {num_resources} for each of the {bigT} answers")
     if "As" not in model:
         model["As"] = np.array([[1-model["learns"], model["forgets"]], [model["learns"], 1-model["forgets"]]])
 
