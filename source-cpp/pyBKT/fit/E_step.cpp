@@ -233,7 +233,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
     Index bigT = PyArray_DIM(alldata.pointer, 1), num_subparts = PyArray_DIM(alldata.pointer, 0);
-    int num_sequences = static_cast<int>(PyArray_DIM(starts.pointer, 0));
+    Py_ssize_t num_sequences = PyArray_DIM(starts.pointer, 0);
     Index num_resources = PyArray_DIM(learns.pointer, 0);
 
     Map<Array<int32_t,Dynamic,Dynamic,RowMajor>> alldata_arr(static_cast<int32_t *>(PyArray_DATA(alldata.pointer)),num_subparts,bigT);
@@ -330,11 +330,11 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
         emission_softcounts_temp.setZero();
         init_softcounts_temp.setZero();
         int num_threads = omp_get_num_threads();
-        int blocklen = 1 + ((num_sequences - 1) / num_threads);
-        int sequence_idx_start = blocklen * omp_get_thread_num();
-        int sequence_idx_end = std::min(sequence_idx_start+blocklen,num_sequences);
+        Py_ssize_t blocklen = 1 + ((num_sequences - 1) / num_threads);
+        Py_ssize_t sequence_idx_start = blocklen * omp_get_thread_num();
+        Py_ssize_t sequence_idx_end = std::min(sequence_idx_start+blocklen,num_sequences);
 
-        for (int sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
+        for (Py_ssize_t sequence_index=sequence_idx_start; sequence_index < sequence_idx_end; sequence_index++) {
 
             // NOTE: -1 because Matlab indexing starts at 1
             int64_t sequence_start = starts_arr(sequence_index, 0) - 1;
@@ -350,7 +350,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
             Map<Array2Xd,Unaligned> likelihoods(s_likelihoods.data(),2,T);
 
             likelihoods.setOnes();
-             for (int t=0; t<T; t++) {
+             for (int64_t t=0; t<T; t++) {
                  for (int n=0; n<num_subparts; n++) {
                     int32_t data_temp = alldata_arr(n, sequence_start+t);
                     if (data_temp != 0) {
@@ -369,7 +369,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
             alpha.col(0) /= norm;
             loglike += std::log(norm) / static_cast<double>(normalizeLengths? T : 1);
 
-            for (int t=0; t<T-1; t++) {
+            for (int64_t t=0; t<T-1; t++) {
                 int64_t resources_temp = allresources_arr(sequence_start+t, 0);
                 alpha.col(t+1) = (As.block(0,2*(resources_temp-1),2,2) * alpha.col(t)).array()
                     * likelihoods.col(t+1);

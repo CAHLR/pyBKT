@@ -80,7 +80,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     double prior = PyFloat_AsDouble(PyDict_GetItemString(model_ptr, "prior"));
 
     Index num_subparts = PyArray_DIM(slips.pointer, 0);
-    int num_sequences = static_cast<int>(PyArray_DIM(starts.pointer, 0));
+    Py_ssize_t num_sequences = PyArray_DIM(starts.pointer, 0);
     Index num_resources = PyArray_DIM(learns.pointer, 0);
 
     Vector2d initial_distn;
@@ -102,7 +102,7 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
     const Int64Vector length_values = int64_vector(lengths.pointer);
     const Int64Vector resource_values = int64_vector(resources.pointer);
     int64_t bigT = 0;
-    for (int k=0; k<num_sequences; k++) {
+    for (Py_ssize_t k=0; k<num_sequences; k++) {
         bigT += length_values(k);
     }
 
@@ -122,13 +122,13 @@ static PyObject* run(PyObject * /* module */, PyObject * args) {
 
     const DoubleVector guess_values = double_vector(guesses.pointer);
     const DoubleVector slip_values = double_vector(slips.pointer);
-    for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
+    for (Py_ssize_t sequence_index=0; sequence_index < num_sequences; sequence_index++) {
         int64_t sequence_start = start_values(sequence_index) - 1;
         int64_t T = length_values(sequence_index);
 
         Vector2d nextstate_distr = initial_distn;
 
-        for (int t=0; t<T; t++) {
+        for (int64_t t=0; t<T; t++) {
             all_stateseqs(sequence_start + t) = nextstate_distr(0) < uniform_draw();
             for (Index n=0; n<num_subparts; n++) {
                 all_data(n, sequence_start + t) = (all_stateseqs(sequence_start + t) ? slip_values(n) : (1-guess_values(n))) < uniform_draw();
