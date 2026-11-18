@@ -105,9 +105,13 @@ def run(data, model, trans_softcounts, emission_softcounts, init_softcounts, num
         thread_counts[thread_num] = {'sequence_idx_start': sequence_idx_start, 'sequence_idx_end': sequence_idx_end}
         thread_counts[thread_num].update(input)
 
-    p = Pool(len(thread_counts))
-    x = p.map(inner, thread_counts)
-    p.close()
+    # A single worker gains nothing from a Pool; run in-process to avoid forking.
+    if num_threads == 1:
+        x = [inner(thread_counts[0])]
+    else:
+        p = Pool(len(thread_counts))
+        x = p.map(inner, thread_counts)
+        p.close()
 
     for i in x:
         total_loglike += i[3]
