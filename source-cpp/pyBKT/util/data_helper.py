@@ -123,7 +123,9 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
     if "original" in df.columns:
         df = df[(df["original"]==1)].copy(deep=False)
         
-    df[defaults["skill_name"]] = df[defaults["skill_name"]].apply(str)
+    # str() of a missing value depends on the pandas version and dtypes, so every missing name becomes 'nan'
+    skills = df[defaults["skill_name"]]
+    df[defaults["skill_name"]] = skills.apply(str).astype(object).where(skills.notna().to_numpy(), 'nan')
     try:
         df[defaults["correct"]] = df[defaults["correct"]].apply(int)
     except:
