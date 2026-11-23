@@ -49,7 +49,7 @@ jobs:
   # stored reference values against a second compiler and CPU.
   compiled-macos:
     name: C++ build, macOS arm, Python 3.12
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 15
 
     steps:
