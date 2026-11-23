@@ -1,0 +1,28 @@
+{
+    "version": 1,
+    "project": "pyBKT",
+    "project_url": "https://github.com/CAHLR/pyBKT",
+    "repo": ".",
+    "branches": ["master"],
+    "show_commit_url": "https://github.com/CAHLR/pyBKT/commit/",
+    "environment_type": "virtualenv",
+    "pythons": ["3.12"],
+    "build_command": ["python -m pip wheel --no-deps -w {build_cache_dir} {build_dir}"],
+    "matrix": {
+        "req": {
+            "numpy": [],
+            "pandas": [],
+            "requests": []
+        },
+        "env": {
+            "PYBKT_REQUIRE_CPP": "1"
+        },
+        "env_nobuild": {
+            "OMP_NUM_THREADS": "1"
+        }
+    },
+    "benchmark_dir": "benchmarks",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html"
+}

@@ -5,3 +5,4 @@ __pycache__/
 .eggs
 build
 *.egg-info
+.asv/
