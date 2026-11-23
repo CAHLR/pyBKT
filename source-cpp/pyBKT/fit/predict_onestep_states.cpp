@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <stdint.h>
-#include <alloca.h>
 #include <omp.h>
 #include <Eigen/Core>
 #include <Python.h>
@@ -89,8 +88,8 @@ static PyArrayObject* to_integer_array(PyObject *obj, int dtype, const char *nam
 }
 
 void capsule_cleanup(PyObject *capsule) {
-    void *memory = PyCapsule_GetPointer(capsule, NULL);
-    delete memory;
+    double *memory = (double *) PyCapsule_GetPointer(capsule, NULL);
+    delete[] memory;
 }
 
 static PyObject* run(PyObject * module, PyObject * args) {
@@ -109,9 +108,6 @@ static PyObject* run(PyObject * module, PyObject * args) {
         PyErr_SetString(PyExc_ValueError, "Error parsing arguments.");
         return NULL;
     }
-
-    if (!parallel)
-        omp_set_num_threads(1);
 
     int DTYPE = PyArray_ObjectType(fwd_msgs, NPY_FLOAT);
     forward_messages = (PyArrayObject *)PyArray_FROM_OTF(fwd_msgs, DTYPE, NPY_ARRAY_IN_ARRAY);
@@ -170,7 +166,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
 
     /* COMPUTATION */
 
-    #pragma omp parallel for
+    #pragma omp parallel for if(parallel)
     for (int sequence_index=0; sequence_index < num_sequences; sequence_index++) {
         // NOTE: -1 because Matlab indexing starts at 1
         int64_t sequence_start = extract_int64_t(starts, sequence_index) - 1;
@@ -195,6 +191,7 @@ static PyObject* run(PyObject * module, PyObject * args) {
     for (int i = 0; i < 8; i++)
         Py_XDECREF(*DM_PTRS[i]);
     Py_XDECREF(forward_messages);
+    delete[] forward_messages_temp;
 
     return(all_predictions_arr);
 }
