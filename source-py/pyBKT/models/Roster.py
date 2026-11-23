@@ -565,13 +565,17 @@ class State:
                 raise ValueError("specified guess/slip class must be one of:", gs_ref.keys())
             data_ref = np.array(list(map(lambda x: gs_ref[x], gsargs)))
             data_temp = np.zeros((len(gs_ref), len(corrects)))
+            # the last column, the next answer, has no known class and keeps class 0
+            gs_classes = np.zeros(len(corrects), dtype=np.int64)
             for i in range(len(data_temp[0]) - 1):
                 data_temp[data_ref[i]][i] = data[i]
+                gs_classes[i] = data_ref[i]
             data = np.asarray(data_temp, dtype='int')
         else:
             data = np.asarray([data], dtype='int')
+            gs_classes = np.zeros(len(corrects), dtype=np.int64)
 
-        Data = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data}
+        Data = {'starts': starts, 'lengths': lengths, 'resources': resources, 'data': data, 'gs_classes': gs_classes}
         return Data
 
     def predict(self, model, skill, data, state):

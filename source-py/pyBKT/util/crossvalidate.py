@@ -19,6 +19,7 @@ def fix_data(data, indices):
     total_length = np.sum(lengths)
     d = np.zeros((len(data["data"]), total_length), dtype=np.int32)
     resources = np.ones(total_length, dtype=np.int64)
+    gs_classes = np.zeros(total_length, dtype=np.int64)
     
     if "resource_names" in data:
         training_data["resource_names"] = data["resource_names"]
@@ -32,12 +33,14 @@ def fix_data(data, indices):
 
         d[:,starts[i]-1:starts[i]+lengths[i]-1] = data["data"][:,prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
         resources[starts[i]-1:starts[i]+lengths[i]-1] = data["resources"][prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
+        gs_classes[starts[i]-1:starts[i]+lengths[i]-1] = data["gs_classes"][prev_starts[i]-1:prev_starts[i]+lengths[i]-1]
         current_index += lengths[i]
     
     training_data["starts"] = starts
     training_data["lengths"] = lengths
     training_data["data"] = d
     training_data["resources"]=resources
+    training_data["gs_classes"] = gs_classes
     return (training_data)
 
 def fix_data_specified(data, label, count):
@@ -47,11 +50,13 @@ def fix_data_specified(data, label, count):
     train_starts = np.zeros(len(data["starts"]), dtype = 'int')
     train_lengths = np.zeros(len(data["lengths"]), dtype = 'int')
     train_resources = np.zeros(len(data["resources"]) - count, dtype = 'int')
+    train_gs_classes = np.zeros(len(data["resources"]) - count, dtype = 'int')
     train_data = np.zeros((len(data["data"]), len(data["resources"]) - count), dtype = 'int')
     
     test_starts = np.zeros(len(data["starts"]), dtype = 'int')
     test_lengths = np.zeros(len(data["lengths"]), dtype = 'int')
     test_resources = np.zeros(count, dtype = 'int')
+    test_gs_classes = np.zeros(count, dtype = 'int')
     test_data = np.zeros((len(data["data"]), count), dtype = 'int')
      
     train_idx = 1
@@ -66,11 +71,13 @@ def fix_data_specified(data, label, count):
                 train_lengths[i] += 1
                 train_data[:,save_idx] = data["data"][:,current_idx]
                 train_resources[save_idx] = data["resources"][current_idx]
+                train_gs_classes[save_idx] = data["gs_classes"][current_idx]
             else:
                 save_idx = test_starts[i]+test_lengths[i]-1
                 test_lengths[i] += 1
                 test_data[:,save_idx] = data["data"][:,current_idx]
                 test_resources[save_idx] = data["resources"][current_idx]
+                test_gs_classes[save_idx] = data["gs_classes"][current_idx]
         train_idx += train_lengths[i]
         test_idx += test_lengths[i]
         
@@ -86,6 +93,7 @@ def fix_data_specified(data, label, count):
     training_data["lengths"] = train_lengths
     training_data["data"] = train_data
     training_data["resources"] = train_resources
+    training_data["gs_classes"] = train_gs_classes
     
     if "resource_names" in data:
         training_data["resource_names"] = data["resource_names"]
@@ -98,6 +106,7 @@ def fix_data_specified(data, label, count):
     testing_data["lengths"] = test_lengths
     testing_data["data"] = test_data
     testing_data["resources"] = test_resources
+    testing_data["gs_classes"] = test_gs_classes
     
     
     

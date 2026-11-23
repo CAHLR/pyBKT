@@ -42,6 +42,8 @@ def synthetic_data(model, lengths, resources = None):
     datastruct["starts"] = starts
     datastruct["lengths"] = lengths
     datastruct["resources"] = resources
+    # every row is a subpart that answers at every step, so this gives class 0, as predict used before
+    datastruct["gs_classes"] = (syn_data["data"] != 0).argmax(axis = 0)
 
     return datastruct
 
