@@ -150,14 +150,16 @@ class Model:
         # default best effort prediction of 0.5
         df['correct_predictions'] = 0.5
         df['state_predictions'] = 0.5
+        correct_column = df.columns.get_loc('correct_predictions')
+        state_column = df.columns.get_loc('state_predictions')
         for skill in all_data:
             correct_predictions, state_predictions = self._predict(self.fit_model[skill], all_data[skill])
             state_predictions = state_predictions[1]
             if all_data[skill]['multiprior_index'] is not None:
                 correct_predictions = np.delete(correct_predictions, all_data[skill]['multiprior_index'])
                 state_predictions = np.delete(state_predictions, all_data[skill]['multiprior_index'])
-            df.loc[all_data[skill]['index'], 'correct_predictions'] = correct_predictions
-            df.loc[all_data[skill]['index'], 'state_predictions'] = state_predictions
+            df.iloc[all_data[skill]['row_positions'], correct_column] = correct_predictions
+            df.iloc[all_data[skill]['row_positions'], state_column] = state_predictions
         return df
 
     def evaluate(self, data = None, data_path = None, metric = metrics.rmse):

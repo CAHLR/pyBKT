@@ -147,7 +147,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
             gs_ref = gs_refs[skill_]["gs_names"]
 
         # filter out based on skill
-        df3 = df[df[defaults["skill_name"]] == skill_].copy(deep=False)
+        in_skill = (df[defaults["skill_name"]] == skill_).to_numpy()
+        df3 = df[in_skill].copy(deep=False)
         if df3.empty:
             raise ValueError("Incorrect Skill or Dataset Specified")
 
@@ -297,6 +298,8 @@ def convert_data(url, skill_name, defaults=None, model_type=None, gs_refs=None, 
         Data["resource_names"]=resource_ref
         Data["gs_names"]=gs_ref
         Data["index"]=stored_index
+        # positions in the returned frame, which may repeat index labels
+        Data["row_positions"]=np.flatnonzero(in_skill)
         Data["multiprior_index"]=multiprior_index
         if folds:
             Data["folds"] = np.array(df3[defaults["folds"]])
