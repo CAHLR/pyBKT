@@ -32,7 +32,7 @@ jobs:
           - os: ubuntu-latest
           - os: ubuntu-24.04-arm
           # Homebrew's libomp targets the runner's macOS version.
-          - os: macos-14
+          - os: macos-15
             macos-deployment-target: "14.0"
           - os: macos-15-intel
             macos-deployment-target: "15.0"
